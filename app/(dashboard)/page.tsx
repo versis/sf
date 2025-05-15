@@ -190,7 +190,7 @@ export default function HomePage() {
                     <button 
                         onClick={completeColorStep}
                         disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
-                        className="mt-4 px-6 py-3 bg-input text-accent font-semibold border-2 border-accent shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                        className="mt-4 px-6 py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
                     >
                         Confirm Color
                     </button>
@@ -214,7 +214,7 @@ export default function HomePage() {
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="px-6 py-3 bg-input text-accent font-semibold border-2 border-accent shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                    className="px-6 py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
                   >
                     {isGenerating ? 'Generating...' : 'Generate Shadenfreude Card'}
                   </button>
