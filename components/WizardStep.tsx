@@ -35,7 +35,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
   }
 
   // Old-school checkmark character: "✓" (could also use "✔" or "☑")
-  const oldSchoolCheckmark = "☑";
+  const oldSchoolCheckmark = "✓";
 
   return (
     <div className={`${isFutureStep && !isCompleted ? 'opacity-60' : ''} ${stepNumber === 4 ? '' : 'border-b-2 border-foreground'}`}>
@@ -46,7 +46,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
         <div className="flex items-center">
           <span>Step {stepNumber}: {title}</span>
           {isCompleted && !isActive && 
-            <span className="text-[var(--accent-green)] text-lg leading-none ml-2">{oldSchoolCheckmark}</span>
+            <span className="text-[var(--accent-green)] text-2xl leading-none ml-2">{oldSchoolCheckmark}</span>
           }
         </div>
         
