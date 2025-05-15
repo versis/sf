@@ -184,7 +184,7 @@ export default function HomePage() {
                   <button 
                       onClick={completeColorStep}
                       disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
-                      className="mt-4 w-full px-6 py-3 bg-primary text-primary-foreground font-semibold border-2 border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+                      className="mt-4 w-full px-6 py-3 bg-white text-gray-900 text-sm font-medium border border-foreground hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
                       Confirm Color &amp; Proceed
                   </button>
@@ -204,13 +204,10 @@ export default function HomePage() {
             >
               {isColorStepCompleted ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Ready to generate your Shadenfreude card.
-                  </p>
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="w-full px-6 py-3 bg-primary text-primary-foreground font-semibold border-2 border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+                    className="w-full px-6 py-3 bg-white text-gray-900 text-sm font-medium border border-foreground hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
                     {isGenerating ? 'Generating...' : 'Generate Shadenfreude Card'}
                   </button>
@@ -224,24 +221,27 @@ export default function HomePage() {
             </WizardStep>
           </section>
 
-          <aside className="w-full space-y-6 md:order-2"> {/* Explicit order for clarity */}
+          <aside className="w-full space-y-6 md:order-2">
             <CardPreview 
-              imageDataUrl={croppedImageDataUrl} // Show cropped image for preview
+              imageDataUrl={croppedImageDataUrl} 
               backgroundColor={selectedHexColor}
             />
-            {generatedImageUrl && (
-              <div className="mt-6 pt-6 border-t-2 border-foreground">
-                <h3 className="text-xl font-semibold mb-4">Generated Image:</h3>
-                <img 
-                  src={generatedImageUrl} 
-                  alt="Generated Shadenfreude card" 
-                  className="max-w-full h-auto border-2 border-foreground"
-                  onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
-                />
-              </div>
-            )}
           </aside>
         </div>
+
+        {generatedImageUrl && (
+          <section className="w-full mt-12 pt-6 border-t-2 border-foreground">
+            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique Shadenfreude card</h3>
+            <div className="flex justify-center">
+              <img 
+                src={generatedImageUrl} 
+                alt="Generated Shadenfreude card" 
+                className="max-w-full md:max-w-2xl h-auto rounded-lg"
+                onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
+              />
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );

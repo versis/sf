@@ -100,9 +100,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 border border-foreground bg-card">
-      <h3 className="text-lg font-medium text-foreground">Color Details:</h3>
-      
+    <div className="space-y-6">
       {croppedImageDataUrl && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-foreground">
@@ -116,7 +114,6 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           />
         </div>
       )}
-
     </div>
   );
 };

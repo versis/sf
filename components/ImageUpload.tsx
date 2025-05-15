@@ -66,8 +66,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const crop = centerAspectCrop(width, height, ASPECT_RATIO);
-    setCrop(crop);
+    const currentCrop = centerAspectCrop(width, height, ASPECT_RATIO);
+    setCrop(currentCrop);
   };
 
   const getCroppedImg = () => {
@@ -114,9 +114,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     <div className="space-y-6">
       {showUploader && (
         <div>
-          <label htmlFor="imageUpload" className="block text-sm font-medium text-foreground mb-1">
-            Select Image File
-          </label>
           <input
             type="file"
             id="imageUpload"
@@ -130,7 +127,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {showCropper && previewUrl && (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-foreground mb-2">Crop Image:</h3>
           <ReactCrop
             crop={crop}
             onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -149,12 +145,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             />
           </ReactCrop>
           {completedCrop && imgRef.current && (
-            <div className="mt-4 p-4 border border-dashed border-foreground bg-card space-y-2">
-              <h4 className="text-md font-semibold text-foreground">Crop Controls:</h4>
+            <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={getCroppedImg}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium border border-black hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 dark:bg-green-500 dark:hover:bg-green-600"
+                className="px-6 py-3 bg-white text-gray-900 text-sm font-medium border border-foreground hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring transition-colors"
               >
                 Confirm Crop
               </button>
