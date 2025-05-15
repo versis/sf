@@ -32,7 +32,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["YOUR_PRODUCTION_FRONTEND_URL_HERE", "http://localhost:3000"], # Restrict origins
+    allow_origins=["https://sf.tinker.institute", "https://sf-livid.vercel.app", "http://localhost:3000"], # Updated production URLs
     allow_credentials=True,
     allow_methods=["POST"], # Restrict methods
     allow_headers=["Content-Type"], # Restrict headers
