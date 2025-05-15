@@ -6,8 +6,12 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
-  title: "Shadenfreude - Color Card Generator",
-  description: "Create your own Pantone-like color cards with Shadenfreude.",
+  title: "shadenfreude card (part of tinker.institute)",
+  description: "Create your own Pantone-like color cards with shadenfreude.",
+  icons: [
+    { rel: "icon", url: "/sf-icon.png" },
+    { rel: "apple-touch-icon", url: "/sf-icon.png" },
+  ],
   openGraph: {
     images: [
       {

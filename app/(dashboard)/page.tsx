@@ -22,19 +22,19 @@ export default function HomePage() {
   const [isUploadStepCompleted, setIsUploadStepCompleted] = useState(false);
   const [isCropStepCompleted, setIsCropStepCompleted] = useState(false); // Renamed from isImageStepCompleted
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
-  const [showLivePreview, setShowLivePreview] = useState<boolean>(true); // New state
+  const [showLivePreview, setShowLivePreview] = useState<boolean>(false); // Initialize to false
 
   const handleImageSelectedForUpload = (file: File) => {
-    setShowLivePreview(true); // Show preview when options change
     const reader = new FileReader();
     reader.onloadend = () => {
       setUploadStepPreviewUrl(reader.result as string);
-      setCroppedImageDataUrl(null); // Reset crop if new image is selected
-      setSelectedHexColor('#000000');
+      setCroppedImageDataUrl(null); 
+      setSelectedHexColor('#F7F7F7');
       setGeneratedImageUrl(null);
       setGenerationError(null);
       setIsUploadStepCompleted(true);
-      setIsCropStepCompleted(false);
+      setIsCropStepCompleted(false); // Reset crop completion
+      setShowLivePreview(false); // Hide preview
       setIsColorStepCompleted(false);
       setCurrentWizardStep('crop');
       console.log('New original image selected for upload:', file.name);
@@ -51,20 +51,21 @@ export default function HomePage() {
   };
 
   const handleImageCropped = (dataUrl: string | null) => {
-    setShowLivePreview(true); // Show preview when options change
     setCroppedImageDataUrl(dataUrl);
     setGeneratedImageUrl(null); 
     setGenerationError(null);
     if (dataUrl) {
       setIsCropStepCompleted(true);
+      setShowLivePreview(true); // Show preview on successful crop
       setCurrentWizardStep('color');
     } else {
       setIsCropStepCompleted(false);
+      setShowLivePreview(false); // Hide preview if crop is removed/fails
     }
   };
 
   const handleHexColorChange = (hex: string) => {
-    setShowLivePreview(true); // Show preview when options change
+    if(isCropStepCompleted) setShowLivePreview(true); // Show preview when options change, if crop is done
     setSelectedHexColor(hex);
     setGeneratedImageUrl(null);
   };
@@ -123,6 +124,8 @@ export default function HomePage() {
     else if (step === 'generate' && isUploadStepCompleted && isCropStepCompleted && isColorStepCompleted) setCurrentWizardStep('generate');
   };
 
+  const shouldShowPreviewColumn = isCropStepCompleted && showLivePreview;
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:p-12 bg-background text-foreground">
       <div className="w-full max-w-6xl space-y-10">
@@ -137,9 +140,12 @@ export default function HomePage() {
             </span>
             {/*<span className="text-xl md:text-2xl font-normal text-muted-foreground">(sf.tinker.institute)</span>*/}
           </h1>
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
+          </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+        <div className={`grid grid-cols-1 ${shouldShowPreviewColumn ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-8 md:gap-12`}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
               title="Select Image" 
@@ -223,7 +229,7 @@ export default function HomePage() {
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
                     className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
                   >
-                    {isGenerating ? 'Generating...' : 'Generate Shadenfreude Card'}
+                    {isGenerating ? 'Generating...' : 'Generate shadenfreude Card'}
                   </button>
                   {generationError && (
                     <p className="text-sm text-destructive mt-2">Error: {generationError}</p>
@@ -235,23 +241,23 @@ export default function HomePage() {
             </WizardStep>
           </section>
 
-          <aside className="w-full space-y-6 md:order-2">
-            {showLivePreview && (
+          {shouldShowPreviewColumn && (
+            <aside className="w-full space-y-6 md:order-2">
               <CardPreview 
                 imageDataUrl={croppedImageDataUrl} 
                 backgroundColor={selectedHexColor}
               />
-            )}
-          </aside>
+            </aside>
+          )}
         </div>
 
         {generatedImageUrl && (
           <section className="w-full mt-12 pt-6 border-t-2 border-foreground">
-            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique Shadenfreude card</h3>
+            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique shadenfreude card</h3>
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 
-                alt="Generated Shadenfreude card" 
+                alt="Generated shadenfreude card" 
                 className="max-w-full md:max-w-2xl h-auto rounded-lg"
                 onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
               />
