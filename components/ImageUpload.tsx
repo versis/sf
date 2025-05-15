@@ -84,8 +84,24 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = cropData.width * scaleX;
-    canvas.height = cropData.height * scaleY;
+    // Limit the maximum dimensions of the cropped image
+    const maxDimension = 1200; // Reasonable size to prevent huge images
+    const cropWidth = cropData.width * scaleX;
+    const cropHeight = cropData.height * scaleY;
+    
+    // Calculate scaled dimensions if needed
+    let canvasWidth = cropWidth;
+    let canvasHeight = cropHeight;
+    
+    if (cropWidth > maxDimension || cropHeight > maxDimension) {
+      const ratio = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
+      canvasWidth = cropWidth * ratio;
+      canvasHeight = cropHeight * ratio;
+      console.log(`Image cropped area rescaled from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight}`);
+    }
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -98,15 +114,21 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       image,
       cropData.x * scaleX,
       cropData.y * scaleY,
-      cropData.width * scaleX,
-      cropData.height * scaleY,
+      cropWidth,
+      cropHeight,
       0,
       0,
-      cropData.width * scaleX,
-      cropData.height * scaleY
+      canvasWidth,
+      canvasHeight
     );
 
-    const base64Image = canvas.toDataURL('image/png');
+    // Use JPEG with 0.9 quality for better file size (if user needs transparency, this can be updated)
+    const base64Image = canvas.toDataURL('image/jpeg', 0.9);
+    
+    // Estimate size in MB
+    const approximateSizeMB = (base64Image.length * 0.75) / (1024 * 1024); // base64 is ~4/3 the size
+    console.log(`Estimated cropped image size: ${approximateSizeMB.toFixed(2)} MB`);
+    
     onImageCropped(base64Image);
   };
 

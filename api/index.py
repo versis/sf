@@ -117,6 +117,16 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
     if not cropped_image_data_url or not hex_color_input or not color_name:
         raise HTTPException(status_code=400, detail="Missing required data: croppedImageDataUrl, hexColor, or colorName")
 
+    # Check payload size
+    payload_size_mb = len(cropped_image_data_url) / (1024 * 1024)
+    if payload_size_mb > 4.5:  # Limit to 4.5MB to stay under 5MB Vercel limit
+        raise HTTPException(
+            status_code=413, 
+            detail=f"Image too large ({payload_size_mb:.1f}MB). Please reduce image size to under 4.5MB."
+        )
+    
+    print(f"Received image data URL size: {payload_size_mb:.2f}MB")
+    
     rgb_color = hex_to_rgb(hex_color_input)
     if rgb_color is None:
         raise HTTPException(status_code=400, detail=f"Invalid HEX color format: {hex_color_input}")
@@ -134,9 +144,35 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             print("Error: Invalid image data URL format - missing base64 delimiter.")
             raise HTTPException(status_code=400, detail="Invalid image data URL format")
         header, encoded = cropped_image_data_url.split(';base64,', 1)
-        image_data = base64.b64decode(encoded)
-        user_image_pil = Image.open(io.BytesIO(image_data)).convert("RGBA")
-        print(f"User image decoded successfully. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}")
+        
+        try:
+            image_data = base64.b64decode(encoded)
+        except Exception as e:
+            print(f"Base64 decoding error: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to decode base64 image: {str(e)}")
+        
+        # Validate decoded image data
+        if len(image_data) == 0:
+            raise HTTPException(status_code=400, detail="Decoded image data is empty")
+            
+        try:
+            img_buffer = io.BytesIO(image_data)
+            user_image_pil = Image.open(img_buffer).convert("RGBA")
+            print(f"User image decoded successfully. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}")
+        except Exception as e:
+            print(f"Error opening image data: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to open image data: {str(e)}")
+
+        # Check image dimensions
+        if user_image_pil.width > 4000 or user_image_pil.height > 4000:
+            print(f"Image too large: {user_image_pil.width}x{user_image_pil.height}")
+            # Resize to manageable dimensions
+            max_dim = 2000
+            ratio = min(max_dim / user_image_pil.width, max_dim / user_image_pil.height)
+            new_width = int(user_image_pil.width * ratio)
+            new_height = int(user_image_pil.height * ratio)
+            user_image_pil = user_image_pil.resize((new_width, new_height), Image.LANCZOS)
+            print(f"Resized to: {new_width}x{new_height}")
 
         # Card dimensions and style
         card_width = 1000
@@ -147,11 +183,6 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         color_swatch_width = int(card_width * 0.45)
         image_panel_x_start = color_swatch_width
 
-        # Padding and text layout
-        outer_padding = 50
-        text_padding_left = outer_padding
-        current_y = outer_padding
-        
         # Create canvas with alpha for rounding
         canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
         draw = ImageDraw.Draw(canvas)
@@ -164,62 +195,58 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         text_color = (20, 20, 20) if sum(rgb_color) > text_brightness_threshold else (245, 245, 245)
 
         # Fonts updated to match sample proportions
-        font_brand = get_font(80, bold=True)
-        font_id = get_font(36, bold=False)
-        font_main_name = get_font(52, bold=True)
-        font_color_codes_label = get_font(20, bold=True)
-        font_color_codes_value = get_font(20)
+        font_brand = get_font(80, bold=False)       # shadenfreude title (biggest)
+        font_id = get_font(36, bold=False)          # unique ID (normal size)
+        font_main_name = get_font(52, bold=True)    # color name (normal size, bold)
+        font_color_codes_label = get_font(20, bold=True) # HEX, CMYK, RGB labels (small)
+        font_color_codes_value = get_font(20, bold=False) # color values (small)
 
-        # Draw brand name
-        print("Drawing text elements on swatch...")
-        draw.text((text_padding_left, current_y), "SHADENFREUDE", font=font_brand, fill=text_color)
-        # Move down by brand height + spacing
-        brand_height = font_brand.getbbox("SHADENFREUDE")[3] - font_brand.getbbox("SHADENFREUDE")[1]
-        current_y += brand_height + 20
-        # Draw sequential ID
-        sequential_id = "#000000001"
-        draw.text((text_padding_left, current_y), sequential_id, font=font_id, fill=text_color)
-        id_height = font_id.getbbox(sequential_id)[3] - font_id.getbbox(sequential_id)[1]
-        current_y += id_height + 20
+        # Text positioning - Start from bottom and work our way up
+        text_padding_left = 50  # Left padding
+        bottom_padding = 50     # Bottom padding
 
-        # Draw color name (split into lines if needed)
-        max_name_width = color_swatch_width - (text_padding_left * 2)
-        lines: list[str] = []
-        if font_main_name.getlength(color_name.upper()) > max_name_width:
-            words = color_name.upper().split()
-            current_line = ''
-            for word in words:
-                if font_main_name.getlength(current_line + word + ' ') <= max_name_width:
-                    current_line += word + ' '
-                else:
-                    lines.append(current_line.strip())
-                    current_line = word + ' '
-            lines.append(current_line.strip())
-        else:
-            lines = [color_name.upper()]
-        
-        for line in lines:
-            draw.text((text_padding_left, current_y), line, font=font_main_name, fill=text_color)
-            line_height = font_main_name.getbbox(line)[3] - font_main_name.getbbox(line)[1]
-            current_y += line_height + 15
-        # Extra spacing after name block
-        current_y += 30
-
-        # Color code labels
-        label_x = text_padding_left
-        value_x = text_padding_left + 150
+        # Calculate starting Y position from bottom
+        # Start with color codes (smallest text at the bottom)
         line_height_codes = (font_color_codes_value.getbbox("ABC")[3] - font_color_codes_value.getbbox("ABC")[1]) + 10
-
-        draw.text((label_x, current_y), "HEX", font=font_color_codes_label, fill=text_color)
-        draw.text((value_x, current_y), hex_color_input.upper(), font=font_color_codes_value, fill=text_color)
-        current_y += line_height_codes
-
-        draw.text((label_x, current_y), "CMYK", font=font_color_codes_label, fill=text_color)
-        draw.text((value_x, current_y), f"{cmyk_color[0]} {cmyk_color[1]} {cmyk_color[2]} {cmyk_color[3]}", font=font_color_codes_value, fill=text_color)
-        current_y += line_height_codes
-
+        
+        # Calculate position for color codes section (at the bottom)
+        label_x = text_padding_left
+        value_x = text_padding_left + 70
+        
+        # Calculate starting y-position from bottom for RGB (last line)
+        current_y = card_height - bottom_padding - line_height_codes
+        
+        # Draw RGB (last line)
         draw.text((label_x, current_y), "RGB", font=font_color_codes_label, fill=text_color)
         draw.text((value_x, current_y), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_color_codes_value, fill=text_color)
+        
+        # Move up for CMYK
+        current_y -= line_height_codes
+        draw.text((label_x, current_y), "CMYK", font=font_color_codes_label, fill=text_color)
+        draw.text((value_x, current_y), f"{cmyk_color[0]} {cmyk_color[1]} {cmyk_color[2]} {cmyk_color[3]}", font=font_color_codes_value, fill=text_color)
+        
+        # Move up for HEX
+        current_y -= line_height_codes
+        draw.text((label_x, current_y), "HEX", font=font_color_codes_label, fill=text_color)
+        draw.text((value_x, current_y), hex_color_input.upper(), font=font_color_codes_value, fill=text_color)
+        
+        # Add empty space before color codes
+        current_y -= 40
+        
+        # Draw color name (bold)
+        color_name_height = font_main_name.getbbox(color_name.upper())[3] - font_main_name.getbbox(color_name.upper())[1]
+        current_y -= color_name_height
+        draw.text((text_padding_left, current_y), color_name.upper(), font=font_main_name, fill=text_color)
+        
+        # Draw sequential ID above color name
+        id_height = font_id.getbbox("#00000001 F")[3] - font_id.getbbox("#00000001 F")[1]
+        current_y -= id_height + 15
+        draw.text((text_padding_left, current_y), "#00000001 F", font=font_id, fill=text_color)
+        
+        # Draw shadenfreude title at the top of the text block
+        brand_height = font_brand.getbbox("shadenfreude")[3] - font_brand.getbbox("shadenfreude")[1]
+        current_y -= brand_height + 15
+        draw.text((text_padding_left, current_y), "shadenfreude", font=font_brand, fill=text_color)
 
         # Prepare and paste the right image panel
         print("Preparing and fitting user image for right panel...")

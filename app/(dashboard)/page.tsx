@@ -11,10 +11,11 @@ type WizardStepName = 'upload' | 'crop' | 'color' | 'generate';
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
-  const [selectedHexColor, setSelectedHexColor] = useState<string>('#F7F7F7');
+  const [selectedHexColor, setSelectedHexColor] = useState<string>('#000000');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [colorName, setColorName] = useState<string>('DARK EMBER');
 
   // State for wizard
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -27,7 +28,7 @@ export default function HomePage() {
     reader.onloadend = () => {
       setUploadStepPreviewUrl(reader.result as string);
       setCroppedImageDataUrl(null); 
-      setSelectedHexColor('#F7F7F7');
+      setSelectedHexColor('#000000');
       setGeneratedImageUrl(null);
       setGenerationError(null);
       setIsUploadStepCompleted(true);
@@ -71,6 +72,28 @@ export default function HomePage() {
     }
   };
 
+  const compressImage = (dataUrl: string, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        
+        // Convert to JPEG for better compression (even if original was PNG)
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = dataUrl;
+    });
+  };
+
   const handleGenerateImageClick = async () => {
     if (!croppedImageDataUrl || !selectedHexColor) {
       setGenerationError('Please ensure an image is cropped and a HEX color is set.');
@@ -81,15 +104,24 @@ export default function HomePage() {
     setGeneratedImageUrl(null);
 
     try {
+      // Compress the image before sending
+      let compressedImageDataUrl = croppedImageDataUrl;
+      try {
+        compressedImageDataUrl = await compressImage(croppedImageDataUrl, 0.7);
+        console.log('Image compressed successfully');
+      } catch (compressError) {
+        console.warn('Image compression failed, using original:', compressError);
+      }
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          croppedImageDataUrl,
+          croppedImageDataUrl: compressedImageDataUrl,
           hexColor: selectedHexColor,
-          colorName: selectedHexColor, // Placeholder for backend
+          colorName: colorName || 'DARK EMBER',
         }),
       });
 
@@ -225,6 +257,19 @@ export default function HomePage() {
             >
               {isColorStepCompleted ? (
                 <div className="space-y-4 flex flex-col items-center">
+                  <div className="w-full max-w-[38.4rem] mb-4">
+                    <label htmlFor="colorName" className="block text-sm font-medium text-foreground mb-1">
+                      Color Name:
+                    </label>
+                    <input
+                      type="text"
+                      id="colorName"
+                      value={colorName}
+                      onChange={(e) => setColorName(e.target.value)}
+                      placeholder="e.g., DARK EMBER"
+                      className="w-full p-2 border border-foreground focus:outline-none focus:ring-1 focus:ring-blue-700"
+                    />
+                  </div>
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
