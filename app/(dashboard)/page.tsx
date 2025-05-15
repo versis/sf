@@ -184,9 +184,9 @@ export default function HomePage() {
                   <button 
                       onClick={completeColorStep}
                       disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
-                      className="mt-4 w-full px-6 py-3 bg-white text-gray-900 text-sm font-medium border border-foreground hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                      className="mt-4 w-full px-6 py-3 bg-foreground text-background font-semibold border border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
-                      Confirm Color &amp; Proceed
+                      Confirm Color
                   </button>
                 </>
               ) : (
@@ -207,7 +207,7 @@ export default function HomePage() {
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="w-full px-6 py-3 bg-white text-gray-900 text-sm font-medium border border-foreground hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    className="w-full px-6 py-3 bg-foreground text-background font-semibold border border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
                     {isGenerating ? 'Generating...' : 'Generate Shadenfreude Card'}
                   </button>

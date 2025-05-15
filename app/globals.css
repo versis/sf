@@ -4,74 +4,91 @@
 
 @layer base {
     :root {
-        /* Brutalist Color Palette - Light Mode */
-        --background: 0 0% 100%; /* White */
+        /* New Palette - Light Mode (Art Laboratory Inspired) */
+        --background: 40 33% 97%; /* Very light beige/off-white */
         --foreground: 0 0% 0%;   /* Black */
-        --card: 0 0% 100%;
+        --card: 40 33% 97%;       /* Same as background */
         --card-foreground: 0 0% 0%;
-        --popover: 0 0% 100%;
+        --popover: 40 33% 97%;
         --popover-foreground: 0 0% 0%;
-        --primary: 240 60% 50%; /* A strong blue */
+        --primary: 220 100% 55%; /* Vibrant Electric Blue */
         --primary-foreground: 0 0% 100%; /* White text on primary */
-        --secondary: 0 0% 90%; /* Light gray */
-        --secondary-foreground: 0 0% 0%;
-        --muted: 0 0% 95%; /* Lighter gray */
-        --muted-foreground: 0 0% 25%;
-        --accent: 0 0% 90%; /* Light gray */
-        --accent-foreground: 0 0% 0%;
+        --secondary: 0 0% 92%; /* Light gray - for elements like file input button */
+        --secondary-foreground: 0 0% 0%; /* Black text on light gray */
+        --muted: 0 0% 96%; /* Lighter gray for muted backgrounds if needed */
+        --muted-foreground: 0 0% 35%; /* Darker gray for muted text */
+        --accent: 220 100% 55%; /* Same as primary */
+        --accent-foreground: 0 0% 100%;
         --destructive: 0 100% 50%; /* Bright Red */
         --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 0%; /* Black borders */
-        --input: 0 0% 85%; /* Slightly darker gray for input backgrounds */
-        --ring: 240 60% 50%; /* Blue for focus rings */
+        --border: 0 0% 15%; /* Dark gray/off-black for borders, slightly softer than pure black */
+        --input: 0 0% 100%; /* White input backgrounds */
+        --ring: 220 100% 55%; /* Blue for focus rings */
         
         --radius: 0rem; /* No rounded corners */
     }
 
     .dark {
-        /* Brutalist Color Palette - Dark Mode */
-        --background: 0 0% 0%;   /* Black */
-        --foreground: 0 0% 100%; /* White */
-        --card: 0 0% 5%; /* Very dark gray */
-        --card-foreground: 0 0% 100%;
-        --popover: 0 0% 5%;
-        --popover-foreground: 0 0% 100%;
-        --primary: 240 70% 60%; /* A brighter strong blue for dark mode */
-        --primary-foreground: 0 0% 0%; /* Black text on primary in dark mode */
-        --secondary: 0 0% 15%; /* Dark gray */
-        --secondary-foreground: 0 0% 100%;
-        --muted: 0 0% 10%; /* Darker gray */
-        --muted-foreground: 0 0% 75%;
-        --accent: 0 0% 15%;
+        /* New Palette - Dark Mode */
+        --background: 220 15% 5%;   /* Very dark, slightly desaturated blue/black */
+        --foreground: 0 0% 95%; /* Off-white */
+        --card: 220 15% 10%;       /* Slightly lighter than background */
+        --card-foreground: 0 0% 95%;
+        --popover: 220 15% 10%;
+        --popover-foreground: 0 0% 95%;
+        --primary: 220 100% 65%; /* Brighter Electric Blue for dark mode */
+        --primary-foreground: 0 0% 100%; /* White text on this blue */
+        --secondary: 0 0% 20%; /* Dark gray */
+        --secondary-foreground: 0 0% 95%; /* Off-white */
+        --muted: 0 0% 15%;
+        --muted-foreground: 0 0% 70%;
+        --accent: 220 100% 65%;
         --accent-foreground: 0 0% 100%;
-        --destructive: 0 70% 50%; /* A slightly less intense red for dark mode */
-        --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 100%; /* White borders */
-        --input: 0 0% 20%;   /* Dark gray for input backgrounds */
-        --ring: 240 70% 60%;
-
-        /* --radius is inherited from :root, so it remains 0rem */
+        --destructive: 0 80% 60%; /* Slightly less intense red */
+        --destructive-foreground: 0 0% 95%;
+        --border: 0 0% 80%; /* Light gray for borders in dark mode */
+        --input: 0 0% 12%;   /* Dark gray for input backgrounds */
+        --ring: 220 100% 65%;
     }
 }
 
 @layer base {
     * {
-        @apply border-border; /* Uses the new --border variable */
+        /* Use the new --border variable, applied to all elements by default via Tailwind */
+        /* Tailwind's default border color is `colors.gray.200`. We override it via @apply border-border */
+        /* To make borders more explicit only where needed, we rely on utility classes like `border` or `border-2` in components. */
+        /* The global `border-border` here sets the default border color if a border utility is used. */
+         @apply border-border;
     }
-    html, body {
+    html {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-        /* Consider a monospace font for a more extreme brutalist style:
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; */
         @apply bg-background text-foreground;
+        /* Ensure smooth scrolling if not already default */
+        scroll-behavior: smooth;
+    }
+    body {
+        /* The grain effect will be on the body's pseudo-element */
+        min-height: 100vh;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        opacity: 0.03; /* Adjusted for potentially lighter bg */
+        pointer-events: none; 
+        z-index: -1; 
+    }
+    .dark body::before {
+        opacity: 0.02; /* Slightly less for dark mode */
     }
 
-    /* Ensure borders are visible by default */
-    button, input, select, textarea, section, div[class*="bg-"] {
-        /* Default border, can be overridden by specific utilities */
-        /* border-width: 1px; No, this will be too much. Let utilities handle it.*/
-    }
     h1,h2,h3,h4,h5,h6 {
-      font-weight: bold; /* Brutalism often uses bold text */
+      font-weight: bold;
+      /* text-wrap: balance; /* Consider applying this more selectively if needed */
     }
 }
 
