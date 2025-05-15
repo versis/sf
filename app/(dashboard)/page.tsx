@@ -15,6 +15,7 @@ export default function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [generatedVerticalImageUrl, setGeneratedVerticalImageUrl] = useState<string | null>(null);
   const [generatedHorizontalImageUrl, setGeneratedHorizontalImageUrl] = useState<string | null>(null);
+  const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'vertical' | 'horizontal'>('vertical');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [colorName, setColorName] = useState<string>('DARK EMBER');
@@ -39,18 +40,27 @@ export default function HomePage() {
 
   // Effect to revoke object URL
   useEffect(() => {
-    let objectUrlToRevoke: string | null = null;
+    let objectUrlsToRevoke: string[] = [];
+    
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
-      objectUrlToRevoke = generatedImageUrl;
+      objectUrlsToRevoke.push(generatedImageUrl);
+    }
+    
+    if (generatedVerticalImageUrl && generatedVerticalImageUrl.startsWith('blob:')) {
+      objectUrlsToRevoke.push(generatedVerticalImageUrl);
+    }
+    
+    if (generatedHorizontalImageUrl && generatedHorizontalImageUrl.startsWith('blob:')) {
+      objectUrlsToRevoke.push(generatedHorizontalImageUrl);
     }
 
     return () => {
-      if (objectUrlToRevoke) {
-        URL.revokeObjectURL(objectUrlToRevoke);
-        console.log('Revoked object URL:', objectUrlToRevoke);
-      }
+      objectUrlsToRevoke.forEach(url => {
+        URL.revokeObjectURL(url);
+        console.log('Revoked object URL:', url);
+      });
     };
-  }, [generatedImageUrl]);
+  }, [generatedImageUrl, generatedVerticalImageUrl, generatedHorizontalImageUrl]);
 
   const handleImageSelectedForUpload = (file: File) => {
     // Log the original file size
@@ -146,141 +156,157 @@ export default function HomePage() {
     });
   };
 
-  const handleGenerateImageClick = async () => {
+  const handleToggleOrientationDisplay = () => {
+    if (isGenerating || !generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
+
+    if (currentDisplayOrientation === 'vertical') {
+      setGeneratedImageUrl(generatedHorizontalImageUrl);
+      setCurrentDisplayOrientation('horizontal');
+    } else {
+      setGeneratedImageUrl(generatedVerticalImageUrl);
+      setCurrentDisplayOrientation('vertical');
+    }
+  };
+
+  const handleGenerateImageClick = async (/* Parameter removed as this is now the primary generation */) => {
     if (!croppedImageDataUrl || !selectedHexColor) {
       setGenerationError('Please ensure an image is cropped and a HEX color is set.');
       return;
     }
     
-    // Close the last step by setting currentWizardStep to null
-    setCurrentWizardStep('' as any);
+    setCurrentWizardStep('' as any); // Close the wizard
     
     setGeneratedImageUrl(null);
-    setGenerationProgress(0); // Initialize progress to 0
+    setGeneratedVerticalImageUrl(null);
+    setGeneratedHorizontalImageUrl(null);
+    setCurrentDisplayOrientation('vertical'); // Default to showing vertical first
+    setGenerationProgress(0);
     setIsGenerating(true);
-    setStatusMessage('Creating your shadefreude card...');
-
-    // Clear any existing interval
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
-
-    // Smooth progress simulation
-    const DURATION = 7000; // Target 7 seconds
-    const TICK_INTERVAL = 70; // Update every 70ms
-    let currentProgress = 0;
-
-    progressIntervalRef.current = setInterval(() => {
-      currentProgress += 1;
-      if (currentProgress < 99) { // Stop before 100, actual completion will set it to 100
-        setGenerationProgress(currentProgress);
-      } else {
-        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      }
-    }, TICK_INTERVAL);
+    setGenerationError(null);
+    
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
 
     try {
-      // Compress the image before sending
-      // setGenerationProgress(30); // No longer direct set, rely on interval
-      setStatusMessage('Compressing image...');
-      let compressedImageDataUrl = croppedImageDataUrl;
+      // STAGE 1: Generate Vertical Card
+      let compressedDataForVertical = croppedImageDataUrl;
       try {
-        compressedImageDataUrl = await compressImage(croppedImageDataUrl, 0.7);
-        console.log('Image compressed successfully');
+        compressedDataForVertical = await compressImage(croppedImageDataUrl, 0.7);
       } catch (compressError) {
-        console.warn('Image compression failed, using original:', compressError);
+        console.warn('Vertical image compression failed, using original:', compressError);
       }
-
-      // setGenerationProgress(50); // No longer direct set
-      setStatusMessage('Generating card...');
-      const response = await fetch('/api/generate-image', {
+      setGenerationProgress(10);
+      
+      const verticalResponse = await fetch('/api/generate-image', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          croppedImageDataUrl: compressedImageDataUrl,
+          croppedImageDataUrl: compressedDataForVertical,
           hexColor: selectedHexColor,
           colorName: colorName || 'DARK EMBER',
+          orientation: 'vertical',
         }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text(); // Get raw error text
-        let errorDetail = `Server error: ${response.status} ${response.statusText}`;
-        try {
-          // Try to parse as JSON, as some errors might still be structured
-          const errorData = JSON.parse(errorText);
-          errorDetail = errorData.error || errorData.detail || errorText; // Use specific error fields if available
-        } catch (e) {
-          // If not JSON, use the raw text, truncating if too long for display
-          errorDetail = errorText.length > 150 ? errorText.substring(0, 147) + "..." : errorText;
-        }
-        console.error('Server error response:', errorText); // Log full server error text
-        throw new Error(errorDetail);
+      if (!verticalResponse.ok) {
+        const errorText = await verticalResponse.text();
+        throw new Error(`Vertical card generation failed: ${verticalResponse.status} ${errorText.substring(0,100)}`);
       }
+      const verticalBlob = await verticalResponse.blob();
+      const verticalUrl = URL.createObjectURL(verticalBlob);
+      setGeneratedVerticalImageUrl(verticalUrl);
+      console.log(`STEP 4.1: Received vertical image - Size: ${(verticalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+      setGenerationProgress(50);
 
-      // setGenerationProgress(80); // No longer direct set
-      setStatusMessage('Finalizing...');
-      
-      // Get the binary response as a blob
-      const imageBlob = await response.blob();
-      console.log(`STEP 4: Received image - Size: ${(imageBlob.size / (1024 * 1024)).toFixed(2)} MB`);
-      
-      // Create blob URLs for both vertical and horizontal from the same image
-      const imageUrl = URL.createObjectURL(imageBlob);
-      
-      // Store the same image URL for both orientations for now
-      // When the backend is updated to return different orientations in the future,
-      // this code can be modified to use the distinct images
-      setGeneratedVerticalImageUrl(imageUrl);
-      setGeneratedHorizontalImageUrl(imageUrl);
-      
-      // Set the displayed image based on current orientation preference
-      setGeneratedImageUrl(imageUrl);
-      
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); // Ensure interval is cleared
-      setGenerationProgress(100); // Complete
-      setStatusMessage('Your shadefreude card is ready!');
-      
-      // Scroll to result
-      if (resultRef.current) {
-        resultRef.current.scrollIntoView({ behavior: 'smooth' });
+      // STAGE 2: Generate Horizontal Card
+      let compressedDataForHorizontal = croppedImageDataUrl; // Re-compress original for potentially different needs
+      try {
+        compressedDataForHorizontal = await compressImage(croppedImageDataUrl, 0.7); 
+      } catch (compressError) {
+        console.warn('Horizontal image compression failed, using original:', compressError);
       }
+      setGenerationProgress(60);
+
+      const horizontalResponse = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          croppedImageDataUrl: compressedDataForHorizontal,
+          hexColor: selectedHexColor,
+          colorName: colorName || 'DARK EMBER',
+          orientation: 'horizontal',
+        }),
+      });
+
+      if (!horizontalResponse.ok) {
+        const errorText = await horizontalResponse.text();
+        throw new Error(`Horizontal card generation failed: ${horizontalResponse.status} ${errorText.substring(0,100)}`);
+      }
+      const horizontalBlob = await horizontalResponse.blob();
+      const horizontalUrl = URL.createObjectURL(horizontalBlob);
+      setGeneratedHorizontalImageUrl(horizontalUrl);
+      console.log(`STEP 4.2: Received horizontal image - Size: ${(horizontalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+      
+      // Set generation progress to complete
+      setGenerationProgress(100);
+      
+      // Scroll to show results
+      if (resultRef.current) resultRef.current.scrollIntoView({ behavior: 'smooth' });
 
     } catch (error) {
-      console.error('Error generating image:', error);
-      setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
-      setStatusMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      setGenerationProgress(0); // Reset progress on error
+      console.error('Error during dual image generation:', error);
+      setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred during generation.');
+      setGenerationProgress(0);
     } finally {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); // Safeguard clear
       setIsGenerating(false);
     }
   };
-  
-  const handleDownloadImage = () => {
-    if (!generatedImageUrl) return;
+
+  // Reset function for Create Another Card
+  const resetGeneration = () => {
+    // Clear all image URLs
+    setGeneratedImageUrl(null);
+    setGeneratedVerticalImageUrl(null);
+    setGeneratedHorizontalImageUrl(null);
+    setUploadStepPreviewUrl(null);
+    setCroppedImageDataUrl(null);
+    
+    // Reset other states
+    setSelectedHexColor('#000000');
+    setGenerationError(null);
+    setStatusMessage(null);
+    setGenerationProgress(0);
+    setCurrentDisplayOrientation('vertical');
+    
+    // Reset wizard steps
+    setIsUploadStepCompleted(false);
+    setIsCropStepCompleted(false);
+    setIsColorStepCompleted(false);
+    setCurrentWizardStep('upload');
+    
+    // Revoke any object URLs to prevent memory leaks
+    if (generatedVerticalImageUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(generatedVerticalImageUrl);
+    }
+    if (generatedHorizontalImageUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(generatedHorizontalImageUrl);
+    }
+    if (generatedImageUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(generatedImageUrl);
+    }
+    
+    console.log('All states reset, ready for a new card generation');
+  };
+
+  const handleDownloadImage = (orientation: 'vertical' | 'horizontal' = 'vertical') => {
+    const imageUrl = orientation === 'vertical' ? generatedVerticalImageUrl : generatedHorizontalImageUrl;
+    if (!imageUrl) return;
     
     const link = document.createElement('a');
-    link.href = generatedImageUrl;
-    link.download = `shadefreude-${colorName.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
+    link.href = imageUrl;
+    link.download = `shadefreude-${orientation}-${colorName.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleToggleOrientationDisplay = () => {
-    if (!generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
-
-    if (cardOrientation === 'vertical') {
-      setGeneratedImageUrl(generatedHorizontalImageUrl);
-      setCardOrientation('horizontal');
-    } else {
-      setGeneratedImageUrl(generatedVerticalImageUrl);
-      setCardOrientation('vertical');
-    }
   };
 
   const setStep = (step: WizardStepName) => {
@@ -395,7 +421,7 @@ export default function HomePage() {
               {isColorStepCompleted ? (
                 <div className="space-y-4 flex flex-col items-center">
                   <button
-                    onClick={handleGenerateImageClick}
+                    onClick={() => handleGenerateImageClick()}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
                     className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
                   >
@@ -413,10 +439,6 @@ export default function HomePage() {
         {/* Progress bar now appears below the wizard */}
         {isGenerating && (
           <div className="w-full bg-background p-4 rounded-md border-2 border-foreground">
-            <div className="mb-2 flex justify-between text-sm font-medium">
-              <span>{statusMessage}</span>
-              <span>{generationProgress}%</span>
-            </div>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
                 className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
@@ -437,45 +459,56 @@ export default function HomePage() {
           </div>
         )}
 
-        {generatedImageUrl && (
+        {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
           <section ref={resultRef} className="w-full pt-6">
-            {/* Button to toggle display orientation - placed above the image */}
-            {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
-              <div className="flex justify-center mb-4">
-                <button
-                  onClick={handleToggleOrientationDisplay}
-                  className="px-3 py-1.5 md:px-4 md:py-2 bg-input text-sm text-black font-medium border-2 border-black shadow-[3px_3px_0_0_#000000] hover:shadow-[1px_1px_0_0_#000000] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out flex items-center gap-2"
-                >
-                  {cardOrientation === 'vertical' ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-                  )}
-                  View {cardOrientation === 'vertical' ? 'Horizontal' : 'Vertical'} Version
-                </button>
-              </div>
-            )}
-            <div className="flex justify-center">
-              <img 
-                src={generatedImageUrl} 
-                alt="Generated shadefreude card" 
-                className="max-w-full md:max-w-2xl h-auto rounded-md"
-              />
+            {/* Display both vertical and horizontal cards */}
+            <div className="space-y-12">
+              {/* Vertical Card */}
+              {generatedVerticalImageUrl && (
+                <div className="flex flex-col items-center">
+                  <img 
+                    src={generatedVerticalImageUrl} 
+                    alt="Vertical shadefreude card" 
+                    className="max-w-full md:max-w-2xl h-auto rounded-md"
+                  />
+                </div>
+              )}
+              
+              {/* Horizontal Card */}
+              {generatedHorizontalImageUrl && (
+                <div className="flex flex-col items-center mt-8">
+                  <img 
+                    src={generatedHorizontalImageUrl} 
+                    alt="Horizontal shadefreude card" 
+                    className="max-w-full md:max-w-2xl h-auto rounded-md"
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
-              <button
-                onClick={handleDownloadImage}
-                className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download Card
-              </button>
+            
+            <div className="flex flex-wrap justify-center gap-3 mt-8">
+              {generatedVerticalImageUrl && (
+                <button
+                  onClick={() => handleDownloadImage('vertical')}
+                  className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Vertical
+                </button>
+              )}
+              {generatedHorizontalImageUrl && (
+                <button
+                  onClick={() => handleDownloadImage('horizontal')}
+                  className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Horizontal
+                </button>
+              )}
               <button
                 onClick={() => {
-                  setGeneratedImageUrl(null);
-                  setGeneratedVerticalImageUrl(null); // Also clear specific orientation URLs
-                  setGeneratedHorizontalImageUrl(null);
-                  setCurrentWizardStep('upload');
+                  // Call resetGeneration when Create Another Card is clicked
+                  resetGeneration();
                 }}
                 className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
               >

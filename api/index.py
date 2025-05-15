@@ -106,6 +106,7 @@ class ImageGenerationRequest(BaseModel):
     croppedImageDataUrl: str
     hexColor: str
     colorName: str
+    orientation: str = "vertical"  # Default to vertical if not specified
 
 @app.post("/api/generate-image")
 @limiter.limit("10/minute") # Apply rate limit: 10 requests per minute per IP
@@ -113,6 +114,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
     cropped_image_data_url = data.croppedImageDataUrl
     hex_color_input = data.hexColor
     color_name = data.colorName
+    orientation = data.orientation
 
     if not cropped_image_data_url or not hex_color_input or not color_name:
         raise HTTPException(status_code=400, detail="Missing required data: croppedImageDataUrl, hexColor, or colorName")
@@ -126,6 +128,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         )
     
     print(f"Received image data URL size: {payload_size_mb:.2f}MB")
+    print(f"Orientation: {orientation}")
     
     rgb_color = hex_to_rgb(hex_color_input)
     if rgb_color is None:
@@ -175,90 +178,176 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             print(f"Resized to: {new_width}x{new_height}")
 
         # Card dimensions and style
-        card_width = 1000
-        card_height = 600
+        # Define base dimensions
+        BASE_CARD_WIDTH = 1000
+        BASE_CARD_HEIGHT = 600
+        
+        # IMPORTANT: Set correct dimensions based on orientation
+        if orientation.lower() == "horizontal":
+            # For horizontal card: 600 width x 1000 height
+            card_width = BASE_CARD_HEIGHT  # 600
+            card_height = BASE_CARD_WIDTH  # 1000
+            print(f"Creating HORIZONTAL card: {card_width}x{card_height}")
+        else:  # vertical or default
+            # For vertical card: 1000 width x 600 height
+            card_width = BASE_CARD_WIDTH   # 1000
+            card_height = BASE_CARD_HEIGHT # 600
+            print(f"Creating VERTICAL card: {card_width}x{card_height}")
+            
         # off-white background (will be masked by swatch and image)
-        bg_color = (250, 250, 250)
-        # Left swatch covers 45%, right image 55%
-        color_swatch_width = int(card_width * 0.45)
-        image_panel_x_start = color_swatch_width
+        bg_color = (250, 250, 250) # This is for the canvas before rounded corners only
 
-        # Create canvas with alpha for rounding
-        canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
+        # Create canvas with the correct dimensions
+        canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,)) # Use bg_color for canvas base
         draw = ImageDraw.Draw(canvas)
+        
+        if orientation.lower() == "horizontal":
+            # HORIZONTAL CARD: 600px width x 1000px height
+            # Top section: Color swatch with all text (similar to vertical's left panel)
+            # Bottom section: User image
 
-        # Draw the color swatch on the left
-        draw.rectangle([(0, 0), (color_swatch_width, card_height)], fill=rgb_color)
+            # Define height for the top color/text panel (e.g., 45% of total card height)
+            top_panel_height = int(card_height * 0.45) # 45% of 1000px = 450px
+            image_panel_y_start = top_panel_height
 
-        # Determine contrasting text color for swatch
-        text_brightness_threshold = 128 * 3
-        text_color = (20, 20, 20) if sum(rgb_color) > text_brightness_threshold else (245, 245, 245)
+            # 1. Top Color/Text Panel Background (uses the selected rgb_color)
+            draw.rectangle([(0, 0), (card_width, top_panel_height)], fill=rgb_color)
 
-        # Fonts updated to match sample proportions
-        font_brand = get_font(80, bold=False)       # shadefreude title (biggest)
-        font_id = get_font(36, bold=False)          # unique ID (normal size)
-        font_main_name = get_font(52, bold=True)    # color name (normal size, bold)
-        font_color_codes_label = get_font(20, bold=True) # HEX, CMYK, RGB labels (small)
-        font_color_codes_value = get_font(20, bold=False) # color values (small)
+            # --- Text for Top Panel (similar to vertical's swatch text) ---
+            text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
+            
+            # Adjust font sizes for the 600px width of this panel
+            font_brand_h = get_font(70, bold=False) 
+            font_id_h = get_font(32, bold=False)
+            font_name_h = get_font(48, bold=True)
+            font_metrics_label_h = get_font(18, bold=True)
+            font_metrics_value_h = get_font(18, bold=False)
+            
+            text_padding_left_h = 40
+            bottom_padding_h = 30 # Padding from the bottom of the top_panel_height
+            line_height_metrics_h = font_metrics_value_h.getmask("A").size[1] + 10
+            
+            label_x_h = text_padding_left_h
+            value_x_h = text_padding_left_h + 60 
+            
+            current_y_h = top_panel_height - bottom_padding_h - font_metrics_value_h.getmask("A").size[1]
+            
+            draw.text((label_x_h, current_y_h), "RGB", font=font_metrics_label_h, fill=text_color_on_swatch)
+            draw.text((value_x_h, current_y_h), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value_h, fill=text_color_on_swatch)
+            current_y_h -= line_height_metrics_h
+            
+            draw.text((label_x_h, current_y_h), "CMYK", font=font_metrics_label_h, fill=text_color_on_swatch)
+            draw.text((value_x_h, current_y_h), f"{cmyk_color[0]} {cmyk_color[1]} {cmyk_color[2]} {cmyk_color[3]}", font=font_metrics_value_h, fill=text_color_on_swatch)
+            current_y_h -= line_height_metrics_h
+            
+            draw.text((label_x_h, current_y_h), "HEX", font=font_metrics_label_h, fill=text_color_on_swatch)
+            draw.text((value_x_h, current_y_h), hex_color_input.upper(), font=font_metrics_value_h, fill=text_color_on_swatch)
+            
+            current_y_h -= 30 
+            
+            color_name_text_h = color_name.upper()
+            # Check fit for color name, adjust font if necessary
+            available_text_width_h = card_width - (2 * text_padding_left_h)
+            if font_name_h.getmask(color_name_text_h).size[0] > available_text_width_h:
+                font_name_h = get_font(40, bold=True)
+                if font_name_h.getmask(color_name_text_h).size[0] > available_text_width_h:
+                    font_name_h = get_font(36, bold=True)
+            color_name_height_h = font_name_h.getmask(color_name_text_h).size[1]
+            current_y_h -= color_name_height_h
+            draw.text((text_padding_left_h, current_y_h), color_name_text_h, font=font_name_h, fill=text_color_on_swatch)
+            
+            id_text_h = "#00000001 F"
+            id_height_h = font_id_h.getmask(id_text_h).size[1]
+            current_y_h -= (id_height_h + 12) 
+            draw.text((text_padding_left_h, current_y_h), id_text_h, font=font_id_h, fill=text_color_on_swatch)
+            
+            brand_text_h = "shadefreude"
+            brand_height_h = font_brand_h.getmask(brand_text_h).size[1]
+            current_y_h -= (brand_height_h + 12) 
+            draw.text((text_padding_left_h, current_y_h), brand_text_h, font=font_brand_h, fill=text_color_on_swatch)
+            # --- End Text for Top Panel ---
 
-        # Text positioning - Start from bottom and work our way up
-        text_padding_left = 50  # Left padding
-        bottom_padding = 50     # Bottom padding
+            # 2. Bottom Image Panel
+            image_panel_width = card_width # Full width of the card (600px)
+            image_panel_height = card_height - top_panel_height # Remaining height (1000 - 450 = 550px)
+            
+            if image_panel_height <=0: 
+                image_panel_height = int(card_height * 0.5) 
+                image_panel_y_start = card_height - image_panel_height
 
-        # Calculate starting Y position from bottom
-        # Start with color codes (smallest text at the bottom)
-        line_height_codes = (font_color_codes_value.getbbox("ABC")[3] - font_color_codes_value.getbbox("ABC")[1]) + 10
-        
-        # Calculate position for color codes section (at the bottom)
-        label_x = text_padding_left
-        value_x = text_padding_left + 70
-        
-        # Calculate starting y-position from bottom for RGB (last line)
-        current_y = card_height - bottom_padding - line_height_codes
-        
-        # Draw RGB (last line)
-        draw.text((label_x, current_y), "RGB", font=font_color_codes_label, fill=text_color)
-        draw.text((value_x, current_y), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_color_codes_value, fill=text_color)
-        
-        # Move up for CMYK
-        current_y -= line_height_codes
-        draw.text((label_x, current_y), "CMYK", font=font_color_codes_label, fill=text_color)
-        draw.text((value_x, current_y), f"{cmyk_color[0]} {cmyk_color[1]} {cmyk_color[2]} {cmyk_color[3]}", font=font_color_codes_value, fill=text_color)
-        
-        # Move up for HEX
-        current_y -= line_height_codes
-        draw.text((label_x, current_y), "HEX", font=font_color_codes_label, fill=text_color)
-        draw.text((value_x, current_y), hex_color_input.upper(), font=font_color_codes_value, fill=text_color)
-        
-        # Add empty space before color codes
-        current_y -= 40
-        
-        # Draw color name (bold)
-        color_name_height = font_main_name.getbbox(color_name.upper())[3] - font_main_name.getbbox(color_name.upper())[1]
-        current_y -= color_name_height
-        draw.text((text_padding_left, current_y), color_name.upper(), font=font_main_name, fill=text_color)
-        
-        # Draw sequential ID above color name
-        id_height = font_id.getbbox("#00000001 F")[3] - font_id.getbbox("#00000001 F")[1]
-        current_y -= id_height + 15
-        draw.text((text_padding_left, current_y), "#00000001 F", font=font_id, fill=text_color)
-        
-        # Draw shadefreude title at the top of the text block
-        brand_height = font_brand.getbbox("shadefreude")[3] - font_brand.getbbox("shadefreude")[1]
-        current_y -= brand_height + 15
-        draw.text((text_padding_left, current_y), "shadefreude", font=font_brand, fill=text_color)
+            user_image_fitted = ImageOps.fit(
+                user_image_pil, 
+                (image_panel_width, image_panel_height),
+                Image.Resampling.LANCZOS
+            )
+            # Paste image into the bottom panel
+            canvas.paste(user_image_fitted, (0, image_panel_y_start), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
 
-        # Prepare and paste the right image panel
-        print("Preparing and fitting user image for right panel...")
-        image_panel_target_width = card_width - image_panel_x_start
-        image_panel_target_height = card_height
+        else:  # VERTICAL CARD (1000x600)
+            # Left panel: color swatch with all text 
+            # Right panel: full image
+            color_swatch_width = int(card_width * 0.45)
+            image_panel_x_start = color_swatch_width
 
-        user_image_fitted = ImageOps.fit(user_image_pil, 
-                                         (image_panel_target_width, image_panel_target_height), 
-                                         Image.Resampling.LANCZOS)
+            # Draw the color swatch on the left (uses the selected rgb_color)
+            draw.rectangle([(0, 0), (color_swatch_width, card_height)], fill=rgb_color)
+
+            text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
+
+            font_brand_v = get_font(80, bold=False)
+            font_id_v = get_font(36, bold=False)
+            font_name_v = get_font(52, bold=True)
+            font_metrics_label_v = get_font(20, bold=True)
+            font_metrics_value_v = get_font(20, bold=False)
+            
+            text_padding_left_v = 50
+            bottom_padding_v = 50
+            line_height_metrics_v = font_metrics_value_v.getmask("A").size[1] + 10
+            
+            label_x_v = text_padding_left_v
+            value_x_v = text_padding_left_v + 70
+            
+            current_y_v = card_height - bottom_padding_v - font_metrics_value_v.getmask("A").size[1]
+            
+            draw.text((label_x_v, current_y_v), "RGB", font=font_metrics_label_v, fill=text_color_on_swatch)
+            draw.text((value_x_v, current_y_v), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value_v, fill=text_color_on_swatch)
+            current_y_v -= line_height_metrics_v
+            
+            draw.text((label_x_v, current_y_v), "CMYK", font=font_metrics_label_v, fill=text_color_on_swatch)
+            draw.text((value_x_v, current_y_v), f"{cmyk_color[0]} {cmyk_color[1]} {cmyk_color[2]} {cmyk_color[3]}", font=font_metrics_value_v, fill=text_color_on_swatch)
+            current_y_v -= line_height_metrics_v
+            
+            draw.text((label_x_v, current_y_v), "HEX", font=font_metrics_label_v, fill=text_color_on_swatch)
+            draw.text((value_x_v, current_y_v), hex_color_input.upper(), font=font_metrics_value_v, fill=text_color_on_swatch)
+            
+            current_y_v -= 40
+            
+            color_name_text_v = color_name.upper()
+            color_name_height_v = font_name_v.getmask(color_name_text_v).size[1]
+            current_y_v -= color_name_height_v
+            draw.text((text_padding_left_v, current_y_v), color_name_text_v, font=font_name_v, fill=text_color_on_swatch)
+            
+            id_text_v = "#00000001 F"
+            id_height_v = font_id_v.getmask(id_text_v).size[1]
+            current_y_v -= (id_height_v + 15)
+            draw.text((text_padding_left_v, current_y_v), id_text_v, font=font_id_v, fill=text_color_on_swatch)
+            
+            brand_text_v = "shadefreude"
+            brand_height_v = font_brand_v.getmask(brand_text_v).size[1]
+            current_y_v -= (brand_height_v + 15)
+            draw.text((text_padding_left_v, current_y_v), brand_text_v, font=font_brand_v, fill=text_color_on_swatch)
+
+            # Image panel for vertical
+            image_panel_width_v = card_width - color_swatch_width
+            image_panel_height_v = card_height
+            
+            user_image_fitted_v = ImageOps.fit(
+                user_image_pil,
+                (image_panel_width_v, image_panel_height_v),
+                Image.Resampling.LANCZOS
+            )
+            canvas.paste(user_image_fitted_v, (image_panel_x_start, 0), user_image_fitted_v if user_image_fitted_v.mode == 'RGBA' else None)
         
-        # Paste user image
-        canvas.paste(user_image_fitted, (image_panel_x_start, 0))
         print("User image pasted onto canvas.")
 
         # Apply rounded corners to entire card
