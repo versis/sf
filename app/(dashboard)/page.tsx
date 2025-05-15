@@ -451,35 +451,33 @@ export default function HomePage() {
         )}
 
         {/* Results Section: Display one image at a time with a toggle button */}
-        {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
+        {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
           <section ref={resultRef} className="w-full pt-4">
             {/* Orientation toggle buttons */}
-            {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
-              <div className="flex justify-center gap-6 mb-6">
-                <button 
-                  onClick={() => setCurrentDisplayOrientation('vertical')}
-                  className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
-                  title="Vertical Orientation"
-                  disabled={isGenerating}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
-                  </svg>
-                  <span className="text-xs mt-1">Vertical</span>
-                </button>
-                <button
-                  onClick={() => setCurrentDisplayOrientation('horizontal')}
-                  className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
-                  title="Horizontal Orientation"
-                  disabled={isGenerating}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
-                  </svg>
-                  <span className="text-xs mt-1">Horizontal</span>
-                </button>
-              </div>
-            )}
+            <div className="flex justify-center gap-6 mb-6">
+              <button 
+                onClick={() => setCurrentDisplayOrientation('vertical')}
+                className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                title="Vertical Orientation"
+                disabled={isGenerating}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
+                </svg>
+                <span className="text-xs mt-1">Vertical</span>
+              </button>
+              <button
+                onClick={() => setCurrentDisplayOrientation('horizontal')}
+                className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                title="Horizontal Orientation"
+                disabled={isGenerating}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
+                </svg>
+                <span className="text-xs mt-1">Horizontal</span>
+              </button>
+            </div>
             <div className="flex justify-center">
               {(currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) && (
                 <img 
@@ -498,16 +496,14 @@ export default function HomePage() {
             </div>
             <div className="flex flex-wrap justify-center gap-3 mt-8">
               {/* Download button for the currently displayed image */}
-              {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
-                <button
-                    onClick={() => handleDownloadImage(currentDisplayOrientation)}
-                    disabled={!(currentDisplayOrientation === 'vertical' ? generatedVerticalImageUrl : generatedHorizontalImageUrl)}
-                    className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Download {currentDisplayOrientation === 'vertical' ? 'Vertical' : 'Horizontal'} Card
-                </button>
-              )}
+              <button
+                  onClick={() => handleDownloadImage(currentDisplayOrientation)}
+                  disabled={!(currentDisplayOrientation === 'vertical' ? generatedVerticalImageUrl : generatedHorizontalImageUrl)}
+                  className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
+              >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download {currentDisplayOrientation === 'vertical' ? 'Vertical' : 'Horizontal'} Card
+              </button>
             </div>
           </section>
         )}
