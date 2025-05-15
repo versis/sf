@@ -174,7 +174,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         if user_image_pil.width > 4000 or user_image_pil.height > 4000:
             print(f"Image too large: {user_image_pil.width}x{user_image_pil.height}")
             # Resize to manageable dimensions
-            max_dim = 2000
+            max_dim = 4000
             ratio = min(max_dim / user_image_pil.width, max_dim / user_image_pil.height)
             new_width = int(user_image_pil.width * ratio)
             new_height = int(user_image_pil.height * ratio)
@@ -183,8 +183,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
 
         # Card dimensions and style
         # Define base dimensions
-        BASE_CARD_WIDTH = 1000
-        BASE_CARD_HEIGHT = 600
+        BASE_CARD_WIDTH = 1500
+        BASE_CARD_HEIGHT = 900
         
         # IMPORTANT: Set correct dimensions based on orientation
         if orientation.lower() == "horizontal":
