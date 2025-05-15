@@ -2,7 +2,6 @@
 
 import ImageUpload from '@/components/ImageUpload';
 import ColorTools from '@/components/ColorTools';
-import CardPreview from '@/components/CardPreview';
 import WizardStep from '@/components/WizardStep';
 import { useState } from 'react';
 
@@ -20,9 +19,8 @@ export default function HomePage() {
   // State for wizard
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
   const [isUploadStepCompleted, setIsUploadStepCompleted] = useState(false);
-  const [isCropStepCompleted, setIsCropStepCompleted] = useState(false); // Renamed from isImageStepCompleted
+  const [isCropStepCompleted, setIsCropStepCompleted] = useState(false);
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
-  const [showLivePreview, setShowLivePreview] = useState<boolean>(false); // Initialize to false
 
   const handleImageSelectedForUpload = (file: File) => {
     const reader = new FileReader();
@@ -33,8 +31,7 @@ export default function HomePage() {
       setGeneratedImageUrl(null);
       setGenerationError(null);
       setIsUploadStepCompleted(true);
-      setIsCropStepCompleted(false); // Reset crop completion
-      setShowLivePreview(false); // Hide preview
+      setIsCropStepCompleted(false);
       setIsColorStepCompleted(false);
       setCurrentWizardStep('crop');
       console.log('New original image selected for upload:', file.name);
@@ -56,16 +53,13 @@ export default function HomePage() {
     setGenerationError(null);
     if (dataUrl) {
       setIsCropStepCompleted(true);
-      setShowLivePreview(true); // Show preview on successful crop
       setCurrentWizardStep('color');
     } else {
       setIsCropStepCompleted(false);
-      setShowLivePreview(false); // Hide preview if crop is removed/fails
     }
   };
 
   const handleHexColorChange = (hex: string) => {
-    if(isCropStepCompleted) setShowLivePreview(true); // Show preview when options change, if crop is done
     setSelectedHexColor(hex);
     setGeneratedImageUrl(null);
   };
@@ -100,14 +94,23 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to generate image. Server returned an error.' }));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
+        const errorText = await response.text(); // Get raw error text
+        let errorDetail = `Server error: ${response.status} ${response.statusText}`;
+        try {
+          // Try to parse as JSON, as some errors might still be structured
+          const errorData = JSON.parse(errorText);
+          errorDetail = errorData.error || errorData.detail || errorText; // Use specific error fields if available
+        } catch (e) {
+          // If not JSON, use the raw text, truncating if too long for display
+          errorDetail = errorText.length > 150 ? errorText.substring(0, 147) + "..." : errorText;
+        }
+        console.error('Server error response:', errorText); // Log full server error text
+        throw new Error(errorDetail);
       }
 
       const imageBlob = await response.blob();
       const imageUrl = URL.createObjectURL(imageBlob);
       setGeneratedImageUrl(imageUrl);
-      setShowLivePreview(false); // Hide preview only on successful generation
 
     } catch (error) {
       console.error('Error generating image:', error);
@@ -123,8 +126,6 @@ export default function HomePage() {
     else if (step === 'color' && isUploadStepCompleted && isCropStepCompleted) setCurrentWizardStep('color');
     else if (step === 'generate' && isUploadStepCompleted && isCropStepCompleted && isColorStepCompleted) setCurrentWizardStep('generate');
   };
-
-  const shouldShowPreviewColumn = isCropStepCompleted && showLivePreview;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
@@ -145,7 +146,7 @@ export default function HomePage() {
           </p>
         </header>
 
-        <div className={`grid grid-cols-1 ${shouldShowPreviewColumn ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-8 md:gap-12`}>
+        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
               title="Select Image" 
@@ -185,7 +186,7 @@ export default function HomePage() {
             </WizardStep>
 
             <WizardStep 
-              title="Pick Background Color" 
+              title="Pick Color"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
@@ -229,7 +230,7 @@ export default function HomePage() {
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
                     className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
                   >
-                    {isGenerating ? 'Generating...' : 'Generate shadenfreude Card'}
+                    {isGenerating ? 'Generating...' : 'Generate Card'}
                   </button>
                   {generationError && (
                     <p className="text-sm text-destructive mt-2">Error: {generationError}</p>
@@ -240,20 +241,11 @@ export default function HomePage() {
               )}
             </WizardStep>
           </section>
-
-          {shouldShowPreviewColumn && (
-            <aside className="w-full space-y-6 md:order-2">
-              <CardPreview 
-                imageDataUrl={croppedImageDataUrl} 
-                backgroundColor={selectedHexColor}
-              />
-            </aside>
-          )}
         </div>
 
         {generatedImageUrl && (
           <section className="w-full mt-12 pt-6 border-t-2 border-foreground">
-            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique shadenfreude card</h3>
+            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique card:</h3>
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 

@@ -29,7 +29,8 @@ const ColorTools: React.FC<ColorToolsProps> = ({
 }) => {
   const [hexColor, setHexColor] = useState<string>(initialHex);
   const [hexError, setHexError] = useState<string>('');
-  const imageCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imageCanvasRef = useRef<HTMLCanvasElement | null>(null); // This will be the visible 42/58 preview
+  const sourceImageCanvasRef = useRef<HTMLCanvasElement | null>(null); // Hidden canvas for original image data
 
   // Update internal hexColor state if initialHex prop changes from parent (e.g., after color picking)
   useEffect(() => {
@@ -37,31 +38,57 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   }, [initialHex]);
 
   useEffect(() => {
-    if (croppedImageDataUrl && imageCanvasRef.current) {
-      const canvas = imageCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
+    // Update the visible preview canvas (imageCanvasRef)
+    const previewCanvas = imageCanvasRef.current;
+    const sourceCanvas = sourceImageCanvasRef.current; // For original image data
+
+    if (previewCanvas) {
+      const prevCtx = previewCanvas.getContext('2d');
+      if (prevCtx) {
+        // Set fixed dimensions for the preview canvas (matching card aspect ratio)
+        previewCanvas.width = 500; // Example width, aspect ratio 1000/600 = 500/300
+        previewCanvas.height = 300;
+
+        const swatchWidth = previewCanvas.width * 0.42;
+        const imagePanelXStart = swatchWidth;
+        const imagePanelWidth = previewCanvas.width - swatchWidth;
+
+        // Draw color swatch
+        prevCtx.fillStyle = hexColor;
+        prevCtx.fillRect(0, 0, swatchWidth, previewCanvas.height);
+
         const img = new Image();
         img.onload = () => {
-          // Set canvas dimensions to image dimensions to avoid scaling issues with pixel picking
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.drawImage(img, 0, 0);
+          // Draw image on the right panel of the preview canvas
+          prevCtx.drawImage(img, imagePanelXStart, 0, imagePanelWidth, previewCanvas.height);
+
+          // Also draw the original image to the hidden source canvas for accurate color picking
+          if (sourceCanvas) {
+            const sourceCtx = sourceCanvas.getContext('2d');
+            if (sourceCtx) {
+              sourceCanvas.width = img.naturalWidth;
+              sourceCanvas.height = img.naturalHeight;
+              sourceCtx.drawImage(img, 0, 0);
+            }
+          }
         };
         img.onerror = () => {
           console.error('Failed to load image for color picker.');
         };
-        img.src = croppedImageDataUrl;
-      }
-    } else if (imageCanvasRef.current) {
-      // Clear canvas if no image
-      const canvas = imageCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if(ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (croppedImageDataUrl) {
+          img.src = croppedImageDataUrl;
+        } else {
+          // Clear preview if no image
+          prevCtx.clearRect(imagePanelXStart, 0, imagePanelWidth, previewCanvas.height);
+          if (sourceCanvas) { // Clear source canvas too
+            const sourceCtx = sourceCanvas.getContext('2d');
+            if (sourceCtx) sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+          }
+        }
       }
     }
-  }, [croppedImageDataUrl]);
+  }, [croppedImageDataUrl, hexColor]); // Redraw preview if hexColor (swatch) or image changes
 
   const handleHexInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     let newHex = event.target.value.toUpperCase();
@@ -83,47 +110,69 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   };
 
   const handleCanvasClick = (event: MouseEvent<HTMLCanvasElement>) => {
-    if (!imageCanvasRef.current) return;
-    const canvas = imageCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+    if (!imageCanvasRef.current || !sourceImageCanvasRef.current || !croppedImageDataUrl) return;
 
-    // Calculate click coordinates relative to the canvas element
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const previewCanvas = imageCanvasRef.current;
+    const sourceCanvas = sourceImageCanvasRef.current;
+    const rect = previewCanvas.getBoundingClientRect(); // Dimensions of the displayed canvas
 
-    // Adjust coordinates for canvas scaling (due to CSS or browser zoom)
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const canvasX = x * scaleX;
-    const canvasY = y * scaleY;
+    // Click coordinates relative to the displayed canvas element
+    const displayedClickX = event.clientX - rect.left;
+    const displayedClickY = event.clientY - rect.top;
 
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // Ensure coordinates are within canvas bounds before getting image data
-      const finalX = Math.min(Math.max(canvasX, 0), canvas.width - 1);
-      const finalY = Math.min(Math.max(canvasY, 0), canvas.height - 1);
-      const pixel = ctx.getImageData(finalX, finalY, 1, 1).data;
-      const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
-      setHexColor(hex); // Update local state for immediate feedback in input
-      onHexChange(hex); // Propagate to parent
-      setHexError(''); // Clear any previous hex error
+    // Scale click coordinates to the canvas's internal drawing dimensions (500x300)
+    const displayToCanvasScaleX = previewCanvas.width / rect.width;
+    const displayToCanvasScaleY = previewCanvas.height / rect.height;
+    const canvasClickX = displayedClickX * displayToCanvasScaleX;
+    const canvasClickY = displayedClickY * displayToCanvasScaleY;
+
+    // Define the image panel dimensions within the internal canvas drawing
+    const imagePanelXStartDrawn = previewCanvas.width * 0.42;
+    const imagePanelWidthDrawn = previewCanvas.width * 0.58;
+    const imagePanelHeightDrawn = previewCanvas.height;
+
+    // Check if the (scaled) click is within the image panel on the internal canvas
+    if (canvasClickX >= imagePanelXStartDrawn && canvasClickX < previewCanvas.width) {
+      // Calculate click coordinates relative to the image panel on the internal canvas
+      const localXDrawn = canvasClickX - imagePanelXStartDrawn;
+      const localYDrawn = canvasClickY;
+
+      // Scale these coordinates to the original source image dimensions
+      const sourceImgWidth = sourceCanvas.width;
+      const sourceImgHeight = sourceCanvas.height;
+
+      const pickX = Math.floor((localXDrawn / imagePanelWidthDrawn) * sourceImgWidth);
+      const pickY = Math.floor((localYDrawn / imagePanelHeightDrawn) * sourceImgHeight);
+
+      const sourceCtx = sourceCanvas.getContext('2d');
+      if (sourceCtx) {
+        const finalPickX = Math.min(Math.max(pickX, 0), sourceImgWidth - 1);
+        const finalPickY = Math.min(Math.max(pickY, 0), sourceImgHeight - 1);
+        const pixel = sourceCtx.getImageData(finalPickX, finalPickY, 1, 1).data;
+        const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
+        setHexColor(hex); 
+        onHexChange(hex); 
+        setHexError(''); 
+      }
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {croppedImageDataUrl && (
-        <div className="space-y-2">
+        <>
           <p className="text-sm font-medium text-foreground">
-            Pick color from image (click below):
+            Preview & Pick (click image on right):
           </p>
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="cursor-crosshair max-w-full h-auto"
-            style={{ maxWidth: '100%', height: 'auto'}}
+            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto" 
+            style={{ aspectRatio: '1000 / 600' }} 
           />
-        </div>
+          {/* Hidden canvas for source image data */}
+          <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />
+        </>
       )}
     </div>
   );

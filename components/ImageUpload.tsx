@@ -126,24 +126,26 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       )}
 
       {showCropper && previewUrl && (
-        <div className="space-y-4">
-          <ReactCrop
-            crop={crop}
-            onChange={(_, percentCrop) => setCrop(percentCrop)}
-            onComplete={(c) => setCompletedCrop(c)}
-            aspect={ASPECT_RATIO}
-            minWidth={MIN_DIMENSION}
-            minHeight={MIN_DIMENSION}
-          >
-            <img
-              ref={imgRef}
-              src={previewUrl}
-              alt="Selected preview for cropping"
-              onLoad={onImageLoad}
-              style={{ maxHeight: '70vh', display: previewUrl ? 'block' : 'none' }}
-              className="border border-foreground"
-            />
-          </ReactCrop>
+        <div className="space-y-4 flex flex-col items-center">
+          <div className="w-full max-w-[38.4rem]">
+            <ReactCrop
+              crop={crop}
+              onChange={(_, percentCrop) => setCrop(percentCrop)}
+              onComplete={(c) => setCompletedCrop(c)}
+              aspect={ASPECT_RATIO}
+              minWidth={MIN_DIMENSION}
+              minHeight={MIN_DIMENSION}
+            >
+              <img
+                ref={imgRef}
+                src={previewUrl}
+                alt="Selected preview for cropping"
+                onLoad={onImageLoad}
+                style={{ maxHeight: '65vh', display: previewUrl ? 'block' : 'none' }}
+                className="border border-foreground block mx-auto"
+              />
+            </ReactCrop>
+          </div>
           {completedCrop && imgRef.current && (
             <div className="mt-4 flex justify-center">
               <button

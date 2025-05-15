@@ -126,49 +126,65 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
     print(f"Input HEX: {hex_color_input}")
     print(f"Converted RGB: {rgb_color}")
     print(f"Converted CMYK: {cmyk_color}")
+    print(f"Color Name: {color_name}")
 
     try:
+        print("Attempting to decode base64 image data...")
         if ';base64,' not in cropped_image_data_url:
+            print("Error: Invalid image data URL format - missing base64 delimiter.")
             raise HTTPException(status_code=400, detail="Invalid image data URL format")
         header, encoded = cropped_image_data_url.split(';base64,', 1)
         image_data = base64.b64decode(encoded)
         user_image_pil = Image.open(io.BytesIO(image_data)).convert("RGBA")
+        print(f"User image decoded successfully. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}")
 
+        # Card dimensions and style
         card_width = 1000
         card_height = 600
-        bg_color = (240, 240, 240)
-        
-        color_swatch_width = int(card_width * 0.42)
+        # off-white background (will be masked by swatch and image)
+        bg_color = (250, 250, 250)
+        # Left swatch covers 45%, right image 55%
+        color_swatch_width = int(card_width * 0.45)
         image_panel_x_start = color_swatch_width
 
-        outer_padding = 40
+        # Padding and text layout
+        outer_padding = 50
         text_padding_left = outer_padding
-        text_padding_top = outer_padding
+        current_y = outer_padding
         
-        canvas = Image.new('RGB', (card_width, card_height), bg_color)
+        # Create canvas with alpha for rounding
+        canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
         draw = ImageDraw.Draw(canvas)
 
+        # Draw the color swatch on the left
         draw.rectangle([(0, 0), (color_swatch_width, card_height)], fill=rgb_color)
 
+        # Determine contrasting text color for swatch
         text_brightness_threshold = 128 * 3
         text_color = (20, 20, 20) if sum(rgb_color) > text_brightness_threshold else (245, 245, 245)
 
-        font_brand = get_font(60, bold=True)
-        font_id = get_font(30, bold=False)
-        font_main_name = get_font(42, bold=True)
-        font_color_codes_label = get_font(18, bold=True)
-        font_color_codes_value = get_font(18)
+        # Fonts updated to match sample proportions
+        font_brand = get_font(80, bold=True)
+        font_id = get_font(36, bold=False)
+        font_main_name = get_font(52, bold=True)
+        font_color_codes_label = get_font(20, bold=True)
+        font_color_codes_value = get_font(20)
 
-        current_y = text_padding_top + 30
+        # Draw brand name
+        print("Drawing text elements on swatch...")
         draw.text((text_padding_left, current_y), "SHADENFREUDE", font=font_brand, fill=text_color)
-        current_y += 90
-        
-        sequential_id = "#000000001" 
+        # Move down by brand height + spacing
+        brand_height = font_brand.getbbox("SHADENFREUDE")[3] - font_brand.getbbox("SHADENFREUDE")[1]
+        current_y += brand_height + 20
+        # Draw sequential ID
+        sequential_id = "#000000001"
         draw.text((text_padding_left, current_y), sequential_id, font=font_id, fill=text_color)
-        current_y += 55
+        id_height = font_id.getbbox(sequential_id)[3] - font_id.getbbox(sequential_id)[1]
+        current_y += id_height + 20
 
+        # Draw color name (split into lines if needed)
         max_name_width = color_swatch_width - (text_padding_left * 2)
-        lines = []
+        lines: list[str] = []
         if font_main_name.getlength(color_name.upper()) > max_name_width:
             words = color_name.upper().split()
             current_line = ''
@@ -184,12 +200,15 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         
         for line in lines:
             draw.text((text_padding_left, current_y), line, font=font_main_name, fill=text_color)
-            current_y += font_main_name.getbbox(line)[3] - font_main_name.getbbox(line)[1] + 10
-        current_y += 60
-        
+            line_height = font_main_name.getbbox(line)[3] - font_main_name.getbbox(line)[1]
+            current_y += line_height + 15
+        # Extra spacing after name block
+        current_y += 30
+
+        # Color code labels
         label_x = text_padding_left
-        value_x = text_padding_left + 90
-        line_height_codes = 32
+        value_x = text_padding_left + 150
+        line_height_codes = (font_color_codes_value.getbbox("ABC")[3] - font_color_codes_value.getbbox("ABC")[1]) + 10
 
         draw.text((label_x, current_y), "HEX", font=font_color_codes_label, fill=text_color)
         draw.text((value_x, current_y), hex_color_input.upper(), font=font_color_codes_value, fill=text_color)
@@ -202,6 +221,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((label_x, current_y), "RGB", font=font_color_codes_label, fill=text_color)
         draw.text((value_x, current_y), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_color_codes_value, fill=text_color)
 
+        # Prepare and paste the right image panel
+        print("Preparing and fitting user image for right panel...")
         image_panel_target_width = card_width - image_panel_x_start
         image_panel_target_height = card_height
 
@@ -209,11 +230,24 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
                                          (image_panel_target_width, image_panel_target_height), 
                                          Image.Resampling.LANCZOS)
         
+        # Paste user image
         canvas.paste(user_image_fitted, (image_panel_x_start, 0))
+        print("User image pasted onto canvas.")
 
+        # Apply rounded corners to entire card
+        print("Applying rounded corners...")
+        radius = 40
+        mask = Image.new('L', (card_width, card_height), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rounded_rectangle([(0, 0), (card_width, card_height)], radius=radius, fill=255)
+        # Add alpha channel and apply mask
+        canvas.putalpha(mask)
+
+        # Save as PNG with transparency
         img_byte_arr = io.BytesIO()
         canvas.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
+        print("Canvas saved to byte array as PNG.")
         
         print("Sending composed Shadenfreude card image.")
         return StreamingResponse(img_byte_arr, media_type='image/png')
