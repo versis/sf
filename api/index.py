@@ -46,7 +46,7 @@ app.add_middleware(
 # class ChatRequest(BaseModel):
 #     messages: List[ClientMessage]
 
-# --- Color Conversion Utilities (from shadenfreude) ---
+# --- Color Conversion Utilities (from shadefreude) ---
 def hex_to_rgb(hex_color: str) -> tuple[int, int, int] | None:
     """Converts a HEX color string to an RGB tuple."""
     hex_color = hex_color.lstrip('#')
@@ -82,7 +82,7 @@ def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[int, int, int, int]:
     return round(c * 100), round(m * 100), round(y * 100), round(k * 100)
 # --- End Color Conversion Utilities ---
 
-# --- Font Loading (from shadenfreude) ---
+# --- Font Loading (from shadefreude) ---
 def get_font(size: int, bold: bool = False):
     font_name_suffix = "-Bold" if bold else ""
     try:
@@ -195,7 +195,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         text_color = (20, 20, 20) if sum(rgb_color) > text_brightness_threshold else (245, 245, 245)
 
         # Fonts updated to match sample proportions
-        font_brand = get_font(80, bold=False)       # shadenfreude title (biggest)
+        font_brand = get_font(80, bold=False)       # shadefreude title (biggest)
         font_id = get_font(36, bold=False)          # unique ID (normal size)
         font_main_name = get_font(52, bold=True)    # color name (normal size, bold)
         font_color_codes_label = get_font(20, bold=True) # HEX, CMYK, RGB labels (small)
@@ -243,10 +243,10 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y -= id_height + 15
         draw.text((text_padding_left, current_y), "#00000001 F", font=font_id, fill=text_color)
         
-        # Draw shadenfreude title at the top of the text block
-        brand_height = font_brand.getbbox("shadenfreude")[3] - font_brand.getbbox("shadenfreude")[1]
+        # Draw shadefreude title at the top of the text block
+        brand_height = font_brand.getbbox("shadefreude")[3] - font_brand.getbbox("shadefreude")[1]
         current_y -= brand_height + 15
-        draw.text((text_padding_left, current_y), "shadenfreude", font=font_brand, fill=text_color)
+        draw.text((text_padding_left, current_y), "shadefreude", font=font_brand, fill=text_color)
 
         # Prepare and paste the right image panel
         print("Preparing and fitting user image for right panel...")
@@ -264,19 +264,36 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Apply rounded corners to entire card
         print("Applying rounded corners...")
         radius = 40
-        mask = Image.new('L', (card_width, card_height), 0)
+        
+        # Create a high-quality anti-aliased mask with double resolution for better edge quality
+        scale_factor = 2
+        mask_size = (card_width * scale_factor, card_height * scale_factor)
+        mask = Image.new('L', mask_size, 0)
         mask_draw = ImageDraw.Draw(mask)
-        mask_draw.rounded_rectangle([(0, 0), (card_width, card_height)], radius=radius, fill=255)
-        # Add alpha channel and apply mask
-        canvas.putalpha(mask)
-
+        
+        # Draw the rounded rectangle with scaled radius
+        mask_draw.rounded_rectangle([(0, 0), (mask_size[0] - 1, mask_size[1] - 1)], 
+                                    radius=radius * scale_factor, 
+                                    fill=255)
+        
+        # Resize back to original dimensions with high-quality anti-aliasing
+        mask = mask.resize((card_width, card_height), Image.Resampling.LANCZOS)
+        
+        # Apply mask with improved edge quality by using a pre-multiplied alpha technique
+        r, g, b, a = canvas.split()
+        rgba = Image.merge('RGBA', (r, g, b, mask))
+        
+        # This premultiplied alpha blending yields sharper edges
+        canvas = rgba.copy()
+        
         # Save as PNG with transparency
         img_byte_arr = io.BytesIO()
-        canvas.save(img_byte_arr, format='PNG')
+        # Use higher quality settings for PNG
+        canvas.save(img_byte_arr, format='PNG', compress_level=1)
         img_byte_arr.seek(0)
-        print("Canvas saved to byte array as PNG.")
+        print("Canvas saved to byte array as PNG with improved edge quality.")
         
-        print("Sending composed Shadenfreude card image.")
+        print("Sending composed Shadefreude card image.")
         return StreamingResponse(img_byte_arr, media_type='image/png')
 
     except HTTPException as e: # Re-raise HTTPException

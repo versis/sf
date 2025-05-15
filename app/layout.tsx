@@ -6,8 +6,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
-  title: "shadenfreude card (part of tinker.institute)",
-  description: "Create your own Pantone-like color cards with shadenfreude.",
+  title: "shadefreude card (part of tinker.institute)",
+  description: "Create your own Pantone-like color cards with shadefreude.",
   icons: [
     { rel: "icon", url: "/sf-icon.png" },
     { rel: "apple-touch-icon", url: "/sf-icon.png" },
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     images: [
       {
-        url: "/og?title=Shadenfreude",
+        url: "/og?title=Shadefreude",
       },
     ],
   },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: [
       {
-        url: "/og?title=Shadenfreude",
+        url: "/og?title=Shadefreude",
       },
     ],
   },

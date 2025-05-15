@@ -3,7 +3,8 @@
 import ImageUpload from '@/components/ImageUpload';
 import ColorTools from '@/components/ColorTools';
 import WizardStep from '@/components/WizardStep';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'generate';
@@ -16,12 +17,22 @@ export default function HomePage() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [colorName, setColorName] = useState<string>('DARK EMBER');
+  const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // State for wizard
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
   const [isUploadStepCompleted, setIsUploadStepCompleted] = useState(false);
   const [isCropStepCompleted, setIsCropStepCompleted] = useState(false);
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
+  
+  // Scroll to the result when the card is generated
+  useEffect(() => {
+    if (generatedImageUrl && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [generatedImageUrl]);
 
   const handleImageSelectedForUpload = (file: File) => {
     const reader = new FileReader();
@@ -99,12 +110,24 @@ export default function HomePage() {
       setGenerationError('Please ensure an image is cropped and a HEX color is set.');
       return;
     }
+    
+    // Scroll to top of the page and hide wizard steps
+    if (headerRef.current) {
+      headerRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+    
     setIsGenerating(true);
     setGenerationError(null);
     setGeneratedImageUrl(null);
-
+    setGenerationProgress(10); // Start progress at 10%
+    
     try {
+      toast.info('Creating your shadefreude card...', {
+        duration: 5000,
+      });
+      
       // Compress the image before sending
+      setGenerationProgress(30); // Update progress
       let compressedImageDataUrl = croppedImageDataUrl;
       try {
         compressedImageDataUrl = await compressImage(croppedImageDataUrl, 0.7);
@@ -113,6 +136,7 @@ export default function HomePage() {
         console.warn('Image compression failed, using original:', compressError);
       }
 
+      setGenerationProgress(50); // Update progress
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
@@ -140,13 +164,17 @@ export default function HomePage() {
         throw new Error(errorDetail);
       }
 
+      setGenerationProgress(80); // Update progress
       const imageBlob = await response.blob();
       const imageUrl = URL.createObjectURL(imageBlob);
       setGeneratedImageUrl(imageUrl);
+      setGenerationProgress(100); // Complete
+      toast.success('Your shadefreude card is ready!');
 
     } catch (error) {
       console.error('Error generating image:', error);
       setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
+      toast.error(`Failed to generate card: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -162,11 +190,11 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
       <div className="w-full max-w-6xl space-y-10">
-        <header className="py-6 border-b-2 border-foreground">
+        <header ref={headerRef} className="py-6 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
             <span className="mr-1 ml-1">
               <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
-              shaden
+              shade
             </span>
             <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
               freude
@@ -178,126 +206,154 @@ export default function HomePage() {
           </p>
         </header>
 
-        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
-          <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
-            <WizardStep 
-              title="Select Image" 
-              stepNumber={1} 
-              isActive={currentWizardStep === 'upload'} 
-              isCompleted={isUploadStepCompleted}
-              isFutureStep={false} // First step is never future
-              onHeaderClick={() => setStep('upload')}
-            >
-              <ImageUpload 
-                onImageSelect={handleImageSelectedForUpload} 
-                onImageCropped={handleImageCropped}
-                showUploader={true}
-                showCropper={false} 
-              />
-            </WizardStep>
+        {isGenerating && (
+          <div className="w-full">
+            <div className="mb-2 flex justify-between text-sm font-medium">
+              <span>Creating your shadefreude card...</span>
+              <span>{generationProgress}%</span>
+            </div>
+            <div className="h-2 w-full bg-muted overflow-hidden rounded">
+              <div 
+                className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
+                style={{ width: `${generationProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
 
-            <WizardStep 
-              title="Crop Image" 
-              stepNumber={2} 
-              isActive={currentWizardStep === 'crop'} 
-              isCompleted={isCropStepCompleted}
-              isFutureStep={!isUploadStepCompleted} // Future if upload isn't done
-              onHeaderClick={() => setStep('crop')}
-            >
-              {isUploadStepCompleted ? (
+        {!isGenerating && !generatedImageUrl && (
+          <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
+            <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
+              <WizardStep 
+                title="Select Image" 
+                stepNumber={1} 
+                isActive={currentWizardStep === 'upload'} 
+                isCompleted={isUploadStepCompleted}
+                isFutureStep={false} // First step is never future
+                onHeaderClick={() => setStep('upload')}
+              >
                 <ImageUpload 
-                  onImageSelect={() => {}} 
-                  onImageCropped={handleImageCropped} 
-                  showUploader={false}
-                  showCropper={true}
-                  initialPreviewUrl={uploadStepPreviewUrl}
+                  onImageSelect={handleImageSelectedForUpload} 
+                  onImageCropped={handleImageCropped}
+                  showUploader={true}
+                  showCropper={false} 
                 />
-              ) : (
-                <p className="text-muted-foreground">Please select an image in Step 1 first.</p>
-              )}
-            </WizardStep>
+              </WizardStep>
 
-            <WizardStep 
-              title="Pick Color"
-              stepNumber={3} 
-              isActive={currentWizardStep === 'color'} 
-              isCompleted={isColorStepCompleted}
-              isFutureStep={!isUploadStepCompleted || !isCropStepCompleted} // Future if upload or crop isn't done
-              onHeaderClick={() => setStep('color')}
-            >
-              {isCropStepCompleted ? (
-                <>
-                  <ColorTools 
-                    initialHex={selectedHexColor}
-                    onHexChange={handleHexColorChange}
-                    croppedImageDataUrl={croppedImageDataUrl}
+              <WizardStep 
+                title="Crop Image" 
+                stepNumber={2} 
+                isActive={currentWizardStep === 'crop'} 
+                isCompleted={isCropStepCompleted}
+                isFutureStep={!isUploadStepCompleted} // Future if upload isn't done
+                onHeaderClick={() => setStep('crop')}
+              >
+                {isUploadStepCompleted ? (
+                  <ImageUpload 
+                    onImageSelect={() => {}} 
+                    onImageCropped={handleImageCropped} 
+                    showUploader={false}
+                    showCropper={true}
+                    initialPreviewUrl={uploadStepPreviewUrl}
                   />
-                  <div className="flex justify-center w-full">
-                    <button 
-                        onClick={completeColorStep}
-                        disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
-                        className="mt-4 px-6 py-3 bg-input text-blue-700 border-blue-700 font-semibold border-2 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
-                    >
-                        Confirm Color
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground">Please complete image cropping in Step 2 first.</p>
-              )}
-            </WizardStep>
-            
-            <WizardStep 
-              title="Generate Card" 
-              stepNumber={4} 
-              isActive={currentWizardStep === 'generate'} 
-              isCompleted={!!generatedImageUrl}
-              isFutureStep={!isUploadStepCompleted || !isCropStepCompleted || !isColorStepCompleted} // Future if any prior step isn't done
-              onHeaderClick={() => setStep('generate')}
-            >
-              {isColorStepCompleted ? (
-                <div className="space-y-4 flex flex-col items-center">
-                  <div className="w-full max-w-[38.4rem] mb-4">
-                    <label htmlFor="colorName" className="block text-sm font-medium text-foreground mb-1">
-                      Color Name:
-                    </label>
-                    <input
-                      type="text"
-                      id="colorName"
-                      value={colorName}
-                      onChange={(e) => setColorName(e.target.value)}
-                      placeholder="e.g., DARK EMBER"
-                      className="w-full p-2 border border-foreground focus:outline-none focus:ring-1 focus:ring-blue-700"
-                    />
-                  </div>
-                  <button
-                    onClick={handleGenerateImageClick}
-                    disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
-                  >
-                    {isGenerating ? 'Generating...' : 'Generate Card'}
-                  </button>
-                  {generationError && (
-                    <p className="text-sm text-destructive mt-2">Error: {generationError}</p>
-                  )}
-                </div>
                 ) : (
-                  <p className="text-muted-foreground">Please complete the previous steps.</p>
-              )}
-            </WizardStep>
-          </section>
-        </div>
+                  <p className="text-muted-foreground">Please select an image in Step 1 first.</p>
+                )}
+              </WizardStep>
+
+              <WizardStep 
+                title="Pick Color"
+                stepNumber={3} 
+                isActive={currentWizardStep === 'color'} 
+                isCompleted={isColorStepCompleted}
+                isFutureStep={!isUploadStepCompleted || !isCropStepCompleted} // Future if upload or crop isn't done
+                onHeaderClick={() => setStep('color')}
+              >
+                {isCropStepCompleted ? (
+                  <>
+                    <ColorTools 
+                      initialHex={selectedHexColor}
+                      onHexChange={handleHexColorChange}
+                      croppedImageDataUrl={croppedImageDataUrl}
+                    />
+                    <div className="flex justify-center w-full">
+                      <button 
+                          onClick={completeColorStep}
+                          disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
+                          className="mt-4 px-6 py-3 bg-input text-blue-700 border-blue-700 font-semibold border-2 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                      >
+                          Confirm Color
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Please complete image cropping in Step 2 first.</p>
+                )}
+              </WizardStep>
+              
+              <WizardStep 
+                title="Generate Card" 
+                stepNumber={4} 
+                isActive={currentWizardStep === 'generate'} 
+                isCompleted={!!generatedImageUrl}
+                isFutureStep={!isUploadStepCompleted || !isCropStepCompleted || !isColorStepCompleted} // Future if any prior step isn't done
+                onHeaderClick={() => setStep('generate')}
+              >
+                {isColorStepCompleted ? (
+                  <div className="space-y-4 flex flex-col items-center">
+                    <div className="w-full max-w-[38.4rem] mb-4">
+                      <label htmlFor="colorName" className="block text-sm font-medium text-foreground mb-1">
+                        Color Name:
+                      </label>
+                      <input
+                        type="text"
+                        id="colorName"
+                        value={colorName}
+                        onChange={(e) => setColorName(e.target.value)}
+                        placeholder="e.g., DARK EMBER"
+                        className="w-full p-2 border border-foreground focus:outline-none focus:ring-1 focus:ring-blue-700"
+                      />
+                    </div>
+                    <button
+                      onClick={handleGenerateImageClick}
+                      disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
+                      className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                    >
+                      {isGenerating ? 'Generating...' : 'Generate Card'}
+                    </button>
+                    {generationError && (
+                      <p className="text-sm text-destructive mt-2">Error: {generationError}</p>
+                    )}
+                  </div>
+                  ) : (
+                    <p className="text-muted-foreground">Please complete the previous steps.</p>
+                )}
+              </WizardStep>
+            </section>
+          </div>
+        )}
 
         {generatedImageUrl && (
-          <section className="w-full mt-12 pt-6 border-t-2 border-foreground">
+          <section ref={resultRef} className="w-full pt-6 border-t-2 border-foreground">
             <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique card:</h3>
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 
-                alt="Generated shadenfreude card" 
+                alt="Generated shadefreude card" 
                 className="max-w-full md:max-w-2xl h-auto rounded-lg"
                 onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
               />
+            </div>
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => {
+                  setGeneratedImageUrl(null);
+                  setCurrentWizardStep('upload');
+                }}
+                className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out"
+              >
+                Create Another Card
+              </button>
             </div>
           </section>
         )}

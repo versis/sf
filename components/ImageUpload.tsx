@@ -3,6 +3,7 @@
 import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
 import ReactCrop, { type Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { toast } from 'sonner';
 
 // Helper function to center the crop
 function centerAspectCrop(
@@ -25,6 +26,65 @@ function centerAspectCrop(
   );
 }
 
+// Adaptively compress an image to target size
+const compressImageToTargetSize = async (
+  dataUrl: string, 
+  targetSizeMB: number = 2, 
+  initialQuality: number = 0.9,
+  maxAttempts: number = 5
+): Promise<string> => {
+  // Function to get size in MB from a data URL
+  const getSizeInMB = (dataUrl: string): number => {
+    // base64 string is ~4/3 the size of the actual bytes
+    return (dataUrl.length * 0.75) / (1024 * 1024);
+  };
+
+  let currentDataUrl = dataUrl;
+  let currentSize = getSizeInMB(currentDataUrl);
+  let attempt = 0;
+  let quality = initialQuality;
+
+  // Log initial size
+  console.log(`Initial image size: ${currentSize.toFixed(2)}MB`);
+
+  // If image is already under target size, return it
+  if (currentSize <= targetSizeMB) {
+    console.log(`Image already under ${targetSizeMB}MB (${currentSize.toFixed(2)}MB), no compression needed`);
+    return currentDataUrl;
+  }
+
+  // Try compressing with increasingly lower quality until we hit target size
+  while (currentSize > targetSizeMB && attempt < maxAttempts) {
+    attempt++;
+    
+    // Lower quality based on how far we are from target and how many attempts we've made
+    const sizeRatio = currentSize / targetSizeMB;
+    quality = Math.max(0.5, quality * (1 / Math.min(sizeRatio, 1.5)));
+    
+    // Apply compression
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = currentDataUrl;
+    });
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    
+    ctx.drawImage(img, 0, 0);
+    currentDataUrl = canvas.toDataURL('image/jpeg', quality);
+    currentSize = getSizeInMB(currentDataUrl);
+    
+    console.log(`Attempt ${attempt}: Compressed to quality ${quality.toFixed(2)}, new size: ${currentSize.toFixed(2)}MB`);
+  }
+
+  return currentDataUrl;
+};
+
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
   onImageCropped: (croppedImageDataUrl: string | null) => void;
@@ -35,6 +95,7 @@ interface ImageUploadProps {
 
 const ASPECT_RATIO = 1;
 const MIN_DIMENSION = 150;
+const TARGET_SIZE_MB = 2; // Target size in MB
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
   onImageSelect, 
@@ -48,6 +109,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
 
   useEffect(() => {
     if (showCropper && initialPreviewUrl && initialPreviewUrl !== previewUrl) {
@@ -70,66 +132,86 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setCrop(currentCrop);
   };
 
-  const getCroppedImg = () => {
+  const getCroppedImg = async () => {
     if (!completedCrop || !imgRef.current || !previewCanvasRef.current) {
       console.error('Crop, image reference, or canvas reference is not available.');
       onImageCropped(null);
       return;
     }
 
-    const image = imgRef.current;
-    const canvas = previewCanvasRef.current;
-    const cropData = completedCrop;
+    try {
+      setIsCompressing(true);
+      
+      const image = imgRef.current;
+      const canvas = previewCanvasRef.current;
+      const cropData = completedCrop;
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
 
-    // Limit the maximum dimensions of the cropped image
-    const maxDimension = 1200; // Reasonable size to prevent huge images
-    const cropWidth = cropData.width * scaleX;
-    const cropHeight = cropData.height * scaleY;
-    
-    // Calculate scaled dimensions if needed
-    let canvasWidth = cropWidth;
-    let canvasHeight = cropHeight;
-    
-    if (cropWidth > maxDimension || cropHeight > maxDimension) {
-      const ratio = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
-      canvasWidth = cropWidth * ratio;
-      canvasHeight = cropHeight * ratio;
-      console.log(`Image cropped area rescaled from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight}`);
-    }
-    
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+      // Limit the maximum dimensions of the cropped image
+      const maxDimension = 1200; // Reasonable size to prevent huge images
+      const cropWidth = cropData.width * scaleX;
+      const cropHeight = cropData.height * scaleY;
+      
+      // Calculate scaled dimensions if needed
+      let canvasWidth = cropWidth;
+      let canvasHeight = cropHeight;
+      
+      if (cropWidth > maxDimension || cropHeight > maxDimension) {
+        const ratio = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
+        canvasWidth = cropWidth * ratio;
+        canvasHeight = cropHeight * ratio;
+        console.log(`Image cropped area rescaled from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight}`);
+      }
+      
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('Failed to get 2D context from canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error('Failed to get 2D context from canvas');
+        onImageCropped(null);
+        return;
+      }
+
+      ctx.drawImage(
+        image,
+        cropData.x * scaleX,
+        cropData.y * scaleY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+      );
+
+      // Use JPEG with high quality as initial output
+      const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Estimate size in MB
+      const initialSizeMB = (base64Image.length * 0.75) / (1024 * 1024);
+      console.log(`Initial cropped image size: ${initialSizeMB.toFixed(2)} MB`);
+      
+      // Apply adaptive compression if image is over target size
+      let finalImage = base64Image;
+      if (initialSizeMB > TARGET_SIZE_MB) {
+        toast.info(`Optimizing image... (${initialSizeMB.toFixed(1)}MB → targeting ${TARGET_SIZE_MB}MB)`);
+        finalImage = await compressImageToTargetSize(base64Image, TARGET_SIZE_MB);
+        const finalSizeMB = (finalImage.length * 0.75) / (1024 * 1024);
+        console.log(`Final image size after compression: ${finalSizeMB.toFixed(2)} MB`);
+        toast.success(`Image optimized: ${finalSizeMB.toFixed(1)}MB (${Math.round((finalSizeMB / initialSizeMB) * 100)}% of original)`);
+      }
+      
+      onImageCropped(finalImage);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast.error('Failed to process image. Please try again.');
       onImageCropped(null);
-      return;
+    } finally {
+      setIsCompressing(false);
     }
-
-    ctx.drawImage(
-      image,
-      cropData.x * scaleX,
-      cropData.y * scaleY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      canvasWidth,
-      canvasHeight
-    );
-
-    // Use JPEG with 0.9 quality for better file size (if user needs transparency, this can be updated)
-    const base64Image = canvas.toDataURL('image/jpeg', 0.9);
-    
-    // Estimate size in MB
-    const approximateSizeMB = (base64Image.length * 0.75) / (1024 * 1024); // base64 is ~4/3 the size
-    console.log(`Estimated cropped image size: ${approximateSizeMB.toFixed(2)} MB`);
-    
-    onImageCropped(base64Image);
   };
 
   return (
@@ -173,9 +255,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <button
                 type="button"
                 onClick={getCroppedImg}
+                disabled={isCompressing}
                 className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
               >
-                Confirm Crop
+                {isCompressing ? 'Processing...' : 'Confirm Crop'}
               </button>
             </div>
           )}
