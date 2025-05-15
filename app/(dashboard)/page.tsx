@@ -154,6 +154,11 @@ export default function HomePage() {
           hexColor: selectedHexColor,
           colorName: colorName || 'DARK EMBER',
           orientation: 'vertical',
+          cardName: "OLIVE ALPINE SENTINEL",
+          phoneticName: "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]",
+          article: "[noun]",
+          description: "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude.",
+          cardId: "00000001 F",
         }),
       });
 
@@ -184,6 +189,11 @@ export default function HomePage() {
           hexColor: selectedHexColor,
           colorName: colorName || 'DARK EMBER',
           orientation: 'horizontal',
+          cardName: "OLIVE ALPINE SENTINEL",
+          phoneticName: "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]",
+          article: "[noun]",
+          description: "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude.",
+          cardId: "00000001 F",
         }),
       });
 
