@@ -2,8 +2,10 @@ import "./globals.css";
 import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
+import { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
+  metadataBase: new URL('https://sf.tinker.institute'),
   title: "Shadenfreude - Color Card Generator",
   description: "Create your own Pantone-like color cards with Shadenfreude.",
   openGraph: {
