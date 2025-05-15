@@ -6,7 +6,7 @@ import WizardStep from '@/components/WizardStep';
 import { useState, useRef, useEffect } from 'react';
 
 // Define types for wizard steps
-type WizardStepName = 'upload' | 'crop' | 'color';
+type WizardStepName = 'upload' | 'crop' | 'color' | 'generate';
 
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
@@ -265,6 +265,7 @@ export default function HomePage() {
     if (step === 'upload') setCurrentWizardStep('upload');
     else if (step === 'crop' && isUploadStepCompleted) setCurrentWizardStep('crop');
     else if (step === 'color' && isUploadStepCompleted && isCropStepCompleted) setCurrentWizardStep('color');
+    else if (step === 'generate' && isUploadStepCompleted && isCropStepCompleted && isColorStepCompleted) setCurrentWizardStep('generate');
   };
 
   const compressImage = (dataUrl: string, quality = 0.7): Promise<string> => {
@@ -296,6 +297,13 @@ export default function HomePage() {
     if (isGenerating || !generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
     const newOrientation = currentDisplayOrientation === 'vertical' ? 'horizontal' : 'vertical';
     setCurrentDisplayOrientation(newOrientation);
+  };
+
+  const completeColorStep = () => {
+    if (croppedImageDataUrl && selectedHexColor) {
+      setIsColorStepCompleted(true);
+      setCurrentWizardStep('generate');
+    }
   };
 
   return (
@@ -363,11 +371,11 @@ export default function HomePage() {
             </WizardStep>
 
             <WizardStep 
-              title="Pick Color & Generate"
+              title="Pick Color"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
-              isFutureStep={!isUploadStepCompleted || !isCropStepCompleted} // Future if upload or crop isn't done
+              isFutureStep={!isUploadStepCompleted || !isCropStepCompleted}
               onHeaderClick={() => setStep('color')}
             >
               {isCropStepCompleted ? (
@@ -379,17 +387,41 @@ export default function HomePage() {
                   />
                   <div className="flex justify-center w-full">
                     <button
-                      onClick={handleGenerateImageClick}
-                      disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating}
-                      className="mt-4 px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      onClick={completeColorStep}
+                      disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl)}
+                      className="mt-4 px-4 py-2 md:px-6 md:py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                      {isGenerating ? 'Generating...' : 'Generate Card'}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+                      Confirm Color
                     </button>
                   </div>
                 </>
               ) : (
                 <p className="text-muted-foreground">Please complete image cropping in Step 2 first.</p>
+              )}
+            </WizardStep>
+
+            <WizardStep 
+              title="Generate Card" 
+              stepNumber={4} 
+              isActive={currentWizardStep === 'generate'} 
+              isCompleted={!!generatedVerticalImageUrl || !!generatedHorizontalImageUrl}
+              isFutureStep={!isUploadStepCompleted || !isCropStepCompleted || !isColorStepCompleted}
+              onHeaderClick={() => setStep('generate')}
+            >
+              {isColorStepCompleted ? (
+                <div className="space-y-4 flex flex-col items-center">
+                  <button
+                    onClick={handleGenerateImageClick}
+                    disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
+                    className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
+                    {isGenerating ? 'Generating...' : 'Generate Card'}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Please complete the previous steps.</p>
               )}
             </WizardStep>
           </section>
