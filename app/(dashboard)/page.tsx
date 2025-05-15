@@ -32,10 +32,10 @@ export default function HomePage() {
   
   // Scroll to the result when the card is generated
   useEffect(() => {
-    if (generatedImageUrl && resultRef.current) {
+    if (generatedImageUrl && resultRef.current && !generatedVerticalImageUrl && !generatedHorizontalImageUrl) {
       resultRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [generatedImageUrl]);
+  }, [generatedImageUrl, generatedVerticalImageUrl, generatedHorizontalImageUrl]);
 
   useEffect(() => {
     let urlsToRevoke: string[] = [];
@@ -162,10 +162,8 @@ export default function HomePage() {
 
   const handleToggleOrientationDisplay = () => {
     if (isGenerating || !generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
-
     const newOrientation = currentDisplayOrientation === 'vertical' ? 'horizontal' : 'vertical';
     setCurrentDisplayOrientation(newOrientation);
-    // No need to set generatedImageUrl here, the JSX will pick the correct one based on currentDisplayOrientation
   };
 
   const handleGenerateImageClick = async () => {
@@ -469,6 +467,34 @@ export default function HomePage() {
         {/* Results Section: Display one image at a time with a toggle button */}
         {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
           <section ref={resultRef} className="w-full pt-4">
+            {/* Orientation toggle buttons */}
+            {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
+              <div className="flex justify-center gap-6 mb-6">
+                <button 
+                  onClick={() => setCurrentDisplayOrientation('vertical')}
+                  className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                  title="Vertical Orientation"
+                  disabled={isGenerating}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
+                  </svg>
+                  <span className="text-xs mt-1">Vertical</span>
+                </button>
+                <button
+                  onClick={() => setCurrentDisplayOrientation('horizontal')}
+                  className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                  title="Horizontal Orientation"
+                  disabled={isGenerating}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
+                  </svg>
+                  <span className="text-xs mt-1">Horizontal</span>
+                </button>
+              </div>
+            )}
+
             <div className="flex justify-center">
               {(currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) && (
                 <img 
@@ -487,34 +513,6 @@ export default function HomePage() {
             </div>
             
             <div className="flex flex-wrap justify-center gap-3 mt-8">
-              {/* Orientation toggle buttons */}
-              {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
-                <div className="flex justify-center gap-6 w-full mb-4">
-                  <button 
-                    onClick={() => setCurrentDisplayOrientation('vertical')}
-                    className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
-                    title="Vertical Orientation"
-                    disabled={isGenerating}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
-                    </svg>
-                    <span className="text-xs mt-1">Vertical</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentDisplayOrientation('horizontal')}
-                    className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
-                    title="Horizontal Orientation"
-                    disabled={isGenerating}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
-                    </svg>
-                    <span className="text-xs mt-1">Horizontal</span>
-                  </button>
-                </div>
-              )}
-
               {/* Download button for the currently displayed image */}
               {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
                 <button
