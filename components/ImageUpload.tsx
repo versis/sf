@@ -3,7 +3,6 @@
 import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
 import ReactCrop, { type Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { toast } from 'sonner';
 
 // Helper function to center the crop
 function centerAspectCrop(
@@ -110,6 +109,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (showCropper && initialPreviewUrl && initialPreviewUrl !== previewUrl) {
@@ -141,6 +141,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     try {
       setIsCompressing(true);
+      setProcessingMessage('Processing image...');
       
       const image = imgRef.current;
       const canvas = previewCanvasRef.current;
@@ -197,20 +198,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       // Apply adaptive compression if image is over target size
       let finalImage = base64Image;
       if (initialSizeMB > TARGET_SIZE_MB) {
-        toast.info(`Optimizing image... (${initialSizeMB.toFixed(1)}MB → targeting ${TARGET_SIZE_MB}MB)`);
+        setProcessingMessage(`Optimizing image... (${initialSizeMB.toFixed(1)}MB → targeting ${TARGET_SIZE_MB}MB)`);
         finalImage = await compressImageToTargetSize(base64Image, TARGET_SIZE_MB);
         const finalSizeMB = (finalImage.length * 0.75) / (1024 * 1024);
         console.log(`Final image size after compression: ${finalSizeMB.toFixed(2)} MB`);
-        toast.success(`Image optimized: ${finalSizeMB.toFixed(1)}MB (${Math.round((finalSizeMB / initialSizeMB) * 100)}% of original)`);
+        setProcessingMessage(`Image optimized: ${finalSizeMB.toFixed(1)}MB (${Math.round((finalSizeMB / initialSizeMB) * 100)}% of original)`);
       }
       
       onImageCropped(finalImage);
     } catch (error) {
       console.error('Error processing image:', error);
-      toast.error('Failed to process image. Please try again.');
+      setProcessingMessage('Failed to process image. Please try again.');
       onImageCropped(null);
     } finally {
       setIsCompressing(false);
+      // Clear message after a delay
+      setTimeout(() => setProcessingMessage(null), 3000);
     }
   };
 
@@ -250,14 +253,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               />
             </ReactCrop>
           </div>
+          
+          {processingMessage && (
+            <div className="text-sm mt-2 p-2 border border-foreground rounded bg-secondary">
+              {processingMessage}
+            </div>
+          )}
+          
           {completedCrop && imgRef.current && (
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={getCroppedImg}
                 disabled={isCompressing}
-                className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                className="px-6 py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 {isCompressing ? 'Processing...' : 'Confirm Crop'}
               </button>
             </div>
