@@ -13,12 +13,16 @@ export default function HomePage() {
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
   const [selectedHexColor, setSelectedHexColor] = useState<string>('#000000');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedVerticalImageUrl, setGeneratedVerticalImageUrl] = useState<string | null>(null);
+  const [generatedHorizontalImageUrl, setGeneratedHorizontalImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [colorName, setColorName] = useState<string>('DARK EMBER');
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null); // For smooth progress
+  const [cardOrientation, setCardOrientation] = useState<'vertical' | 'horizontal'>('vertical');
 
   // State for wizard
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -33,16 +37,31 @@ export default function HomePage() {
     }
   }, [generatedImageUrl]);
 
+  // Effect to revoke object URL
+  useEffect(() => {
+    let objectUrlToRevoke: string | null = null;
+    if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
+      objectUrlToRevoke = generatedImageUrl;
+    }
+
+    return () => {
+      if (objectUrlToRevoke) {
+        URL.revokeObjectURL(objectUrlToRevoke);
+        console.log('Revoked object URL:', objectUrlToRevoke);
+      }
+    };
+  }, [generatedImageUrl]);
+
   const handleImageSelectedForUpload = (file: File) => {
     // Log the original file size
-    console.log(`Original file size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    console.log(`STEP 1.1: Original file selected - Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
     
     const reader = new FileReader();
     reader.onloadend = () => {
       const dataUrl = reader.result as string;
       // Log the size of the data URL
       const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Data URL size after upload: ${sizeInMB.toFixed(2)} MB`);
+      console.log(`STEP 1.2: Data URL created from upload - Size: ${sizeInMB.toFixed(2)} MB`);
       
       setUploadStepPreviewUrl(dataUrl);
       setCroppedImageDataUrl(null); 
@@ -70,7 +89,7 @@ export default function HomePage() {
     if (dataUrl) {
       // Log the cropped image size
       const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Size after cropping: ${sizeInMB.toFixed(2)} MB`);
+      console.log(`STEP 2: Image cropped - Size: ${sizeInMB.toFixed(2)} MB`);
     }
     setCroppedImageDataUrl(dataUrl);
     setGeneratedImageUrl(null); 
@@ -99,7 +118,7 @@ export default function HomePage() {
     return new Promise((resolve, reject) => {
       // Log the size before compression
       const beforeSizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Size before compression: ${beforeSizeInMB.toFixed(2)} MB`);
+      console.log(`STEP 3.1: Image before compression - Size: ${beforeSizeInMB.toFixed(2)} MB`);
       
       const img = new Image();
       img.onload = () => {
@@ -118,7 +137,7 @@ export default function HomePage() {
         
         // Log the size after compression
         const afterSizeInMB = (compressed.length * 0.75) / (1024 * 1024);
-        console.log(`Size after compression: ${afterSizeInMB.toFixed(2)} MB (${(quality * 100).toFixed(0)}% quality)`);
+        console.log(`STEP 3.2: Image after compression - Size: ${afterSizeInMB.toFixed(2)} MB (${(quality * 100).toFixed(0)}% quality)`);
         
         resolve(compressed);
       };
@@ -136,15 +155,33 @@ export default function HomePage() {
     // Close the last step by setting currentWizardStep to null
     setCurrentWizardStep('' as any);
     
-    setIsGenerating(true);
-    setGenerationError(null);
     setGeneratedImageUrl(null);
-    setGenerationProgress(10); // Start progress at 10%
+    setGenerationProgress(0); // Initialize progress to 0
+    setIsGenerating(true);
     setStatusMessage('Creating your shadefreude card...');
-    
+
+    // Clear any existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+
+    // Smooth progress simulation
+    const DURATION = 7000; // Target 7 seconds
+    const TICK_INTERVAL = 70; // Update every 70ms
+    let currentProgress = 0;
+
+    progressIntervalRef.current = setInterval(() => {
+      currentProgress += 1;
+      if (currentProgress < 99) { // Stop before 100, actual completion will set it to 100
+        setGenerationProgress(currentProgress);
+      } else {
+        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      }
+    }, TICK_INTERVAL);
+
     try {
       // Compress the image before sending
-      setGenerationProgress(30); // Update progress
+      // setGenerationProgress(30); // No longer direct set, rely on interval
       setStatusMessage('Compressing image...');
       let compressedImageDataUrl = croppedImageDataUrl;
       try {
@@ -154,7 +191,7 @@ export default function HomePage() {
         console.warn('Image compression failed, using original:', compressError);
       }
 
-      setGenerationProgress(50); // Update progress
+      // setGenerationProgress(50); // No longer direct set
       setStatusMessage('Generating card...');
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -183,14 +220,26 @@ export default function HomePage() {
         throw new Error(errorDetail);
       }
 
-      setGenerationProgress(80); // Update progress
+      // setGenerationProgress(80); // No longer direct set
       setStatusMessage('Finalizing...');
-      const imageBlob = await response.blob();
-      // Log the final card size
-      console.log(`Final card size: ${(imageBlob.size / (1024 * 1024)).toFixed(2)} MB`);
       
+      // Get the binary response as a blob
+      const imageBlob = await response.blob();
+      console.log(`STEP 4: Received image - Size: ${(imageBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+      
+      // Create blob URLs for both vertical and horizontal from the same image
       const imageUrl = URL.createObjectURL(imageBlob);
+      
+      // Store the same image URL for both orientations for now
+      // When the backend is updated to return different orientations in the future,
+      // this code can be modified to use the distinct images
+      setGeneratedVerticalImageUrl(imageUrl);
+      setGeneratedHorizontalImageUrl(imageUrl);
+      
+      // Set the displayed image based on current orientation preference
       setGeneratedImageUrl(imageUrl);
+      
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); // Ensure interval is cleared
       setGenerationProgress(100); // Complete
       setStatusMessage('Your shadefreude card is ready!');
       
@@ -203,7 +252,10 @@ export default function HomePage() {
       console.error('Error generating image:', error);
       setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
       setStatusMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      setGenerationProgress(0); // Reset progress on error
     } finally {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); // Safeguard clear
       setIsGenerating(false);
     }
   };
@@ -217,6 +269,18 @@ export default function HomePage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleToggleOrientationDisplay = () => {
+    if (!generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
+
+    if (cardOrientation === 'vertical') {
+      setGeneratedImageUrl(generatedHorizontalImageUrl);
+      setCardOrientation('horizontal');
+    } else {
+      setGeneratedImageUrl(generatedVerticalImageUrl);
+      setCardOrientation('vertical');
+    }
   };
 
   const setStep = (step: WizardStepName) => {
@@ -258,7 +322,9 @@ export default function HomePage() {
                 onImageSelect={handleImageSelectedForUpload} 
                 onImageCropped={handleImageCropped}
                 showUploader={true}
-                showCropper={false} 
+                showCropper={false}
+                initialPreviewUrl={uploadStepPreviewUrl}
+                key={uploadStepPreviewUrl || 'uploader'}
               />
             </WizardStep>
 
@@ -271,13 +337,15 @@ export default function HomePage() {
               onHeaderClick={() => setStep('crop')}
             >
               {isUploadStepCompleted ? (
-                <ImageUpload 
-                  onImageSelect={() => {}} 
-                  onImageCropped={handleImageCropped} 
-                  showUploader={false}
-                  showCropper={true}
-                  initialPreviewUrl={uploadStepPreviewUrl}
-                />
+                <div className="flex justify-center w-full">
+                  <ImageUpload 
+                    onImageSelect={() => {}} 
+                    onImageCropped={handleImageCropped} 
+                    showUploader={false}
+                    showCropper={true}
+                    initialPreviewUrl={uploadStepPreviewUrl}
+                  />
+                </div>
               ) : (
                 <p className="text-muted-foreground">Please select an image in Step 1 first.</p>
               )}
@@ -326,30 +394,14 @@ export default function HomePage() {
             >
               {isColorStepCompleted ? (
                 <div className="space-y-4 flex flex-col items-center">
-                  <div className="w-full max-w-[38.4rem] mb-4">
-                    <label htmlFor="colorName" className="block text-sm font-medium text-foreground mb-1">
-                      Color Name:
-                    </label>
-                    <input
-                      type="text"
-                      id="colorName"
-                      value={colorName}
-                      onChange={(e) => setColorName(e.target.value)}
-                      placeholder="e.g., DARK EMBER"
-                      className="w-full p-2 border border-foreground focus:outline-none focus:ring-1 focus:ring-blue-700"
-                    />
-                  </div>
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
                     className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
                     {isGenerating ? 'Generating...' : 'Generate Card'}
                   </button>
-                  {generationError && (
-                    <p className="text-sm text-destructive mt-2">Error: {generationError}</p>
-                  )}
                 </div>
                 ) : (
                   <p className="text-muted-foreground">Please complete the previous steps.</p>
@@ -374,14 +426,40 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Display Generation Error below wizard and progress bar */}
+        {generationError && !isGenerating && (
+          <div className="w-full bg-destructive/10 text-destructive p-4 rounded-md border-2 border-destructive mt-4">
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span className="font-medium">Error:</span>
+            </div>
+            <p className="mt-1 ml-7 text-sm">{generationError}</p>
+          </div>
+        )}
+
         {generatedImageUrl && (
           <section ref={resultRef} className="w-full pt-6">
+            {/* Button to toggle display orientation - placed above the image */}
+            {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={handleToggleOrientationDisplay}
+                  className="px-3 py-1.5 md:px-4 md:py-2 bg-input text-sm text-black font-medium border-2 border-black shadow-[3px_3px_0_0_#000000] hover:shadow-[1px_1px_0_0_#000000] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out flex items-center gap-2"
+                >
+                  {cardOrientation === 'vertical' ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                  )}
+                  View {cardOrientation === 'vertical' ? 'Horizontal' : 'Vertical'} Version
+                </button>
+              </div>
+            )}
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 
                 alt="Generated shadefreude card" 
-                className="max-w-full md:max-w-2xl h-auto rounded-lg"
-                onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
+                className="max-w-full md:max-w-2xl h-auto rounded-md"
               />
             </div>
             <div className="flex flex-wrap justify-center gap-3 mt-6">
@@ -395,6 +473,8 @@ export default function HomePage() {
               <button
                 onClick={() => {
                   setGeneratedImageUrl(null);
+                  setGeneratedVerticalImageUrl(null); // Also clear specific orientation URLs
+                  setGeneratedHorizontalImageUrl(null);
                   setCurrentWizardStep('upload');
                 }}
                 className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
