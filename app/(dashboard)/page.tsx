@@ -34,9 +34,17 @@ export default function HomePage() {
   }, [generatedImageUrl]);
 
   const handleImageSelectedForUpload = (file: File) => {
+    // Log the original file size
+    console.log(`Original file size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    
     const reader = new FileReader();
     reader.onloadend = () => {
-      setUploadStepPreviewUrl(reader.result as string);
+      const dataUrl = reader.result as string;
+      // Log the size of the data URL
+      const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
+      console.log(`Uploaded image data URL size: ${sizeInMB.toFixed(2)} MB`);
+      
+      setUploadStepPreviewUrl(dataUrl);
       setCroppedImageDataUrl(null); 
       setSelectedHexColor('#000000');
       setGeneratedImageUrl(null);
@@ -59,6 +67,11 @@ export default function HomePage() {
   };
 
   const handleImageCropped = (dataUrl: string | null) => {
+    if (dataUrl) {
+      // Log the cropped image size
+      const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
+      console.log(`Cropped image size: ${sizeInMB.toFixed(2)} MB`);
+    }
     setCroppedImageDataUrl(dataUrl);
     setGeneratedImageUrl(null); 
     setGenerationError(null);
@@ -84,6 +97,10 @@ export default function HomePage() {
 
   const compressImage = (dataUrl: string, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // Log the size before compression
+      const beforeSizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
+      console.log(`Before compression size: ${beforeSizeInMB.toFixed(2)} MB`);
+      
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -97,7 +114,13 @@ export default function HomePage() {
         ctx.drawImage(img, 0, 0);
         
         // Convert to JPEG for better compression (even if original was PNG)
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        
+        // Log the size after compression
+        const afterSizeInMB = (compressed.length * 0.75) / (1024 * 1024);
+        console.log(`After compression size: ${afterSizeInMB.toFixed(2)} MB (${(quality * 100).toFixed(0)}% quality)`);
+        
+        resolve(compressed);
       };
       img.onerror = () => reject(new Error('Failed to load image for compression'));
       img.src = dataUrl;
@@ -110,13 +133,14 @@ export default function HomePage() {
       return;
     }
     
-    // Don't scroll to top anymore
+    // Close the last step by setting currentWizardStep to null
+    setCurrentWizardStep('' as any);
     
     setIsGenerating(true);
     setGenerationError(null);
     setGeneratedImageUrl(null);
     setGenerationProgress(10); // Start progress at 10%
-    setStatusMessage('Creating your shadenfreude card...');
+    setStatusMessage('Creating your shadefreude card...');
     
     try {
       // Compress the image before sending
@@ -162,10 +186,13 @@ export default function HomePage() {
       setGenerationProgress(80); // Update progress
       setStatusMessage('Finalizing...');
       const imageBlob = await response.blob();
+      // Log the final card size
+      console.log(`Final card size: ${(imageBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+      
       const imageUrl = URL.createObjectURL(imageBlob);
       setGeneratedImageUrl(imageUrl);
       setGenerationProgress(100); // Complete
-      setStatusMessage('Your shadenfreude card is ready!');
+      setStatusMessage('Your shadefreude card is ready!');
       
       // Scroll to result
       if (resultRef.current) {
@@ -186,7 +213,7 @@ export default function HomePage() {
     
     const link = document.createElement('a');
     link.href = generatedImageUrl;
-    link.download = `shadenfreude-${colorName.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
+    link.download = `shadefreude-${colorName.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -206,7 +233,7 @@ export default function HomePage() {
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
             <span className="mr-1 ml-1">
               <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
-              shaden
+              shade
             </span>
             <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
               freude
@@ -216,21 +243,6 @@ export default function HomePage() {
             part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
           </p>
         </header>
-
-        {isGenerating && (
-          <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mb-4">
-            <div className="mb-2 flex justify-between text-sm font-medium">
-              <span>{statusMessage}</span>
-              <span>{generationProgress}%</span>
-            </div>
-            <div className="h-2 w-full bg-muted overflow-hidden rounded">
-              <div 
-                className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
-                style={{ width: `${generationProgress}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
 
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
@@ -290,11 +302,47 @@ export default function HomePage() {
                     <button 
                         onClick={completeColorStep}
                         disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl)}
-                        className="mt-4 px-6 py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                        className="mt-4 px-4 py-2 md:px-6 md:py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 3 4 4L3 13l4 4 6-6 4 4V3Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
                         Confirm Color
                     </button>
+                  </div>
+                  
+                  {/* Alternative icons for Confirm Color button */}
+                  <div className="mt-6 p-3 border border-dashed border-muted-foreground rounded-md">
+                    <p className="text-sm mb-2 text-muted-foreground">Alternative icons for Confirm Color button:</p>
+                    <div className="flex flex-wrap gap-4 justify-center">
+                      {/* 1. Color palette */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="8" cy="18" r="2.5"/><line x1="12" y1="22" x2="12" y2="12"/><line x1="12" y1="12" x2="17.5" y2="6.5"/><line x1="12" y1="12" x2="8" y2="18"/><line x1="12" y1="12" x2="19" y2="12"/><line x1="12" y1="12" x2="6" y2="12"/></svg>
+                      
+                      {/* 2. Droplet */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+                      
+                      {/* 3. Check/Checkmark */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><polyline points="20 6 9 17 4 12"/></svg>
+                      
+                      {/* 4. Paint bucket */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>
+                      
+                      {/* 5. Save icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      
+                      {/* 6. Thumbs up */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                      
+                      {/* 7. Color swatch */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+                      
+                      {/* 8. Eye (preview) */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                      
+                      {/* 9. Arrow right (next) */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      
+                      {/* 10. Star */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-blue-700"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -328,9 +376,9 @@ export default function HomePage() {
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="px-6 py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                    className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><path d="M12 8H6v8h6"/><path d="M16 12h-4"/><path d="m8 12 4 4"/><path d="m8 12 4-4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
                     {isGenerating ? 'Generating...' : 'Generate Card'}
                   </button>
                   {generationError && (
@@ -343,22 +391,37 @@ export default function HomePage() {
             </WizardStep>
           </section>
         </div>
+        
+        {/* Progress bar now appears below the wizard */}
+        {isGenerating && (
+          <div className="w-full bg-background p-4 rounded-md border-2 border-foreground">
+            <div className="mb-2 flex justify-between text-sm font-medium">
+              <span>{statusMessage}</span>
+              <span>{generationProgress}%</span>
+            </div>
+            <div className="h-2 w-full bg-muted overflow-hidden rounded">
+              <div 
+                className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
+                style={{ width: `${generationProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
 
         {generatedImageUrl && (
           <section ref={resultRef} className="w-full pt-6 border-t-2 border-foreground">
-            <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Your unique card:</h3>
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 
-                alt="Generated shadenfreude card" 
+                alt="Generated shadefreude card" 
                 className="max-w-full md:max-w-2xl h-auto rounded-lg"
                 onLoad={() => { if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl); }} 
               />
             </div>
-            <div className="flex justify-center gap-4 mt-6">
+            <div className="flex flex-wrap justify-center gap-3 mt-6">
               <button
                 onClick={handleDownloadImage}
-                className="px-6 py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2"
+                className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download Card
@@ -368,7 +431,7 @@ export default function HomePage() {
                   setGeneratedImageUrl(null);
                   setCurrentWizardStep('upload');
                 }}
-                className="px-6 py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2"
+                className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 Create Another Card
