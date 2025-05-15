@@ -42,7 +42,7 @@ export default function HomePage() {
       const dataUrl = reader.result as string;
       // Log the size of the data URL
       const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Uploaded image data URL size: ${sizeInMB.toFixed(2)} MB`);
+      console.log(`Data URL size after upload: ${sizeInMB.toFixed(2)} MB`);
       
       setUploadStepPreviewUrl(dataUrl);
       setCroppedImageDataUrl(null); 
@@ -70,7 +70,7 @@ export default function HomePage() {
     if (dataUrl) {
       // Log the cropped image size
       const sizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Cropped image size: ${sizeInMB.toFixed(2)} MB`);
+      console.log(`Size after cropping: ${sizeInMB.toFixed(2)} MB`);
     }
     setCroppedImageDataUrl(dataUrl);
     setGeneratedImageUrl(null); 
@@ -99,7 +99,7 @@ export default function HomePage() {
     return new Promise((resolve, reject) => {
       // Log the size before compression
       const beforeSizeInMB = (dataUrl.length * 0.75) / (1024 * 1024);
-      console.log(`Before compression size: ${beforeSizeInMB.toFixed(2)} MB`);
+      console.log(`Size before compression: ${beforeSizeInMB.toFixed(2)} MB`);
       
       const img = new Image();
       img.onload = () => {
@@ -118,7 +118,7 @@ export default function HomePage() {
         
         // Log the size after compression
         const afterSizeInMB = (compressed.length * 0.75) / (1024 * 1024);
-        console.log(`After compression size: ${afterSizeInMB.toFixed(2)} MB (${(quality * 100).toFixed(0)}% quality)`);
+        console.log(`Size after compression: ${afterSizeInMB.toFixed(2)} MB (${(quality * 100).toFixed(0)}% quality)`);
         
         resolve(compressed);
       };
@@ -375,7 +375,7 @@ export default function HomePage() {
         )}
 
         {generatedImageUrl && (
-          <section ref={resultRef} className="w-full pt-6 border-t-2 border-foreground">
+          <section ref={resultRef} className="w-full pt-6">
             <div className="flex justify-center">
               <img 
                 src={generatedImageUrl} 
