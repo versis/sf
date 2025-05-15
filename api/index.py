@@ -206,7 +206,7 @@ async def generate_image_route(data: ImageGenerationRequest):
         img_byte_arr.seek(0)
         
         print("Sending composed Shadenfreude card image.")
-        return FileResponse(img_byte_arr, media_type='image/png')
+        return StreamingResponse(img_byte_arr, media_type='image/png')
 
     except HTTPException as e: # Re-raise HTTPException
         raise e
