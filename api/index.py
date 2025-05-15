@@ -4,38 +4,47 @@ from typing import List, Optional
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request as FastAPIRequest
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
-from .utils.prompt import ClientMessage, convert_to_openai_messages
-from .utils.tools import get_current_weather
+# from .utils.prompt import ClientMessage, convert_to_openai_messages # Commented out
+# from .utils.tools import get_current_weather # Commented out
 
 import io
 import re 
 import base64 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+# Rate limiting with slowapi
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 load_dotenv(".env.local")
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+
+app.state.limiter = limiter # type: ignore
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["YOUR_PRODUCTION_FRONTEND_URL_HERE", "http://localhost:3000"], # Restrict origins
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["POST"], # Restrict methods
+    allow_headers=["Content-Type"], # Restrict headers
 )
 
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
+# OpenAI client initialization is kept for future use
+# client = OpenAI(
+#     api_key=os.environ.get("OPENAI_API_KEY"),
+# )
 
-
-class ChatRequest(BaseModel):
-    messages: List[ClientMessage]
+# class ChatRequest(BaseModel):
+#     messages: List[ClientMessage]
 
 # --- Color Conversion Utilities (from shadenfreude) ---
 def hex_to_rgb(hex_color: str) -> tuple[int, int, int] | None:
@@ -99,7 +108,8 @@ class ImageGenerationRequest(BaseModel):
     colorName: str
 
 @app.post("/api/generate-image")
-async def generate_image_route(data: ImageGenerationRequest):
+@limiter.limit("10/minute") # Apply rate limit: 10 requests per minute per IP
+async def generate_image_route(data: ImageGenerationRequest, request: FastAPIRequest):
     cropped_image_data_url = data.croppedImageDataUrl
     hex_color_input = data.hexColor
     color_name = data.colorName
@@ -216,130 +226,114 @@ async def generate_image_route(data: ImageGenerationRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to compose image: {str(e)}")
 
-available_tools = {
-    "get_current_weather": get_current_weather,
-}
+# available_tools = {
+#     "get_current_weather": get_current_weather,
+# }
 
-def do_stream(messages: List[ChatCompletionMessageParam]):
-    stream = client.chat.completions.create(
-        messages=messages,
-        model="gpt-4o",
-        stream=True,
-        tools=[{
-            "type": "function",
-            "function": {
-                "name": "get_current_weather",
-                "description": "Get the current weather at a location",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "latitude": {
-                            "type": "number",
-                            "description": "The latitude of the location",
-                        },
-                        "longitude": {
-                            "type": "number",
-                            "description": "The longitude of the location",
-                        },
-                    },
-                    "required": ["latitude", "longitude"],
-                },
-            },
-        }]
-    )
+# def do_stream(messages: List[ChatCompletionMessageParam]):
+#     stream = client.chat.completions.create(
+#         messages=messages,
+#         model="gpt-4o",
+#         stream=True,
+#         tools=[{
+#             "type": "function",
+#             "function": {
+#                 "name": "get_current_weather",
+#                 "description": "Get the current weather at a location",
+#                 "parameters": {
+#                     "type": "object",
+#                     "properties": {
+#                         "latitude": {
+#                             "type": "number",
+#                             "description": "The latitude of the location",
+#                         },
+#                         "longitude": {
+#                             "type": "number",
+#                             "description": "The longitude of the location",
+#                         },
+#                     },
+#                     "required": ["latitude", "longitude"],
+#                 },
+#             },
+#         }]
+#     )
+#     return stream
 
-    return stream
+# def stream_text(messages: List[ChatCompletionMessageParam], protocol: str = 'data'):
+#     draft_tool_calls = []
+#     draft_tool_calls_index = -1
+#     stream = client.chat.completions.create(
+#         messages=messages,
+#         model="gpt-4o",
+#         stream=True,
+#         tools=[{
+#             "type": "function",
+#             "function": {
+#                 "name": "get_current_weather",
+#                 "description": "Get the current weather at a location",
+#                 "parameters": {
+#                     "type": "object",
+#                     "properties": {
+#                         "latitude": {
+#                             "type": "number",
+#                             "description": "The latitude of the location",
+#                         },
+#                         "longitude": {
+#                             "type": "number",
+#                             "description": "The longitude of the location",
+#                         },
+#                     },
+#                     "required": ["latitude", "longitude"],
+#                 },
+#             },
+#         }]
+#     )
+#     for chunk in stream:
+#         for choice in chunk.choices:
+#             if choice.finish_reason == "stop":
+#                 continue
+#             elif choice.finish_reason == "tool_calls":
+#                 for tool_call in draft_tool_calls:
+#                     yield '9:{{"toolCallId":"{id}","toolName":"{name}","args":{args}}}\n'.format(
+#                         id=tool_call["id"],
+#                         name=tool_call["name"],
+#                         args=tool_call["arguments"])
+#                 for tool_call in draft_tool_calls:
+#                     tool_result = available_tools[tool_call["name"]](
+#                         **json.loads(tool_call["arguments"])) # type: ignore
+#                     yield 'a:{{"toolCallId":"{id}","toolName":"{name}","args":{args},"result":{result}}}\n'.format(
+#                         id=tool_call["id"],
+#                         name=tool_call["name"],
+#                         args=tool_call["arguments"],
+#                         result=json.dumps(tool_result))
+#             elif choice.delta.tool_calls:
+#                 for tool_call in choice.delta.tool_calls:
+#                     id = tool_call.id
+#                     name = tool_call.function.name
+#                     arguments = tool_call.function.arguments
+#                     if (id is not None):
+#                         draft_tool_calls_index += 1
+#                         draft_tool_calls.append(
+#                             {"id": id, "name": name, "arguments": ""})
+#                     else:
+#                         draft_tool_calls[draft_tool_calls_index]["arguments"] += arguments # type: ignore
+#             else:
+#                 yield '0:{text}\n'.format(text=json.dumps(choice.delta.content))
+#         if chunk.choices == []:
+#             usage = chunk.usage # type: ignore
+#             prompt_tokens = usage.prompt_tokens
+#             completion_tokens = usage.completion_tokens
+#             yield 'e:{{"finishReason":"{reason}","usage":{{"promptTokens":{prompt},"completionTokens":{completion}}},"isContinued":false}}\n'.format(
+#                 reason="tool-calls" if len(
+#                     draft_tool_calls) > 0 else "stop",
+#                 prompt=prompt_tokens,
+#                 completion=completion_tokens
+#             )
 
-def stream_text(messages: List[ChatCompletionMessageParam], protocol: str = 'data'):
-    draft_tool_calls = []
-    draft_tool_calls_index = -1
-
-    stream = client.chat.completions.create(
-        messages=messages,
-        model="gpt-4o",
-        stream=True,
-        tools=[{
-            "type": "function",
-            "function": {
-                "name": "get_current_weather",
-                "description": "Get the current weather at a location",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "latitude": {
-                            "type": "number",
-                            "description": "The latitude of the location",
-                        },
-                        "longitude": {
-                            "type": "number",
-                            "description": "The longitude of the location",
-                        },
-                    },
-                    "required": ["latitude", "longitude"],
-                },
-            },
-        }]
-    )
-
-    for chunk in stream:
-        for choice in chunk.choices:
-            if choice.finish_reason == "stop":
-                continue
-
-            elif choice.finish_reason == "tool_calls":
-                for tool_call in draft_tool_calls:
-                    yield '9:{{"toolCallId":"{id}","toolName":"{name}","args":{args}}}\n'.format(
-                        id=tool_call["id"],
-                        name=tool_call["name"],
-                        args=tool_call["arguments"])
-
-                for tool_call in draft_tool_calls:
-                    tool_result = available_tools[tool_call["name"]](
-                        **json.loads(tool_call["arguments"]))
-
-                    yield 'a:{{"toolCallId":"{id}","toolName":"{name}","args":{args},"result":{result}}}\n'.format(
-                        id=tool_call["id"],
-                        name=tool_call["name"],
-                        args=tool_call["arguments"],
-                        result=json.dumps(tool_result))
-
-            elif choice.delta.tool_calls:
-                for tool_call in choice.delta.tool_calls:
-                    id = tool_call.id
-                    name = tool_call.function.name
-                    arguments = tool_call.function.arguments
-
-                    if (id is not None):
-                        draft_tool_calls_index += 1
-                        draft_tool_calls.append(
-                            {"id": id, "name": name, "arguments": ""})
-
-                    else:
-                        draft_tool_calls[draft_tool_calls_index]["arguments"] += arguments
-
-            else:
-                yield '0:{text}\n'.format(text=json.dumps(choice.delta.content))
-
-        if chunk.choices == []:
-            usage = chunk.usage
-            prompt_tokens = usage.prompt_tokens
-            completion_tokens = usage.completion_tokens
-
-            yield 'e:{{"finishReason":"{reason}","usage":{{"promptTokens":{prompt},"completionTokens":{completion}}},"isContinued":false}}\n'.format(
-                reason="tool-calls" if len(
-                    draft_tool_calls) > 0 else "stop",
-                prompt=prompt_tokens,
-                completion=completion_tokens
-            )
-
-
-
-
-@app.post("/api/chat")
-async def handle_chat_data(request: ChatRequest, protocol: str = Query('data')):
-    messages = request.messages
-    openai_messages = convert_to_openai_messages(messages)
-
-    response = StreamingResponse(stream_text(openai_messages, protocol))
-    response.headers['x-vercel-ai-data-stream'] = 'v1'
-    return response
+# @app.post("/api/chat")
+# async def handle_chat_data(request: ChatRequest, protocol: str = Query('data')):
+#     messages = request.messages
+#     openai_messages = convert_to_openai_messages(messages)
+#     response = StreamingResponse(stream_text(openai_messages, protocol))
+#     response.headers['x-vercel-ai-data-stream'] = 'v1'
+#     return response
