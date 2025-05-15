@@ -149,7 +149,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <button
                 type="button"
                 onClick={getCroppedImg}
-                className="px-6 py-3 bg-foreground text-background font-semibold border border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-3 bg-input text-accent font-semibold border-2 border-accent shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
               >
                 Confirm Crop
               </button>

@@ -4,62 +4,38 @@
 
 @layer base {
     :root {
-        /* New Palette - Light Mode (Art Laboratory Inspired) */
-        --background: 40 33% 97%; /* Very light beige/off-white */
+        /* Light Mode Palette - background adjusted to a lighter off-white */
+        --background: 0 0% 97%; /* Very light gray, almost white */
         --foreground: 0 0% 0%;   /* Black */
-        --card: 40 33% 97%;       /* Same as background */
+        --card: 0 0% 97%;       /* Match background */
         --card-foreground: 0 0% 0%;
-        --popover: 40 33% 97%;
+        --popover: 0 0% 97%;    /* Match background */
         --popover-foreground: 0 0% 0%;
-        --primary: 220 100% 55%; /* Vibrant Electric Blue */
-        --primary-foreground: 0 0% 100%; /* White text on primary */
-        --secondary: 0 0% 92%; /* Light gray - for elements like file input button */
-        --secondary-foreground: 0 0% 0%; /* Black text on light gray */
-        --muted: 0 0% 96%; /* Lighter gray for muted backgrounds if needed */
-        --muted-foreground: 0 0% 35%; /* Darker gray for muted text */
-        --accent: 220 100% 55%; /* Same as primary */
-        --accent-foreground: 0 0% 100%;
-        --destructive: 0 100% 50%; /* Bright Red */
-        --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 15%; /* Dark gray/off-black for borders, slightly softer than pure black */
-        --input: 0 0% 100%; /* White input backgrounds */
-        --ring: 220 100% 55%; /* Blue for focus rings */
-        
-        --radius: 0rem; /* No rounded corners */
-    }
 
-    .dark {
-        /* New Palette - Dark Mode */
-        --background: 220 15% 5%;   /* Very dark, slightly desaturated blue/black */
-        --foreground: 0 0% 95%; /* Off-white */
-        --card: 220 15% 10%;       /* Slightly lighter than background */
-        --card-foreground: 0 0% 95%;
-        --popover: 220 15% 10%;
-        --popover-foreground: 0 0% 95%;
-        --primary: 220 100% 65%; /* Brighter Electric Blue for dark mode */
-        --primary-foreground: 0 0% 100%; /* White text on this blue */
-        --secondary: 0 0% 20%; /* Dark gray */
-        --secondary-foreground: 0 0% 95%; /* Off-white */
-        --muted: 0 0% 15%;
-        --muted-foreground: 0 0% 70%;
-        --accent: 220 100% 65%;
-        --accent-foreground: 0 0% 100%;
-        --destructive: 0 80% 60%; /* Slightly less intense red */
-        --destructive-foreground: 0 0% 95%;
-        --border: 0 0% 80%; /* Light gray for borders in dark mode */
-        --input: 0 0% 12%;   /* Dark gray for input backgrounds */
-        --ring: 220 100% 65%;
+        /* Primary colors (used as a base for button styling, but specific hex will override) */
+        --primary: 0 0% 8%; 
+        --primary-foreground: 0 0% 95%;
+
+        --secondary: 0 0% 92%; 
+        --secondary-foreground: 0 0% 0%;
+        --muted: 0 0% 96%; 
+        --muted-foreground: 0 0% 35%; 
+
+        --accent: #1700FE; /* Specific Blue from user */
+        --accent-foreground: 0 0% 100%; /* White for text on this blue if needed */
+        --accent-green: #30FF6E; /* Specific Green from user */
+
+        --destructive: 0 100% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 0 0% 15%; 
+        --input: 0 0% 100%; /* White - will be button BG */
+        --ring: #1700FE; /* Specific Blue for focus rings */
+        
+        --radius: 0rem;
     }
 }
 
 @layer base {
-    * {
-        /* Use the new --border variable, applied to all elements by default via Tailwind */
-        /* Tailwind's default border color is `colors.gray.200`. We override it via @apply border-border */
-        /* To make borders more explicit only where needed, we rely on utility classes like `border` or `border-2` in components. */
-        /* The global `border-border` here sets the default border color if a border utility is used. */
-         @apply border-border;
-    }
     html {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
         @apply bg-background text-foreground;
@@ -81,9 +57,6 @@
         opacity: 0.03; /* Adjusted for potentially lighter bg */
         pointer-events: none; 
         z-index: -1; 
-    }
-    .dark body::before {
-        opacity: 0.02; /* Slightly less for dark mode */
     }
 
     h1,h2,h3,h4,h5,h6 {

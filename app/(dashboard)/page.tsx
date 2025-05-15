@@ -22,8 +22,10 @@ export default function HomePage() {
   const [isUploadStepCompleted, setIsUploadStepCompleted] = useState(false);
   const [isCropStepCompleted, setIsCropStepCompleted] = useState(false); // Renamed from isImageStepCompleted
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState<boolean>(true); // New state
 
   const handleImageSelectedForUpload = (file: File) => {
+    setShowLivePreview(true); // Show preview when options change
     const reader = new FileReader();
     reader.onloadend = () => {
       setUploadStepPreviewUrl(reader.result as string);
@@ -49,6 +51,7 @@ export default function HomePage() {
   };
 
   const handleImageCropped = (dataUrl: string | null) => {
+    setShowLivePreview(true); // Show preview when options change
     setCroppedImageDataUrl(dataUrl);
     setGeneratedImageUrl(null); 
     setGenerationError(null);
@@ -61,6 +64,7 @@ export default function HomePage() {
   };
 
   const handleHexColorChange = (hex: string) => {
+    setShowLivePreview(true); // Show preview when options change
     setSelectedHexColor(hex);
     setGeneratedImageUrl(null);
   };
@@ -102,6 +106,7 @@ export default function HomePage() {
       const imageBlob = await response.blob();
       const imageUrl = URL.createObjectURL(imageBlob);
       setGeneratedImageUrl(imageUrl);
+      setShowLivePreview(false); // Hide preview only on successful generation
 
     } catch (error) {
       console.error('Error generating image:', error);
@@ -181,13 +186,15 @@ export default function HomePage() {
                     onHexChange={handleHexColorChange}
                     croppedImageDataUrl={croppedImageDataUrl}
                   />
-                  <button 
-                      onClick={completeColorStep}
-                      disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
-                      className="mt-4 w-full px-6 py-3 bg-foreground text-background font-semibold border border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                  >
-                      Confirm Color
-                  </button>
+                  <div className="flex justify-center w-full">
+                    <button 
+                        onClick={completeColorStep}
+                        disabled={!selectedHexColor || (selectedHexColor === '#000000' && !isColorStepCompleted && !croppedImageDataUrl) }
+                        className="mt-4 px-6 py-3 bg-input text-accent font-semibold border-2 border-accent shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
+                    >
+                        Confirm Color
+                    </button>
+                  </div>
                 </>
               ) : (
                 <p className="text-muted-foreground">Please complete image cropping in Step 2 first.</p>
@@ -203,11 +210,11 @@ export default function HomePage() {
               onHeaderClick={() => setStep('generate')}
             >
               {isColorStepCompleted ? (
-                <div className="space-y-4">
+                <div className="space-y-4 flex flex-col items-center">
                   <button
                     onClick={handleGenerateImageClick}
                     disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !isCropStepCompleted || !isColorStepCompleted}
-                    className="w-full px-6 py-3 bg-foreground text-background font-semibold border border-foreground hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    className="px-6 py-3 bg-input text-accent font-semibold border-2 border-accent shadow-[4px_4px_0_0_var(--accent)] hover:shadow-[2px_2px_0_0_var(--accent)] active:shadow-[1px_1px_0_0_var(--accent)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground"
                   >
                     {isGenerating ? 'Generating...' : 'Generate Shadenfreude Card'}
                   </button>
@@ -222,10 +229,12 @@ export default function HomePage() {
           </section>
 
           <aside className="w-full space-y-6 md:order-2">
-            <CardPreview 
-              imageDataUrl={croppedImageDataUrl} 
-              backgroundColor={selectedHexColor}
-            />
+            {showLivePreview && (
+              <CardPreview 
+                imageDataUrl={croppedImageDataUrl} 
+                backgroundColor={selectedHexColor}
+              />
+            )}
           </aside>
         </div>
 

@@ -109,7 +109,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="border border-foreground cursor-crosshair max-w-full h-auto"
+            className="cursor-crosshair max-w-full h-auto"
             style={{ maxWidth: '100%', height: 'auto'}}
           />
         </div>
