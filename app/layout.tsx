@@ -5,13 +5,12 @@ import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/navbar";
 
 export const metadata = {
-  title: "AI SDK Python Streaming Preview",
-  description:
-    "Use the Data Stream Protocol to stream chat completions from a Python endpoint (FastAPI) and display them using the useChat hook in your Next.js application.",
+  title: "Shadenfreude - Color Card Generator",
+  description: "Create your own Pantone-like color cards with Shadenfreude.",
   openGraph: {
     images: [
       {
-        url: "/og?title=AI SDK Python Streaming Preview",
+        url: "/og?title=Shadenfreude",
       },
     ],
   },
@@ -19,7 +18,7 @@ export const metadata = {
     card: "summary_large_image",
     images: [
       {
-        url: "/og?title=AI SDK Python Streaming Preview",
+        url: "/og?title=Shadenfreude",
       },
     ],
   },

@@ -91,3 +91,9 @@
         @apply bg-foreground/20 animate-pulse;
     }
 }
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
