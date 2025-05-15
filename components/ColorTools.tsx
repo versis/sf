@@ -86,12 +86,23 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     if (!imageCanvasRef.current) return;
     const canvas = imageCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
+
+    // Calculate click coordinates relative to the canvas element
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
+    // Adjust coordinates for canvas scaling (due to CSS or browser zoom)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = x * scaleX;
+    const canvasY = y * scaleY;
+
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      // Ensure coordinates are within canvas bounds before getting image data
+      const finalX = Math.min(Math.max(canvasX, 0), canvas.width - 1);
+      const finalY = Math.min(Math.max(canvasY, 0), canvas.height - 1);
+      const pixel = ctx.getImageData(finalX, finalY, 1, 1).data;
       const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
       setHexColor(hex); // Update local state for immediate feedback in input
       onHexChange(hex); // Propagate to parent

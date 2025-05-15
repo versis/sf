@@ -5,11 +5,11 @@
 @layer base {
     :root {
         /* Light Mode Palette - background adjusted to a lighter off-white */
-        --background: 0 0% 97%; /* Very light gray, almost white */
+        --background: 0 0% 98%; /* Lighter off-white */
         --foreground: 0 0% 0%;   /* Black */
-        --card: 0 0% 97%;       /* Match background */
+        --card: 0 0% 98%;       /* Match background */
         --card-foreground: 0 0% 0%;
-        --popover: 0 0% 97%;    /* Match background */
+        --popover: 0 0% 98%;    /* Match background */
         --popover-foreground: 0 0% 0%;
 
         /* Primary colors (used as a base for button styling, but specific hex will override) */
