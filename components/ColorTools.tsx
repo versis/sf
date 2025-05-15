@@ -162,7 +162,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
       {croppedImageDataUrl && (
         <>
           <p className="text-sm font-medium text-foreground">
-            Preview & Pick (click image on right):
+            Click image to pick color:
           </p>
           <canvas 
             ref={imageCanvasRef} 

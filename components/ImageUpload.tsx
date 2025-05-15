@@ -90,6 +90,7 @@ interface ImageUploadProps {
   showUploader: boolean;
   showCropper: boolean;
   initialPreviewUrl?: string | null;
+  currentFileName?: string | null;
 }
 
 const ASPECT_RATIO = 1;
@@ -101,7 +102,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   onImageCropped, 
   showUploader, 
   showCropper, 
-  initialPreviewUrl 
+  initialPreviewUrl, 
+  currentFileName
 }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -221,20 +223,32 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     <div className="space-y-6">
       {showUploader && (
         <div>
-          <input
-            type="file"
-            id="imageUpload"
-            name="imageUpload"
-            accept="image/*"
-            onChange={internalHandleFileChange}
-            className="block w-full text-sm text-muted-foreground border border-foreground file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-opacity-80 focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <div className="flex items-center">
+            <label htmlFor="imageUpload" className="cursor-pointer mr-2">
+              <div className="py-2 px-4 bg-secondary border border-foreground text-sm font-semibold hover:bg-opacity-80">
+                Browse...
+              </div>
+            </label>
+            <div className="flex-grow overflow-hidden">
+              <div className="block w-full text-sm text-muted-foreground border border-foreground py-2 px-3 truncate">
+                {currentFileName || "No file selected"}
+              </div>
+            </div>
+            <input
+              type="file"
+              id="imageUpload"
+              name="imageUpload"
+              accept="image/*"
+              onChange={internalHandleFileChange}
+              className="hidden"
+            />
+          </div>
         </div>
       )}
 
       {showCropper && previewUrl && (
         <div className="space-y-4 flex flex-col items-center">
-          <div className="w-full max-w-[38.4rem]">
+          <div className="w-full max-w-[38.4rem] max-h-[55vh] overflow-auto">
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -248,7 +262,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 src={previewUrl}
                 alt="Selected preview for cropping"
                 onLoad={onImageLoad}
-                style={{ maxHeight: '65vh', display: previewUrl ? 'block' : 'none' }}
+                style={{ maxHeight: '60vh', display: previewUrl ? 'block' : 'none' }}
                 className="border border-foreground block mx-auto"
               />
             </ReactCrop>

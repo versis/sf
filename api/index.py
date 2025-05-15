@@ -74,6 +74,10 @@ def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[int, int, int, int]:
     y = 1 - (b / 255.0)
 
     min_cmy = min(c, m, y)
+    # Handle case for white to avoid division by zero if 1 - min_cmy is 0
+    if min_cmy == 1.0: # This means c, m, y were all 0 (white)
+        return 0, 0, 0, 0
+
     c = (c - min_cmy) / (1 - min_cmy)
     m = (m - min_cmy) / (1 - min_cmy)
     y = (y - min_cmy) / (1 - min_cmy)
@@ -354,26 +358,17 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         print("Applying rounded corners...")
         radius = 40
         
-        # Create a high-quality anti-aliased mask with double resolution for better edge quality
-        scale_factor = 2
-        mask_size = (card_width * scale_factor, card_height * scale_factor)
-        mask = Image.new('L', mask_size, 0)
+        # Create a high-quality anti-aliased mask
+        mask = Image.new('L', (card_width * 2, card_height * 2), 0)
         mask_draw = ImageDraw.Draw(mask)
-        
-        # Draw the rounded rectangle with scaled radius
-        mask_draw.rounded_rectangle([(0, 0), (mask_size[0] - 1, mask_size[1] - 1)], 
-                                    radius=radius * scale_factor, 
-                                    fill=255)
-        
-        # Resize back to original dimensions with high-quality anti-aliasing
+        mask_draw.rounded_rectangle([(0,0), ((card_width*2)-1, (card_height*2)-1)], radius=radius*2, fill=255)
         mask = mask.resize((card_width, card_height), Image.Resampling.LANCZOS)
         
-        # Apply mask with improved edge quality by using a pre-multiplied alpha technique
-        r, g, b, a = canvas.split()
-        rgba = Image.merge('RGBA', (r, g, b, mask))
-        
-        # This premultiplied alpha blending yields sharper edges
-        canvas = rgba.copy()
+        # Apply mask to the canvas
+        # Ensure canvas is RGBA before putting alpha mask
+        if canvas.mode != 'RGBA':
+            canvas = canvas.convert('RGBA')
+        canvas.putalpha(mask)
         
         # Save as PNG with transparency
         img_byte_arr = io.BytesIO()

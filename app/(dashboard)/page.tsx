@@ -20,10 +20,9 @@ export default function HomePage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [colorName, setColorName] = useState<string>('DARK EMBER');
   const [generationProgress, setGenerationProgress] = useState<number>(0);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null); // For smooth progress
-  const [cardOrientation, setCardOrientation] = useState<'vertical' | 'horizontal'>('vertical');
 
   // State for wizard
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -38,33 +37,36 @@ export default function HomePage() {
     }
   }, [generatedImageUrl]);
 
-  // Effect to revoke object URL
   useEffect(() => {
-    let objectUrlsToRevoke: string[] = [];
-    
-    if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
-      objectUrlsToRevoke.push(generatedImageUrl);
-    }
-    
-    if (generatedVerticalImageUrl && generatedVerticalImageUrl.startsWith('blob:')) {
-      objectUrlsToRevoke.push(generatedVerticalImageUrl);
-    }
-    
-    if (generatedHorizontalImageUrl && generatedHorizontalImageUrl.startsWith('blob:')) {
-      objectUrlsToRevoke.push(generatedHorizontalImageUrl);
-    }
+    let urlsToRevoke: string[] = [];
+    // We only want to revoke the URLs that are currently *not* being displayed
+    // or if we are resetting everything.
+    // This effect should primarily run when generatedVerticalImageUrl or generatedHorizontalImageUrl change.
 
-    return () => {
-      objectUrlsToRevoke.forEach(url => {
-        URL.revokeObjectURL(url);
-        console.log('Revoked object URL:', url);
-      });
-    };
-  }, [generatedImageUrl, generatedVerticalImageUrl, generatedHorizontalImageUrl]);
+    // This logic might be too aggressive if it runs every time generatedImageUrl changes due to toggling.
+    // Let's refine it to only revoke when a *new* set of images is generated (i.e., when isGenerating becomes false)
+    // OR when the component unmounts.
+
+    // For now, the existing dependency array [generatedImageUrl, generatedVerticalImageUrl, generatedHorizontalImageUrl]
+    // means it will try to revoke whenever *any* of these change. This could be an issue if toggling re-triggers it.
+    // A better approach would be to revoke old URLs inside resetGeneration or when new images are fetched.
+
+    // For simplicity, let's stick to revoking only when the component unmounts for now.
+    // The resetGeneration function already handles revoking.
+    // return () => {
+    //   if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
+    //   if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
+    //   if (generatedImageUrl?.startsWith('blob:') && 
+    //       generatedImageUrl !== generatedVerticalImageUrl && 
+    //       generatedImageUrl !== generatedHorizontalImageUrl) {
+    //     URL.revokeObjectURL(generatedImageUrl);
+    //   }
+    // };
+  }, []); // Empty dependency array means this cleanup runs only on unmount
 
   const handleImageSelectedForUpload = (file: File) => {
-    // Log the original file size
-    console.log(`STEP 1.1: Original file selected - Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    console.log(`STEP 1.1: Original file selected - Name: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    setSelectedFileName(file.name);
     
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -77,6 +79,8 @@ export default function HomePage() {
       setCroppedImageDataUrl(null); 
       setSelectedHexColor('#000000');
       setGeneratedImageUrl(null);
+      setGeneratedVerticalImageUrl(null);
+      setGeneratedHorizontalImageUrl(null);
       setGenerationError(null);
       setIsUploadStepCompleted(true);
       setIsCropStepCompleted(false);
@@ -159,16 +163,12 @@ export default function HomePage() {
   const handleToggleOrientationDisplay = () => {
     if (isGenerating || !generatedVerticalImageUrl || !generatedHorizontalImageUrl) return;
 
-    if (currentDisplayOrientation === 'vertical') {
-      setGeneratedImageUrl(generatedHorizontalImageUrl);
-      setCurrentDisplayOrientation('horizontal');
-    } else {
-      setGeneratedImageUrl(generatedVerticalImageUrl);
-      setCurrentDisplayOrientation('vertical');
-    }
+    const newOrientation = currentDisplayOrientation === 'vertical' ? 'horizontal' : 'vertical';
+    setCurrentDisplayOrientation(newOrientation);
+    // No need to set generatedImageUrl here, the JSX will pick the correct one based on currentDisplayOrientation
   };
 
-  const handleGenerateImageClick = async (/* Parameter removed as this is now the primary generation */) => {
+  const handleGenerateImageClick = async () => {
     if (!croppedImageDataUrl || !selectedHexColor) {
       setGenerationError('Please ensure an image is cropped and a HEX color is set.');
       return;
@@ -176,10 +176,12 @@ export default function HomePage() {
     
     setCurrentWizardStep('' as any); // Close the wizard
     
-    setGeneratedImageUrl(null);
+    // Reset image URLs before generation
+    setGeneratedImageUrl(null); 
     setGeneratedVerticalImageUrl(null);
     setGeneratedHorizontalImageUrl(null);
     setCurrentDisplayOrientation('vertical'); // Default to showing vertical first
+    
     setGenerationProgress(0);
     setIsGenerating(true);
     setGenerationError(null);
@@ -213,14 +215,14 @@ export default function HomePage() {
       }
       const verticalBlob = await verticalResponse.blob();
       const verticalUrl = URL.createObjectURL(verticalBlob);
-      setGeneratedVerticalImageUrl(verticalUrl);
+      setGeneratedVerticalImageUrl(verticalUrl); // Store the vertical URL
       console.log(`STEP 4.1: Received vertical image - Size: ${(verticalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
       setGenerationProgress(50);
 
       // STAGE 2: Generate Horizontal Card
-      let compressedDataForHorizontal = croppedImageDataUrl; // Re-compress original for potentially different needs
+      let compressedDataForHorizontal = croppedImageDataUrl;
       try {
-        compressedDataForHorizontal = await compressImage(croppedImageDataUrl, 0.7); 
+        compressedDataForHorizontal = await compressImage(croppedImageDataUrl, 0.7);
       } catch (compressError) {
         console.warn('Horizontal image compression failed, using original:', compressError);
       }
@@ -243,13 +245,15 @@ export default function HomePage() {
       }
       const horizontalBlob = await horizontalResponse.blob();
       const horizontalUrl = URL.createObjectURL(horizontalBlob);
-      setGeneratedHorizontalImageUrl(horizontalUrl);
+      setGeneratedHorizontalImageUrl(horizontalUrl); // Store the horizontal URL
       console.log(`STEP 4.2: Received horizontal image - Size: ${(horizontalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
       
-      // Set generation progress to complete
+      // After both are generated, set generatedImageUrl to null initially.
+      // The JSX will pick the correct one based on currentDisplayOrientation (which is 'vertical' by default)
+      setGeneratedImageUrl(null); 
+      // setCurrentDisplayOrientation('vertical'); // Already set before try block
       setGenerationProgress(100);
       
-      // Scroll to show results
       if (resultRef.current) resultRef.current.scrollIntoView({ behavior: 'smooth' });
 
     } catch (error) {
@@ -269,11 +273,11 @@ export default function HomePage() {
     setGeneratedHorizontalImageUrl(null);
     setUploadStepPreviewUrl(null);
     setCroppedImageDataUrl(null);
+    setSelectedFileName(null);
     
     // Reset other states
     setSelectedHexColor('#000000');
     setGenerationError(null);
-    setStatusMessage(null);
     setGenerationProgress(0);
     setCurrentDisplayOrientation('vertical');
     
@@ -318,16 +322,18 @@ export default function HomePage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
-      <div className="w-full max-w-6xl space-y-10">
+      <div className="w-full max-w-6xl space-y-6">
         <header className="py-6 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
-            <span className="mr-1 ml-1">
-              <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
-              shade
-            </span>
-            <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
-              freude
-            </span>
+            <a href="/" onClick={(e) => { e.preventDefault(); window.location.reload();}} className="flex items-center justify-center cursor-pointer">
+              <span className="mr-1 ml-1">
+                <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
+                shade
+              </span>
+              <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
+                freude
+              </span>
+            </a>
           </h1>
           <p className="text-center text-sm text-muted-foreground mt-2">
             part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
@@ -350,7 +356,8 @@ export default function HomePage() {
                 showUploader={true}
                 showCropper={false}
                 initialPreviewUrl={uploadStepPreviewUrl}
-                key={uploadStepPreviewUrl || 'uploader'}
+                currentFileName={selectedFileName}
+                key={uploadStepPreviewUrl || selectedFileName || 'uploader'}
               />
             </WizardStep>
 
@@ -363,7 +370,7 @@ export default function HomePage() {
               onHeaderClick={() => setStep('crop')}
             >
               {isUploadStepCompleted ? (
-                <div className="flex justify-center w-full">
+                <div className="flex justify-center w-full p-1">
                   <ImageUpload 
                     onImageSelect={() => {}} 
                     onImageCropped={handleImageCropped} 
@@ -414,7 +421,7 @@ export default function HomePage() {
               title="Generate Card" 
               stepNumber={4} 
               isActive={currentWizardStep === 'generate'} 
-              isCompleted={!!generatedImageUrl}
+              isCompleted={!!generatedVerticalImageUrl || !!generatedHorizontalImageUrl}
               isFutureStep={!isUploadStepCompleted || !isCropStepCompleted || !isColorStepCompleted} // Future if any prior step isn't done
               onHeaderClick={() => setStep('generate')}
             >
@@ -459,62 +466,66 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Results Section: Display one image at a time with a toggle button */}
         {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
-          <section ref={resultRef} className="w-full pt-6">
-            {/* Display both vertical and horizontal cards */}
-            <div className="space-y-12">
-              {/* Vertical Card */}
-              {generatedVerticalImageUrl && (
-                <div className="flex flex-col items-center">
-                  <img 
-                    src={generatedVerticalImageUrl} 
-                    alt="Vertical shadefreude card" 
-                    className="max-w-full md:max-w-2xl h-auto rounded-md"
-                  />
-                </div>
+          <section ref={resultRef} className="w-full pt-4">
+            <div className="flex justify-center">
+              {(currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) && (
+                <img 
+                  src={generatedVerticalImageUrl} 
+                  alt={`Generated shadefreude card - vertical`}
+                  className={`max-w-full rounded-md md:max-w-2xl h-auto`}
+                />
               )}
-              
-              {/* Horizontal Card */}
-              {generatedHorizontalImageUrl && (
-                <div className="flex flex-col items-center mt-8">
-                  <img 
-                    src={generatedHorizontalImageUrl} 
-                    alt="Horizontal shadefreude card" 
-                    className="max-w-full md:max-w-2xl h-auto rounded-md"
-                  />
-                </div>
+              {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) && (
+                <img 
+                  src={generatedHorizontalImageUrl} 
+                  alt={`Generated shadefreude card - horizontal`}
+                  className={`max-w-full rounded-md md:max-w-sm max-h-[80vh] h-auto`}
+                />
               )}
             </div>
             
             <div className="flex flex-wrap justify-center gap-3 mt-8">
-              {generatedVerticalImageUrl && (
+              {/* Orientation toggle buttons */}
+              {(generatedVerticalImageUrl && generatedHorizontalImageUrl) && (
+                <div className="flex justify-center gap-6 w-full mb-4">
+                  <button 
+                    onClick={() => setCurrentDisplayOrientation('vertical')}
+                    className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                    title="Vertical Orientation"
+                    disabled={isGenerating}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
+                    </svg>
+                    <span className="text-xs mt-1">Vertical</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentDisplayOrientation('horizontal')}
+                    className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} flex flex-col items-center transition-all duration-200`}
+                    title="Horizontal Orientation"
+                    disabled={isGenerating}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
+                    </svg>
+                    <span className="text-xs mt-1">Horizontal</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Download button for the currently displayed image */}
+              {(generatedVerticalImageUrl || generatedHorizontalImageUrl) && (
                 <button
-                  onClick={() => handleDownloadImage('vertical')}
-                  className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
+                    onClick={() => handleDownloadImage(currentDisplayOrientation)}
+                    disabled={!(currentDisplayOrientation === 'vertical' ? generatedVerticalImageUrl : generatedHorizontalImageUrl)}
+                    className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Download Vertical
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download {currentDisplayOrientation === 'vertical' ? 'Vertical' : 'Horizontal'} Card
                 </button>
               )}
-              {generatedHorizontalImageUrl && (
-                <button
-                  onClick={() => handleDownloadImage('horizontal')}
-                  className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Download Horizontal
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  // Call resetGeneration when Create Another Card is clicked
-                  resetGeneration();
-                }}
-                className="px-3 py-2 md:px-4 md:py-2 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                Create Another Card
-              </button>
             </div>
           </section>
         )}
