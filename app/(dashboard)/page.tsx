@@ -12,7 +12,7 @@ type WizardStepName = 'upload' | 'crop' | 'color' | 'generate';
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
-  const [selectedHexColor, setSelectedHexColor] = useState<string>('#000000');
+  const [selectedHexColor, setSelectedHexColor] = useState<string>('#F7F7F7');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -127,8 +127,15 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:p-12 bg-background text-foreground">
       <div className="w-full max-w-6xl space-y-10">
         <header className="py-6 border-b-2 border-foreground">
-          <h1 className="text-4xl md:text-5xl font-bold text-center">
-            shadenfreude <span className="text-xl md:text-2xl font-normal text-muted-foreground">(sf.tinker.institute)</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
+            <span className="mr-1 ml-1">
+              <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
+              shaden
+            </span>
+            <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
+              freude
+            </span>
+            {/*<span className="text-xl md:text-2xl font-normal text-muted-foreground">(sf.tinker.institute)</span>*/}
           </h1>
         </header>
 
