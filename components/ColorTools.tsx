@@ -4,9 +4,7 @@ import React, { useState, ChangeEvent, useRef, useEffect, MouseEvent } from 'rea
 
 interface ColorToolsProps {
   initialHex?: string;
-  initialName?: string;
   onHexChange: (hex: string) => void;
-  onNameChange: (name: string) => void;
   croppedImageDataUrl?: string | null; // For the color picker
 }
 
@@ -26,13 +24,10 @@ const rgbToHex = (r: number, g: number, b: number): string => {
 
 const ColorTools: React.FC<ColorToolsProps> = ({
   initialHex = '#000000',
-  initialName = '',
   onHexChange,
-  onNameChange,
   croppedImageDataUrl,
 }) => {
   const [hexColor, setHexColor] = useState<string>(initialHex);
-  const [colorName, setColorName] = useState<string>(initialName);
   const [hexError, setHexError] = useState<string>('');
   const imageCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -87,12 +82,6 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     }
   };
 
-  const handleNameInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const newName = event.target.value;
-    setColorName(newName);
-    onNameChange(newName);
-  };
-
   const handleCanvasClick = (event: MouseEvent<HTMLCanvasElement>) => {
     if (!imageCanvasRef.current) return;
     const canvas = imageCanvasRef.current;
@@ -111,62 +100,23 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-      <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100">Color Details:</h3>
+    <div className="space-y-6 p-4 border border-foreground bg-card">
+      <h3 className="text-lg font-medium text-foreground">Color Details:</h3>
       
       {croppedImageDataUrl && (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <p className="text-sm font-medium text-foreground">
             Pick color from image (click below):
           </p>
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="border border-gray-300 dark:border-gray-600 rounded-md cursor-crosshair max-w-full h-auto"
-            // Style to ensure canvas is not larger than its container if image is big
+            className="border border-foreground cursor-crosshair max-w-full h-auto"
             style={{ maxWidth: '100%', height: 'auto'}}
           />
         </div>
       )}
 
-      <div>
-        <label htmlFor="hexColorInput" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          HEX Color Code
-        </label>
-        <input
-          type="text"
-          id="hexColorInput"
-          value={hexColor} // Controlled by local state, updated by picker or input
-          onChange={handleHexInputChange}
-          placeholder="#RRGGBB"
-          className={`block w-full sm:w-1/2 p-2 border rounded-md shadow-sm 
-                      ${hexError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} 
-                      focus:ring-blue-500 focus:border-blue-500 
-                      dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400`}
-        />
-        {hexError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{hexError}</p>}
-        <div 
-            className="mt-2 w-10 h-10 rounded border border-gray-400 dark:border-gray-500"
-            style={{ backgroundColor: /^#[0-9A-F]{6}$/i.test(hexColor) || /^#[0-9A-F]{3}$/i.test(hexColor) ? hexColor : 'transparent' }}
-            title="Current color preview"
-        ></div>
-      </div>
-
-      <div>
-        <label htmlFor="colorNameInput" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Color Name
-        </label>
-        <input
-          type="text"
-          id="colorNameInput"
-          value={colorName}
-          onChange={handleNameInputChange}
-          placeholder="e.g., Deep Cerulean"
-          className="block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm 
-                     focus:ring-blue-500 focus:border-blue-500 
-                     dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-        />
-      </div>
     </div>
   );
 };
