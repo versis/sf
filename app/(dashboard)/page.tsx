@@ -355,7 +355,7 @@ export default function HomePage() {
 
             {isColorStepCompleted && (
               <WizardStep
-                title="View & Confirm Orientation"
+                title="Choose Orientation"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}

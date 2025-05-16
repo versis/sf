@@ -278,9 +278,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         base_font_size_scale = swatch_panel_width / 400 # Adjust 400 to find a good base
 
         current_y = text_padding_top
-        font_color_name = get_font(int(50 * base_font_size_scale), bold=True)
-        font_noun = get_font(int(22 * base_font_size_scale), bold=False)
-        font_description = get_font(int(18 * base_font_size_scale), bold=False)
+        font_color_name = get_font(int(50 * base_font_size_scale), weight="Bold")
+        font_noun = get_font(int(22 * base_font_size_scale), weight="Regular")
+        font_description = get_font(int(18 * base_font_size_scale), weight="Regular")
 
         main_color_name_str = color_name.upper()
         # Basic text wrapping for main_color_name_str
@@ -325,10 +325,10 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
                 break 
 
         # Bottom-aligned text: Brand, ID, Metrics
-        font_brand_bottom = get_font(int(30 * base_font_size_scale), bold=(orientation.lower()!="horizontal")) # True for vertical, False for horizontal 
-        font_id_bottom = get_font(int(30 * base_font_size_scale), bold=False)
-        font_metrics_label = get_font(int(16 * base_font_size_scale), bold=True)
-        font_metrics_value = get_font(int(16 * base_font_size_scale), bold=False)
+        font_brand_bottom = get_font(int(30 * base_font_size_scale), weight="Bold" if orientation.lower()!="horizontal" else "Regular") # Bold for vertical, Regular for horizontal 
+        font_id_bottom = get_font(int(30 * base_font_size_scale), weight="Regular")
+        font_metrics_label = get_font(int(16 * base_font_size_scale), weight="Bold")
+        font_metrics_value = get_font(int(16 * base_font_size_scale), weight="Regular")
         metrics_line_height = font_metrics_value.getmask("Tg").size[1] + int(swatch_panel_height * 0.005) # Small gap
 
         brand_text = "shadefreude"
