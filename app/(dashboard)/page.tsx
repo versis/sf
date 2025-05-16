@@ -194,8 +194,8 @@ export default function HomePage() {
     setCurrentWizardStep('results');
     
     // Start the smooth progress animation
-    const progressInterval = 70; // Update every 70ms
-    const totalDuration = 12000; // 12 seconds
+    const progressInterval = 100; // Update every 100ms for smoother feel over longer duration
+    const totalDuration = 58000; // 58 seconds to align with backend timeout
     const totalSteps = totalDuration / progressInterval;
     const progressIncrement = 100 / totalSteps;
     
@@ -480,8 +480,8 @@ export default function HomePage() {
               >
         {isGenerating && (
                   <div className="w-full mb-6">
-                    <p className="text-sm text-center mb-2">
-                      {generationProgress < 100 ? 'Generating card... please wait.' : 'Processing completed card...'}
+                    <p className="text-xs text-center text-blue-600 mb-2">
+                      Generating card... It might take 30-60 seconds.
                     </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
