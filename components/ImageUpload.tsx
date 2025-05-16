@@ -263,7 +263,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   src={previewUrl}
                   alt="Selected preview for cropping"
                   onLoad={onImageLoad}
-                  style={{ maxHeight: '40vh', display: previewUrl ? 'block' : 'none' }}
+                  style={{ maxHeight: '55vh', display: previewUrl ? 'block' : 'none' }}
                   className="border border-foreground mx-auto"
                 />
               </ReactCrop>

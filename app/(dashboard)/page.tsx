@@ -197,50 +197,76 @@ export default function HomePage() {
     
     let tempHorizontalUrl: string | null = null;
     let tempVerticalUrl: string | null = null;
+    let horizontalSuccess = false;
+    let verticalSuccess = false;
 
     try {
-      const horizontalResponse = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          croppedImageDataUrl: croppedImageDataUrl,
-          hexColor: selectedHexColor,
-          colorName: colorNameInput,
-          orientation: 'horizontal',
+      // Generate both cards in parallel for speed
+      const [horizontalResponse, verticalResponse] = await Promise.all([
+        fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            croppedImageDataUrl: croppedImageDataUrl,
+            hexColor: selectedHexColor,
+            colorName: colorNameInput,
+            orientation: 'horizontal',
+          }),
         }),
-      });
-      if (!horizontalResponse.ok) {
-        const errorText = await horizontalResponse.text();
-        throw new Error(`Horizontal card generation failed: ${errorText.substring(0,150)}`);
-      }
-      const horizontalBlob = await horizontalResponse.blob();
-      tempHorizontalUrl = URL.createObjectURL(horizontalBlob);
-      setGeneratedHorizontalImageUrl(tempHorizontalUrl);
-
-      const verticalResponse = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          croppedImageDataUrl: croppedImageDataUrl,
-          hexColor: selectedHexColor,
-          colorName: colorNameInput,
-          orientation: 'vertical',
-        }),
-      });
-      if (!verticalResponse.ok) {
-        const errorText = await verticalResponse.text();
-        setGenerationError(`Vertical card generation failed: ${errorText.substring(0,150)}. Horizontal version is available.`);
-        // Not throwing, allowing horizontal to proceed
+        fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            croppedImageDataUrl: croppedImageDataUrl,
+            hexColor: selectedHexColor,
+            colorName: colorNameInput,
+            orientation: 'vertical',
+          }),
+        })
+      ]);
+      
+      // Process horizontal result
+      if (horizontalResponse.ok) {
+        const horizontalBlob = await horizontalResponse.blob();
+        tempHorizontalUrl = URL.createObjectURL(horizontalBlob);
+        setGeneratedHorizontalImageUrl(tempHorizontalUrl);
+        horizontalSuccess = true;
       } else {
+        const errorText = await horizontalResponse.text();
+        setGenerationError(`Horizontal card generation failed: ${errorText.substring(0,150)}`);
+      }
+      
+      // Process vertical result
+      if (verticalResponse.ok) {
         const verticalBlob = await verticalResponse.blob();
         tempVerticalUrl = URL.createObjectURL(verticalBlob);
         setGeneratedVerticalImageUrl(tempVerticalUrl);
+        verticalSuccess = true;
+      } else {
+        const errorText = await verticalResponse.text();
+        if (horizontalSuccess) {
+          setGenerationError(`Vertical card generation failed: ${errorText.substring(0,150)}. Horizontal version is available.`);
+        } else {
+          throw new Error(`Vertical card generation failed: ${errorText.substring(0,150)}`);
+        }
       }
       
-      setIsColorStepCompleted(true); // Mark step 3 complete
-      setCurrentWizardStep('results'); // Move to step 4
-      setIsResultsStepCompleted(true); // Automatically mark results step as complete
-      setCurrentDisplayOrientation('horizontal'); // Default to horizontal view
+      // Only proceed to results step if at least one card was generated successfully
+      if (horizontalSuccess || verticalSuccess) {
+        setIsColorStepCompleted(true); // Mark step 3 complete
+        setCurrentWizardStep('results'); // Move to step 4
+        setIsResultsStepCompleted(true); // Automatically mark results step as complete
+        
+        // Set the display orientation to whichever card was successfully generated
+        if (horizontalSuccess) {
+          setCurrentDisplayOrientation('horizontal');
+        } else if (verticalSuccess) {
+          setCurrentDisplayOrientation('vertical');
+        }
+      } else {
+        throw new Error('Both card generations failed.');
+      }
+      
       setGenerationProgress(100);
       
       // Clear the progress timer if it's still running
@@ -411,7 +437,7 @@ export default function HomePage() {
               </WizardStep>
             )}
 
-            {isColorStepCompleted && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
+            {isColorStepCompleted && currentWizardStep === 'results' && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
               <WizardStep
                 title="Claim Your Card"
                 stepNumber={4}
@@ -474,9 +500,11 @@ export default function HomePage() {
           </section>
         </div>
         
-        {isGenerating && currentWizardStep !=='results' && (
+        {isGenerating && (
           <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mt-6">
-            <p className="text-sm text-center mb-2">Generating card... please wait.</p>
+            <p className="text-sm text-center mb-2">
+              {generationProgress < 100 ? 'Generating cards... please wait.' : 'Processing completed cards...'}
+            </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
                 className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
