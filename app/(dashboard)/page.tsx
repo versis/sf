@@ -23,6 +23,8 @@ export default function HomePage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [userHasInteractedWithColor, setUserHasInteractedWithColor] = useState(false);
+  const [showColorInstructionHighlight, setShowColorInstructionHighlight] = useState(false);
+  const [colorInstructionKey, setColorInstructionKey] = useState(0);
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -152,6 +154,15 @@ export default function HomePage() {
   const handleGenerateImageClick = async () => {
     if (!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor) {
       setGenerationError('Please ensure an image is cropped and a color has been actively selected.');
+      
+      // Highlight the instruction text if color hasn't been selected
+      if (!userHasInteractedWithColor) {
+        setShowColorInstructionHighlight(true);
+        // Increment key to trigger animation restart
+        setColorInstructionKey(prev => prev + 1);
+        // Reset the highlight after 3 seconds
+        setTimeout(() => setShowColorInstructionHighlight(false), 3000);
+      }
       return;
     }
     
@@ -160,6 +171,24 @@ export default function HomePage() {
     setIsGenerating(true);
     setGenerationError(null);
     setGenerationProgress(0);
+    
+    // Start the smooth progress animation
+    const progressInterval = 70; // Update every 70ms
+    const totalDuration = 7000; // 7 seconds
+    const totalSteps = totalDuration / progressInterval;
+    const progressIncrement = 100 / totalSteps;
+    
+    let currentStep = 0;
+    const progressTimer = setInterval(() => {
+      currentStep++;
+      const newProgress = Math.min(99, progressIncrement * currentStep); // Cap at 99% until completion
+      setGenerationProgress(newProgress);
+      
+      if (currentStep >= totalSteps) {
+        clearInterval(progressTimer);
+      }
+    }, progressInterval);
+    
     // Clear previous images before new generation
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
@@ -170,7 +199,6 @@ export default function HomePage() {
     let tempVerticalUrl: string | null = null;
 
     try {
-      setGenerationProgress(10);
       const horizontalResponse = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,7 +216,6 @@ export default function HomePage() {
       const horizontalBlob = await horizontalResponse.blob();
       tempHorizontalUrl = URL.createObjectURL(horizontalBlob);
       setGeneratedHorizontalImageUrl(tempHorizontalUrl);
-      setGenerationProgress(50);
 
       const verticalResponse = await fetch('/api/generate-image', {
         method: 'POST',
@@ -215,6 +242,9 @@ export default function HomePage() {
       setIsResultsStepCompleted(true); // Automatically mark results step as complete
       setCurrentDisplayOrientation('horizontal'); // Default to horizontal view
       setGenerationProgress(100);
+      
+      // Clear the progress timer if it's still running
+      clearInterval(progressTimer);
 
     } catch (error) {
       console.error('Error during image generation:', error);
@@ -224,8 +254,12 @@ export default function HomePage() {
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
       setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
+      
+      // Clear the progress timer if it's still running
+      clearInterval(progressTimer);
     } finally {
       setIsGenerating(false);
+      setGenerationProgress(100); // Ensure progress is complete
     }
   };
 
@@ -260,6 +294,20 @@ export default function HomePage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
+      <style jsx global>{`
+        @keyframes shakeAnimation {
+          0% { transform: translateX(0); }
+          20% { transform: translateX(-4px); }
+          40% { transform: translateX(4px); }
+          60% { transform: translateX(-2px); }
+          80% { transform: translateX(2px); }
+          100% { transform: translateX(0); }
+        }
+        .shake-animation {
+          animation: shakeAnimation 0.5s ease-in-out;
+        }
+      `}</style>
+      
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
         <header className="py-6 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
@@ -330,20 +378,41 @@ export default function HomePage() {
                   initialHex={selectedHexColor}
                   onHexChange={handleHexColorChange}
                   croppedImageDataUrl={croppedImageDataUrl}
-                  onColorPickedFromCanvas={() => setUserHasInteractedWithColor(true)}
+                  onColorPickedFromCanvas={() => {
+                    setUserHasInteractedWithColor(true);
+                    setShowColorInstructionHighlight(false);
+                  }}
                 />
-                <p className="text-sm text-center text-muted-foreground mt-4 mb-2">
+                <p 
+                  key={colorInstructionKey}
+                  className={`text-sm text-center mt-4 mb-2 transition-colors duration-300 ${
+                    showColorInstructionHighlight ? 'text-red-500 font-medium shake-animation' : 'text-muted-foreground'
+                  }`}
+                >
                   Click on the image to pick the color.
                 </p>
                 <div className="flex justify-center w-full gap-4 mt-2">
-                  <button
-                    onClick={handleGenerateImageClick}
-                    disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !userHasInteractedWithColor}
-                    className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                  <div 
+                    onClick={() => {
+                      if (!userHasInteractedWithColor) {
+                        setShowColorInstructionHighlight(true);
+                        setColorInstructionKey(prev => prev + 1);
+                        setTimeout(() => setShowColorInstructionHighlight(false), 3000);
+                      } else {
+                        handleGenerateImageClick();
+                      }
+                    }}
+                    className="relative"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                    {isGenerating ? 'Generating Card...' : 'Generate Card'}
-                  </button>
+                    <button
+                      type="button"
+                      disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !userHasInteractedWithColor}
+                      className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
+                      {isGenerating ? 'Generating Card...' : 'Generate Card'}
+                    </button>
+                  </div>
                 </div>
               </WizardStep>
             )}
