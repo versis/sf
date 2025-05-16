@@ -305,9 +305,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # --- Text Layout for Swatch Panel ---
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
-        text_padding_left = int(swatch_panel_width * 0.07) # Keep reduced left padding
-        text_padding_top = int(swatch_panel_height * 0.01) # Make top padding smaller
-        text_padding_bottom = int(swatch_panel_height * 0.06)
+        text_padding_left = int(swatch_panel_width * 0.09) # Increased left padding (was 0.07)
+        text_padding_top = int(swatch_panel_height * 0.02) # Increased top padding (was 0.01)
+        text_padding_bottom = int(swatch_panel_height * 0.08) # Increased bottom padding (was 0.06)
 
         if swatch_panel_width == 0: swatch_panel_width = 1 # Avoid division by zero for base_font_size_scale
         if swatch_panel_width >= 900: 
@@ -365,8 +365,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         id_h = get_text_dimensions(id_text, font_id_main)[1]
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position brand text further down as requested
-        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.09)
+        # Position brand text further up as requested
+        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.12) # Moved up (was 0.09)
         
         # Add more space between brand and ID as requested
         id_y = brand_y + brand_h + int(swatch_panel_height * 0.04) # Increased spacing
@@ -509,7 +509,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         available_width = swatch_panel_width - text_padding_left - brand_text_width
         
         # Position metrics more to the left
-        metrics_x_offset = int(swatch_panel_width * 0.57)  # Reduced offset - more to the left
+        metrics_x_offset = int(swatch_panel_width * 0.52)  # Moved further left (was 0.57)
         metrics_start_x = text_padding_left + metrics_x_offset
         
         # Move metrics down from brand text

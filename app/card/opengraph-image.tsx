@@ -22,7 +22,7 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
         tw="flex h-full w-full bg-white"
         style={{ fontFamily: "Geist Sans" }}
       >
-        <div tw="flex flex-col absolute h-full w-full p-12">
+        <div tw="flex flex-col absolute h-full w-full p-16">
           {/* Header */}
           <div tw="flex items-center mb-6">
             <div 
@@ -50,7 +50,7 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
               <div 
                 style={{ backgroundColor: color, height: "250px" }}
               />
-              <div tw="bg-white p-4 flex flex-col" style={{ height: "250px" }}>
+              <div tw="bg-white p-6 flex flex-col" style={{ height: "250px" }}>
                 <div tw="text-2xl font-bold text-black mb-1 truncate" style={{ maxWidth: '300px' }}>{colorName.toUpperCase()}</div>
                 <div tw="text-gray-500 mb-2">{color}</div>
                 <div tw="text-sm text-gray-700">
@@ -61,7 +61,7 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
             </div>
           </div>
           
-          <div tw="absolute bottom-12 left-12 text-xl font-semibold">
+          <div tw="absolute bottom-16 left-16 text-xl font-semibold">
             part of tinker.institute
           </div>
         </div>
