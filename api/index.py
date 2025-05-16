@@ -249,18 +249,23 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             print(f"Generating HORIZONTAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
         elif orientation.lower() == "vertical":
             card_width, card_height = 750, 1800
-            swatch_panel_width = int(card_width * 0.50) # 375px
-            swatch_panel_height = card_height         # 1800px (full height for left panel)
-            image_panel_width = card_width - swatch_panel_width # 375px
-            image_panel_height = card_height        # 1800px (full height for right panel)
+            swatch_panel_width = card_width         # 750px (full width for top panel)
+            swatch_panel_height = int(card_height * 0.50) # 900px
+            image_panel_width = card_width          # 750px (full width for bottom panel)
+            image_panel_height = card_height - swatch_panel_height # 900px
             print(f"Generating VERTICAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
         else:
             raise HTTPException(status_code=400, detail=f"Invalid orientation specified: {orientation}. Must be 'horizontal' or 'vertical'.")
 
         canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
         draw = ImageDraw.Draw(canvas)
-        # Swatch is always on the left
-        draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
+        
+        # For horizontal orientation, swatch is on the left
+        # For vertical orientation, swatch is on the top
+        if orientation.lower() == "horizontal":
+            draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
+        else:  # vertical
+            draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
 
         text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
 
@@ -357,9 +362,14 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         brand_y_pos = id_y_pos - brand_actual_height - int(swatch_panel_height * 0.01) # Small gap
         draw.text((text_padding_left, brand_y_pos), brand_text, font=font_brand_bottom, fill=text_color_on_swatch)
         
-        # Image panel is always on the right of the swatch panel
+        # Position image panel based on orientation
+        # For horizontal: image is on the right
+        # For vertical: image is on the bottom
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
-        canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
+        if orientation.lower() == "horizontal":
+            canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
+        else:  # vertical
+            canvas.paste(user_image_fitted, (0, swatch_panel_height), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
     
         print("User image pasted onto canvas.")
         # Apply rounded corners to entire card
