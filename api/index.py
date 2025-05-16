@@ -305,9 +305,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # --- Text Layout for Swatch Panel ---
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
-        text_padding_left = int(swatch_panel_width * 0.09) # Increased left padding (was 0.07)
-        text_padding_top = int(swatch_panel_height * 0.02) # Increased top padding (was 0.01)
-        text_padding_bottom = int(swatch_panel_height * 0.08) # Increased bottom padding (was 0.06)
+        text_padding_left = int(swatch_panel_width * 0.09) # Increased left padding
+        text_padding_top = int(swatch_panel_height * 0.02) # Increased top padding
+        text_padding_bottom = int(swatch_panel_height * 0.08) # Increased bottom padding
 
         if swatch_panel_width == 0: swatch_panel_width = 1 # Avoid division by zero for base_font_size_scale
         if swatch_panel_width >= 900: 
@@ -334,11 +334,11 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         
         # Use IBM Plex Mono Regular for ID text 
-        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular", font_family="Mono") # ID text with monospace
+        font_id_main = get_font(int(37 * base_font_size_scale), weight="Light", font_family="Mono") # ID text with monospace
         # Use IBM Plex Mono Light for metrics labels to make them lighter
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
+        font_metrics_label_main = get_font(int(23 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
         # Use IBM Plex Mono Light for metrics values to make them lighter
-        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics values
+        font_metrics_value_main = get_font(int(23 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -365,11 +365,15 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         id_h = get_text_dimensions(id_text, font_id_main)[1]
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position brand text further up as requested
-        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.12) # Moved up (was 0.09)
+        # Keep original positions for ID and metrics, but move brand text up
+        # Original position for ID and metrics reference point
+        original_bottom_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.10)
         
-        # Add more space between brand and ID as requested
-        id_y = brand_y + brand_h + int(swatch_panel_height * 0.04) # Increased spacing
+        # Move brand text up higher than original position
+        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.09) # Moved up from original
+        
+        # Keep ID at original relative position (calculated from original_bottom_y, not brand_y)
+        id_y = original_bottom_y + brand_h + int(swatch_panel_height * 0.04) # Relative to original position
 
         # Now handle the title formatting with better letter spacing
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
@@ -499,7 +503,14 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # For monospace fonts, we don't need much additional spacing
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
-                # Simplify metrics positioning - use a fixed position relative to brand text
+        # Position metrics relative to original position, not brand position
+        metrics_x_offset = int(swatch_panel_width * 0.55)  # Moved left from original 0.57
+        metrics_start_x = text_padding_left + metrics_x_offset
+        
+        # Keep metrics aligned with original position
+        metrics_start_y = original_bottom_y + int(brand_h * 0.8)  # Based on original position
+        
+        # Make the spacing between label and value consistent
         hex_val_str = hex_color_input.upper()
         cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
         rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
@@ -507,13 +518,6 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Calculate available space
         brand_text_width = get_text_dimensions(brand_text, font_brand_main)[0]
         available_width = swatch_panel_width - text_padding_left - brand_text_width
-        
-        # Position metrics more to the left
-        metrics_x_offset = int(swatch_panel_width * 0.52)  # Moved further left (was 0.57)
-        metrics_start_x = text_padding_left + metrics_x_offset
-        
-        # Move metrics down from brand text
-        metrics_start_y = brand_y + int(brand_h * 0.8)  # Positioned halfway down the brand text
         
         # Make the spacing between label and value consistent
         metrics_labels = ["HEX", "CMYK", "RGB"] 
