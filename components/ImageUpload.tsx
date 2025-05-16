@@ -255,24 +255,27 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {showCropper && previewUrl && (
         <div className="space-y-4 flex flex-col items-center">
-          <div className="w-full max-w-[38.4rem] max-h-[55vh] overflow-auto">
-            <ReactCrop
-              crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-              onComplete={(c) => setCompletedCrop(c)}
-              aspect={aspectRatio}
-              minWidth={MIN_DIMENSION}
-              minHeight={MIN_DIMENSION}
-            >
-              <img
-                ref={imgRef}
-                src={previewUrl}
-                alt="Selected preview for cropping"
-                onLoad={onImageLoad}
-                style={{ maxHeight: '60vh', display: previewUrl ? 'block' : 'none' }}
-                className="border border-foreground block mx-auto"
-              />
-            </ReactCrop>
+          <div className="w-full flex justify-center">
+            <div className="max-w-[38.4rem] max-h-[55vh] overflow-auto">
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={aspectRatio}
+                minWidth={MIN_DIMENSION}
+                minHeight={MIN_DIMENSION}
+                className="flex justify-center"
+              >
+                <img
+                  ref={imgRef}
+                  src={previewUrl}
+                  alt="Selected preview for cropping"
+                  onLoad={onImageLoad}
+                  style={{ maxHeight: '60vh', display: previewUrl ? 'block' : 'none' }}
+                  className="border border-foreground mx-auto"
+                />
+              </ReactCrop>
+            </div>
           </div>
           
           {processingMessage && (
