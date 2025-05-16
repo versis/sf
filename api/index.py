@@ -87,9 +87,10 @@ def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[int, int, int, int]:
 # --- End Color Conversion Utilities ---
 
 # --- Font Loading ---
-def get_font(size: int, weight: str = "Regular", style: str = "Normal"):
+def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter"):
     """
-    Loads an Inter font variant.
+    Loads a font variant.
+    font_family: "Inter" (default) or "Mono" for monospace
     Weight: "Regular", "Bold", "Light", "Medium", "SemiBold", "ExtraBold", "Black", "Thin", "ExtraLight"
     Style: "Normal", "Italic"
     """
@@ -104,6 +105,15 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal"):
         pt_suffix = "24pt"
     else:
         pt_suffix = "28pt"
+    
+    if font_family == "Mono":
+        # Try common monospace fonts that support IPA symbols
+        monospace_fonts = ["DejaVu Sans Mono", "Courier New", "Consolas", "Liberation Mono"]
+        for mono_font in monospace_fonts:
+            try:
+                return ImageFont.truetype(mono_font, size)
+            except IOError:
+                continue
     
     # Match the filename pattern: Inter_XXpt-WeightStyle.ttf
     font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
@@ -326,7 +336,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
 
         # --- Top Section: Color Name, Phonetic/Noun, Description ---
         font_color_name = get_font(int(60 * base_font_size_scale), weight="Bold") # Slightly reduced from 50 to 60 scaling factor from 400 to 450 base
-        font_phonetic_noun = get_font(int(20 * base_font_size_scale), weight="Regular")
+        font_phonetic_noun = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono")
         font_description = get_font(int(18 * base_font_size_scale), weight="Regular")
 
         main_color_name_str = color_name.upper()
@@ -354,11 +364,21 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         elif data.phoneticName and data.phoneticName.strip():
             phonetic_str = data.phoneticName.strip()
         
-        # Combine phonetic and article on one line if phonetic_str exists
-        combined_phonetic_article = f"{phonetic_str} {article_str}".strip() if phonetic_str else article_str
+        # Format the phonetic text to use lowercase with brackets
+        if phonetic_str and phonetic_str.startswith("[") and phonetic_str.endswith("]"):
+            phonetic_str = phonetic_str  # Already formatted correctly
+        elif color_name.upper() == "OLIVE ALPINE SENTINEL":
+            phonetic_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"
+        else:
+            # Format to ensure it has brackets
+            phonetic_str = f"[{phonetic_str.strip('[]')}]"
         
-        draw.text((text_padding_left, current_y), combined_phonetic_article, font=font_phonetic_noun, fill=text_color_on_swatch)
-        current_y += get_text_dimensions(combined_phonetic_article, font_phonetic_noun)[1] + int(swatch_panel_height * line_spacing_major_scale)
+        # Combine phonetic and article on separate lines
+        draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+        current_y += get_text_dimensions(phonetic_str, font_phonetic_noun)[1] + int(swatch_panel_height * line_spacing_minor_scale * 0.5)
+
+        draw.text((text_padding_left, current_y), article_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+        current_y += get_text_dimensions(article_str, font_phonetic_noun)[1] + int(swatch_panel_height * line_spacing_major_scale)
 
         # Description text
         description_to_draw = data.description if data.description and data.description.strip() else "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
@@ -412,30 +432,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
         
         # Metrics to the right of the brand/ID block
-        metrics_start_x = text_padding_left + brand_w + int(swatch_panel_width * 0.05) # Start X after brand + padding
-        if metrics_start_x < text_padding_left + id_w + int(swatch_panel_width * 0.05): # if ID is wider
-             metrics_start_x = text_padding_left + id_w + int(swatch_panel_width * 0.05)
-
-
-        # Ensure metrics don't overflow swatch panel width
+        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.5) # Start metrics midway in the panel
         max_metrics_label_width = get_text_dimensions("CMYK", font_metrics_label_main)[0]
-        # Approximate value width, can be dynamic if needed
-        approx_value_width = get_text_dimensions("255 255 255", font_metrics_value_main)[0] 
-        metrics_value_x_offset = max_metrics_label_width + int(swatch_panel_width * 0.02)
+        metrics_value_x_offset = max_metrics_label_width + int(swatch_panel_width * 0.05)
 
-
-        if metrics_start_x + metrics_value_x_offset + approx_value_width > swatch_panel_width - text_padding_left: # text_padding_right equivalent
-            # If too wide, reduce offset or make font smaller, or stack them.
-            # For now, let's adjust metrics_start_x to ensure it fits, potentially overlapping brand/id if space is very tight
-            needed_width = metrics_value_x_offset + approx_value_width
-            metrics_start_x = swatch_panel_width - text_padding_left - needed_width
-            # This could still be an issue if brand/id is very wide. A more robust solution would be to dynamically choose stacking or resizing.
-
-
-        # Metrics align with the bottom of the ID text. Metrics draw from top down.
-        # Top of the metrics block, aligned with top of Brand text for visual balance or slightly lower
+        # Ensure metrics align with the right side of the panel
         metrics_start_y = brand_y + int(brand_h * 0.1) # Start metrics slightly below top of brand
-
         current_metrics_y = metrics_start_y
 
         hex_val_str = hex_color_input.upper()

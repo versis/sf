@@ -104,7 +104,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   showCropper, 
   initialPreviewUrl, 
   currentFileName,
-  aspectRatio
+  aspectRatio = 5/6 // Default to 5:6 aspect ratio (750:900) for the image panel
 }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -135,7 +135,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         const currentCrop = centerAspectCrop(width, height, aspectRatio);
         setCrop(currentCrop);
     } else {
-        const defaultAspect = 1;
+        // Default to 5:6 aspect ratio (750:900) for the image panel
+        const defaultAspect = 5/6;
         const currentCrop = centerAspectCrop(width, height, defaultAspect);
         setCrop(currentCrop);
     }

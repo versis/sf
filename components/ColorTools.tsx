@@ -42,18 +42,18 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   useEffect(() => {
     // Update the visible preview canvas (imageCanvasRef)
     const previewCanvas = imageCanvasRef.current;
-    const sourceCanvas = sourceImageCanvasRef.current; // For original image data
+    const sourceCanvas = sourceImageCanvasRef.current;
 
     if (previewCanvas) {
       const prevCtx = previewCanvas.getContext('2d');
       if (prevCtx) {
-        // New dimensions for a 2:1 aspect ratio canvas, with a square image panel
-        previewCanvas.width = 600; // Example: Swatch 300x300, Image 300x300
-        previewCanvas.height = 300;
+        // Match the final card dimensions with a 50/50 split (1500x900 total)
+        previewCanvas.width = 500; // Scaled down version of 1500 for better display
+        previewCanvas.height = 300; // Scaled down version of 900
 
-        const swatchWidth = previewCanvas.width * 0.50; // 50% for swatch
+        const swatchWidth = previewCanvas.width * 0.50; // 50% for swatch (250px)
         const imagePanelXStart = swatchWidth;
-        const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image, making it square with height
+        const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image (250px)
 
         // Draw color swatch
         prevCtx.fillStyle = hexColor;
@@ -90,7 +90,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         }
       }
     }
-  }, [croppedImageDataUrl, hexColor]); // Redraw preview if hexColor (swatch) or image changes
+  }, [croppedImageDataUrl, hexColor]);
 
   const handleHexInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     let newHex = event.target.value.toUpperCase();
@@ -169,8 +169,8 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto"
-            style={{ aspectRatio: '2 / 1' }} // Updated to 2:1 for the overall preview canvas
+            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto border border-foreground"
+            style={{ aspectRatio: '5 / 3' }} // Matches 1500x900 aspect ratio (5:3)
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />

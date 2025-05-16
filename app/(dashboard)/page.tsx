@@ -117,7 +117,9 @@ export default function HomePage() {
     reader.readAsDataURL(file);
   };
 
-  const handleImageCropped = (dataUrl: string | null) => {
+  const aspectRatio = 5/6; // 5:6 ratio for the 750x900 image panel
+
+  const handleCroppedImage = (dataUrl: string | null) => {
     setCroppedImageDataUrl(dataUrl);
     // When image is cropped, reset subsequent steps' progress
     setIsColorStepCompleted(false);
@@ -334,7 +336,7 @@ export default function HomePage() {
             >
               <ImageUpload 
                 onImageSelect={handleImageSelectedForUpload} 
-                onImageCropped={handleImageCropped}
+                onImageCropped={handleCroppedImage}
                 showUploader={true}
                 showCropper={false}
                 initialPreviewUrl={uploadStepPreviewUrl}
@@ -351,15 +353,18 @@ export default function HomePage() {
                 isCompleted={isCropStepCompleted}
                 onHeaderClick={isStepHeaderClickable('crop') ? () => setStep('crop') : undefined}
               >
-                <ImageUpload 
-                  onImageSelect={() => {}} 
-                  onImageCropped={handleImageCropped} 
-                  showUploader={false}
-                  showCropper={true}
-                  initialPreviewUrl={uploadStepPreviewUrl}
-                  aspectRatio={1}
-                  key={`cropper-${uploadStepPreviewUrl}`}
-                />
+                {!isGenerating && (
+                  <ImageUpload 
+                    onImageSelect={() => {}} // No-op since we're not handling file selection here
+                    onImageCropped={handleCroppedImage} 
+                    showUploader={false}
+                    showCropper={true}
+                    initialPreviewUrl={uploadStepPreviewUrl}
+                    currentFileName={selectedFileName}
+                    aspectRatio={aspectRatio} // Pass the aspect ratio to the cropper
+                    key={`cropper-${uploadStepPreviewUrl}`}
+                  />
+                )}
               </WizardStep>
             )}
 
