@@ -122,7 +122,7 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         else:
             ibm_plex_path = "IBMPlexMono-Regular.ttf"
         
-        # Just one path to IBM Plex Mono fonts - no duplicates
+        # Fixed path for IBM Plex Mono fonts - only in assets/fonts/mono
         ibm_plex_mono_path = f"assets/fonts/mono/{ibm_plex_path}"
         
         try:
