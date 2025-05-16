@@ -99,7 +99,6 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     
     # Get the current working directory to help with debugging
     cwd = os.getcwd()
-    print(f"Current working directory: {cwd}")
     
     font_style_suffix = ""
     if style.lower() == "italic":
@@ -114,208 +113,34 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # Use the IBM Plex Mono we downloaded
+        # Use IBM Plex Mono for monospace text
         if weight == "Light":
             ibm_plex_path = "IBMPlexMono-Light.ttf"
-        elif weight == "Medium" or weight == "Bold":
+        elif weight in ["Medium", "Bold", "SemiBold"]:
             ibm_plex_path = "IBMPlexMono-Medium.ttf"
         else:
             ibm_plex_path = "IBMPlexMono-Regular.ttf"
-            
-        # Primary paths for the downloaded IBM Plex Mono fonts
-        ibm_plex_paths = [
-            f"assets/fonts/mono/{ibm_plex_path}",
-            f"api/assets/fonts/mono/{ibm_plex_path}",
-            f"{cwd}/assets/fonts/mono/{ibm_plex_path}",
-            f"{cwd}/api/assets/fonts/mono/{ibm_plex_path}"
-        ]
         
-        # Try our downloaded IBM Plex Mono fonts first
-        for path in ibm_plex_paths:
-            try:
-                print(f"Trying downloaded IBM Plex Mono: {path}")
-                return ImageFont.truetype(path, size)
-            except IOError as e:
-                print(f"Failed to load downloaded IBM Plex Mono: {e}")
-                continue
+        # Just one path to IBM Plex Mono fonts - no duplicates
+        ibm_plex_mono_path = f"assets/fonts/mono/{ibm_plex_path}"
         
-        # Fallback to system IBM Plex Mono variants
-        ibm_plex_mono_variants = [
-            "IBMPlexMono-Regular", "IBM Plex Mono", "IBMPlexMono", 
-            "IBM Plex Mono Regular", "IBMPlexMono-Text"
-        ]
-        
-        # Try system IBM Plex Mono
-        for font in ibm_plex_mono_variants:
-            try:
-                print(f"Trying system IBM Plex Mono variant: {font}")
-                return ImageFont.truetype(font, size)
-            except IOError:
-                continue
-                
-        # Then try other macOS system monospace fonts
-        macos_mono_fonts = [
-            "Menlo-Regular", "Monaco", "Courier", "CourierNewPSMT", 
-            "AndaleMono", "PTMono-Regular"
-        ]
-        
-        # For italic, use the corresponding italic versions
-        if style.lower() == "italic":
-            # Since we don't have italic IBM Plex Mono downloaded, try system versions
-            ibm_plex_mono_italic = [
-                "IBMPlexMono-Italic", "IBM Plex Mono Italic", 
-                "IBMPlexMono-TextItalic", "IBM Plex Mono Italic Text"
-            ]
-            
-            # Try system IBM Plex Mono italic variants
-            for font in ibm_plex_mono_italic:
-                try:
-                    print(f"Trying IBM Plex Mono italic system font: {font}")
-                    return ImageFont.truetype(font, size)
-                except IOError:
-                    continue
-            
-            # Other macOS monospace italic fonts
-            macos_mono_italic = [
-                "Menlo-Italic", "Monaco-Italic", "Courier-Oblique", 
-                "CourierNewPS-ItalicMT", "AndaleMono-Italic", "PTMono-Italic"
-            ]
-            
-            # Try macOS-specific mono italic fonts first
-            for font_name in macos_mono_italic:
-                try:
-                    print(f"Trying macOS monospace italic font: {font_name}")
-                    return ImageFont.truetype(font_name, size)
-                except IOError:
-                    continue
-        
-        # Try macOS-specific mono fonts
-        for font_name in macos_mono_fonts:
-            try:
-                print(f"Trying macOS monospace font: {font_name}")
-                return ImageFont.truetype(font_name, size)
-            except IOError:
-                continue
-                
-        # Try common cross-platform monospace fonts
-        cross_platform_mono = ["DejaVu Sans Mono", "Liberation Mono", "Consolas", "Courier New"]
-        
-        for font_name in cross_platform_mono:
-            try:
-                font_with_style = font_name
-                if style.lower() == "italic":
-                    font_with_style += " Italic"
-                print(f"Trying cross-platform mono font: {font_with_style}")
-                return ImageFont.truetype(font_with_style, size)
-            except IOError:
-                continue
-        
-        # Use Inter as fallback if no monospace fonts are available
-        print("No monospace fonts found, falling back to Inter")
-        regular_font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
-        
-        inter_paths = [
-            f"assets/fonts/{regular_font_name}",
-            f"api/assets/fonts/{regular_font_name}",
-            f"{cwd}/assets/fonts/{regular_font_name}",
-            f"api/fonts/{regular_font_name}"
-        ]
-        
-        for path in inter_paths:
-            try:
-                print(f"Using Inter as fallback for 'Mono': {path}")
-                return ImageFont.truetype(path, size)
-            except IOError:
-                continue
+        try:
+            return ImageFont.truetype(ibm_plex_mono_path, size)
+        except IOError:
+                         # If IBM Plex Mono fails, just use the default font
+             return ImageFont.load_default()
     
-    # Match the filename pattern: Inter_XXpt-WeightStyle.ttf
+    # For Inter font (default)
     font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
     
-    # Updated paths with new assets location as priority
-    font_paths_to_try = [
-        f"assets/fonts/{font_name}",        # Primary path for Vercel deployment
-        f"api/assets/fonts/{font_name}",    # Alternative path for api/assets structure
-        f"{cwd}/assets/fonts/{font_name}",  # Absolute path to assets
-        f"{cwd}/api/assets/fonts/{font_name}", # Absolute path to api/assets
-        f"api/fonts/{font_name}",           # Original path (backward compatibility)
-        font_name,                          # Direct name (fallback)
-    ]
-
-    # Debug available directories
-    try:
-        if os.path.exists("assets"):
-            print(f"Assets directory exists. Contents: {os.listdir('assets')}")
-            if os.path.exists("assets/fonts"):
-                print(f"assets/fonts directory exists. Sample files: {os.listdir('assets/fonts')[:3]}")
-    except Exception as e:
-        print(f"Error checking directories: {e}")
-
-    loaded_font = None
-    for path_attempt in font_paths_to_try:
-        try:
-            print(f"Attempting to load font: {path_attempt}")
-            loaded_font = ImageFont.truetype(path_attempt, size)
-            print(f"Successfully loaded font: {path_attempt}")
-            return loaded_font
-        except IOError as e:
-            print(f"Failed to load font {path_attempt}: {e}")
-            continue # Try next path
+    # Just one path to Inter fonts - no duplicates
+    inter_path = f"assets/fonts/{font_name}"
     
-    # Fallback if all attempts fail - try to find any Inter font
-    if not loaded_font:
-        generic_inter_paths = [
-            "assets/fonts/Inter_24pt-Regular.ttf",  # New primary fallback
-            "assets/fonts/Inter_18pt-Regular.ttf",  # Alternative size
-            "api/fonts/Inter.ttf",                  # Legacy path
-            "api/fonts/Inter-Regular.ttf",
-        ]
-        
-        for path in generic_inter_paths:
-            try:
-                print(f"Trying generic Inter font: {path}")
-                return ImageFont.truetype(path, size)
-            except IOError:
-                continue
-    
-    # Last resort - system fonts
-    print(f"Warning: Font '{font_name}' not found in any expected paths. Using system fallback.")
     try:
-        # Try common system fonts that support IPA with proper styling
-        system_fonts = ["Arial Unicode MS", "DejaVu Sans", "Arial", "Helvetica", "Tahoma"]
-        
-        # For italic style, try explicitly italic fonts first
-        if style.lower() == "italic":
-            italic_system_fonts = [
-                "Arial Unicode MS Italic", "Arial Italic", "Helvetica Italic", 
-                "DejaVu Sans Italic", "Tahoma Italic", "Times New Roman Italic"
-            ]
-            for italic_font in italic_system_fonts:
-                try:
-                    print(f"Trying italic system font: {italic_font}")
-                    return ImageFont.truetype(italic_font, size)
-                except IOError:
-                    continue
-        
-        # If italic fonts failed or not requested, try regular with style parameter if supported
-        for system_font in system_fonts:
-            try:
-                print(f"Trying system font: {system_font}")
-                if style.lower() == "italic":
-                    # Try with style parameter if available (works on some platforms)
-                    try:
-                        return ImageFont.truetype(system_font, size, layout_engine=ImageFont.LAYOUT_BASIC, style=style)
-                    except:
-                        pass
-                return ImageFont.truetype(system_font, size)
-            except IOError:
-                continue
-                
-        # Last resort - PIL default
-        print("Using PIL default font as last resort")
-        return ImageFont.load_default()
-    except Exception as e:
-        print(f"Error loading any font: {e}")
-        return ImageFont.load_default() # Absolute fallback
+        return ImageFont.truetype(inter_path, size)
+    except IOError:
+                 # Just use the default font if Inter fails
+         return ImageFont.load_default()
 # --- End Font Loading ---
 
 # --- Helper Function for Font Measurements ---
@@ -493,10 +318,10 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Define brand-related fonts early - using Inter for all
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         
-        # Use IBM Plex Mono font for ID text 
-        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular", font_family="Mono") # ID text with monospace
-        # Use IBM Plex Mono for metrics labels with medium weight
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Medium", font_family="Mono") # Metrics labels
+        # Use IBM Plex Mono Light for ID text - lighter appearance
+        font_id_main = get_font(int(36 * base_font_size_scale), weight="Light", font_family="Mono") # ID text with lighter weight
+        # Use IBM Plex Mono Light for metrics labels
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
         # Use IBM Plex Mono Light for metrics values
         font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Metrics values
 

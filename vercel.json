@@ -1,8 +1,7 @@
 {
   "functions": {
     "api/**": {
-      "excludeFiles": "{.next,.git,node_modules}/**",
-      "includeFiles": "assets/fonts/**"
+      "excludeFiles": "{.next,.git,node_modules}/**"
     }
   }
 }
