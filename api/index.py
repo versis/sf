@@ -46,7 +46,7 @@ app.add_middleware(
 # Azure OpenAI client initialization
 azure_client = AzureOpenAI(
     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2023-05-15"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT")
 )
 
@@ -236,7 +236,7 @@ async def generate_card_details(color_name: str, hex_color: str):
                 }
             ],
             temperature=0.7,
-            max_tokens=250,
+            max_completion_tokens=250,
             response_format={"type": "json_object"}
         )
         
@@ -401,7 +401,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         else: # Vertical: Swatch is on the TOP
             draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
 
-            text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
+        # Calculate text color for contrast against the swatch color
+        text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
             
         # --- Text Layout for Swatch Panel ---
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)

@@ -52,12 +52,22 @@ To use the Azure OpenAI integration, you need to set the following environment v
 # OpenAI API - Original configuration
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Azure OpenAI API - New configuration
+# Azure OpenAI API configuration
 AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
-AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
-AZURE_OPENAI_API_VERSION=2023-05-15
-AZURE_OPENAI_DEPLOYMENT=gpt-4 # Or your deployment name
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.cognitiveservices.azure.com/
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 ```
+
+For example, with the o4-mini model:
+```
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.cognitiveservices.azure.com/
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_DEPLOYMENT=ti-o4-mini
+```
+
+Make sure the deployment name matches what you created in your Azure OpenAI resource.
 
 ## Learn More
 
