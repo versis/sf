@@ -100,14 +100,14 @@ async def generate_card_image_bytes(
         raise ValueError(f"Failed to process image data: {str(e)}")
 
     # Resize large images
-    if user_image_pil.width > 1200 or user_image_pil.height > 1200:
-        log(f"Resizing image from {user_image_pil.size} to max 1200px side", request_id=request_id)
-        user_image_pil.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+    if user_image_pil.width > 2000 or user_image_pil.height > 2000:
+        log(f"Resizing image from {user_image_pil.size} to max 2000px side", request_id=request_id)
+        user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         log(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Card dimensions (reduced for performance)
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 720, 1440
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1440, 720
+    # Card dimensions (restored to higher resolution)
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 1080, 2160
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 2160, 1080
     bg_color_tuple = (250, 250, 250, 255) # RGBA
 
     if orientation == "horizontal":
@@ -141,14 +141,14 @@ async def generate_card_image_bytes(
     current_y = pad_t
 
     # Fonts (Final fine-tuning of base sizes)
-    f_title = get_font(int(27 * base_font_scale), "Bold", request_id=request_id)
-    f_phonetic = get_font(int(20 * base_font_scale), "Light", "Italic", request_id=request_id)
-    f_article = get_font(int(20 * base_font_scale), "Light", request_id=request_id)
-    f_desc = get_font(int(18 * base_font_scale), "Regular", request_id=request_id)
-    f_brand = get_font(int(38 * base_font_scale), "Bold", request_id=request_id)
-    f_id = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_label = get_font(int(16 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_val = get_font(int(16 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_title = get_font(int(40 * base_font_scale), "Bold", request_id=request_id)
+    f_phonetic = get_font(int(30 * base_font_scale), "Light", "Italic", request_id=request_id)
+    f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
+    f_desc = get_font(int(27 * base_font_scale), "Regular", request_id=request_id)
+    f_brand = get_font(int(64 * base_font_scale), "Bold", request_id=request_id)
+    f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_label = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_val = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Card Name (from AI or default)
     card_name_display = card_details.get("cardName", "MISSING NAME").upper()
@@ -201,20 +201,18 @@ async def generate_card_image_bytes(
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
     _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
 
-    # Define vertical spacing
-    space_between_brand_id = int(swatch_h * 0.015) # Space between brand and ID
-    space_between_id_metrics = int(swatch_h * 0.03) # Space between ID and metrics block
-    line_spacing_metrics = int(swatch_h * 0.018) # Already defined, used for spacing within metrics
+    # Define vertical spacing (increased spacing between bottom elements)
+    space_between_brand_id = int(swatch_h * 0.035) # Reduced from 0.045
+    space_between_id_metrics = int(swatch_h * 0.065) # Increased from 0.045
+    line_spacing_metrics = int(swatch_h * 0.025) # Increased from 0.018
 
     # --- New Y-Positioning Logic for Bottom Elements ---
 
-    # 1. Position Brand ("shadefreude") higher up
-    # Let's target around 70% down the swatch height as a starting point for the brand text
-    # This moves it significantly up from the absolute bottom padding.
-    brand_y_pos = int(swatch_h * 0.72) 
+    # 1. Position Brand ("shadefreude") higher up - moved from 70% to 63% for better bottom padding
+    brand_y_pos = int(swatch_h * 0.63) # Moved up from 0.70 to add more padding at bottom
 
     # 2. Position Card ID below the brand
-    id_y_pos = brand_y_pos + brand_h + space_between_brand_id
+    id_y_pos = brand_y_pos + brand_h + space_between_brand_id # space_between_brand_id was already increased
 
     # 3. Position Metrics block below the Card ID
     metrics_start_y = id_y_pos + id_h + space_between_id_metrics
@@ -234,8 +232,8 @@ async def generate_card_image_bytes(
     id_display = card_details.get("cardId", "0000000 XX X")
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    metrics_x_offset = int(swatch_w * 0.54) # Horizontal offset for metrics can remain similar
-    metrics_labels_start_x = pad_l + metrics_x_offset
+    # Align metrics to the left (pad_l)
+    metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
     hex_val = hex_color_input.upper()
     cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
     rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
@@ -246,7 +244,7 @@ async def generate_card_image_bytes(
     if metric_data: # Ensure metric_data is not empty
         max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data)
     
-    val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.03) # Small gap after longest label
+    val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.06) # Increased gap after longest label
     
     current_metrics_y = metrics_start_y
 
@@ -268,10 +266,11 @@ async def generate_card_image_bytes(
     log("Applied rounded corners", request_id=request_id)
 
     img_byte_arr = io.BytesIO()
-    # Convert to RGB before saving as JPEG, handling transparency
+    # Convert to RGB for image saving
     final_image_rgb = Image.new("RGB", canvas.size, (255, 255, 255)) # White background
     final_image_rgb.paste(canvas, mask=canvas.split()[3] if canvas.mode == 'RGBA' else None)
-    final_image_rgb.save(img_byte_arr, format='JPEG', quality=75, optimize=True, progressive=True)
+    # Save as PNG for lossless quality (no compression artifacts)
+    final_image_rgb.save(img_byte_arr, format='PNG')
     image_bytes = img_byte_arr.getvalue()
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
