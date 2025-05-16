@@ -37,8 +37,11 @@ const WizardStep: React.FC<WizardStepProps> = ({
   // Old-school checkmark character: "✓" (could also use "✔" or "☑")
   const oldSchoolCheckmark = "✓";
 
+  // Conditional border: No bottom border for the last step (now step 5)
+  const stepWrapperClasses = `${isFutureStep && !isCompleted ? 'opacity-60' : ''} ${stepNumber === 5 ? '' : 'border-b-2 border-foreground'}`;
+
   return (
-    <div className={`${isFutureStep && !isCompleted ? 'opacity-60' : ''} ${stepNumber === 4 ? '' : 'border-b-2 border-foreground'}`}>
+    <div className={stepWrapperClasses}>
       <h3
         className={headerClasses}
         onClick={isFutureStep ? undefined : onHeaderClick}

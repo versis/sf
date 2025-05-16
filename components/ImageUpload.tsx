@@ -91,9 +91,9 @@ interface ImageUploadProps {
   showCropper: boolean;
   initialPreviewUrl?: string | null;
   currentFileName?: string | null;
+  aspectRatio?: number;
 }
 
-const ASPECT_RATIO = 1;
 const MIN_DIMENSION = 150;
 const TARGET_SIZE_MB = 2; // Target size in MB
 
@@ -103,7 +103,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   showUploader, 
   showCropper, 
   initialPreviewUrl, 
-  currentFileName
+  currentFileName,
+  aspectRatio
 }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -130,8 +131,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const currentCrop = centerAspectCrop(width, height, ASPECT_RATIO);
-    setCrop(currentCrop);
+    if (aspectRatio) {
+        const currentCrop = centerAspectCrop(width, height, aspectRatio);
+        setCrop(currentCrop);
+    } else {
+        const defaultAspect = 1;
+        const currentCrop = centerAspectCrop(width, height, defaultAspect);
+        setCrop(currentCrop);
+    }
   };
 
   const getCroppedImg = async () => {
@@ -253,7 +260,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
               onComplete={(c) => setCompletedCrop(c)}
-              aspect={ASPECT_RATIO}
+              aspect={aspectRatio}
               minWidth={MIN_DIMENSION}
               minHeight={MIN_DIMENSION}
             >

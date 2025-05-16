@@ -6,6 +6,7 @@ interface ColorToolsProps {
   initialHex?: string;
   onHexChange: (hex: string) => void;
   croppedImageDataUrl?: string | null; // For the color picker
+  onColorPickedFromCanvas?: () => void; // New callback prop
 }
 
 // Helper to convert RGB to HEX
@@ -26,6 +27,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
   initialHex = '#000000',
   onHexChange,
   croppedImageDataUrl,
+  onColorPickedFromCanvas
 }) => {
   const [hexColor, setHexColor] = useState<string>(initialHex);
   const [hexError, setHexError] = useState<string>('');
@@ -49,7 +51,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         previewCanvas.width = 500; // Example width, aspect ratio 1000/600 = 500/300
         previewCanvas.height = 300;
 
-        const swatchWidth = previewCanvas.width * 0.42;
+        const swatchWidth = previewCanvas.width * 0.50;
         const imagePanelXStart = swatchWidth;
         const imagePanelWidth = previewCanvas.width - swatchWidth;
 
@@ -127,8 +129,8 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     const canvasClickY = displayedClickY * displayToCanvasScaleY;
 
     // Define the image panel dimensions within the internal canvas drawing
-    const imagePanelXStartDrawn = previewCanvas.width * 0.42;
-    const imagePanelWidthDrawn = previewCanvas.width * 0.58;
+    const imagePanelXStartDrawn = previewCanvas.width * 0.50;
+    const imagePanelWidthDrawn = previewCanvas.width * 0.50;
     const imagePanelHeightDrawn = previewCanvas.height;
 
     // Check if the (scaled) click is within the image panel on the internal canvas
@@ -141,7 +143,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
       const sourceImgWidth = sourceCanvas.width;
       const sourceImgHeight = sourceCanvas.height;
 
-      const pickX = Math.floor((localXDrawn / imagePanelWidthDrawn) * sourceImgWidth);
+      const pickX = Math.floor((localXDrawn / (previewCanvas.width * 0.50)) * sourceImgWidth);
       const pickY = Math.floor((localYDrawn / imagePanelHeightDrawn) * sourceImgHeight);
 
       const sourceCtx = sourceCanvas.getContext('2d');
@@ -153,6 +155,9 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         setHexColor(hex); 
         onHexChange(hex); 
         setHexError(''); 
+        if (onColorPickedFromCanvas) {
+          onColorPickedFromCanvas(); // Call the callback
+        }
       }
     }
   };
@@ -161,9 +166,6 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     <div className="space-y-4">
       {croppedImageDataUrl && (
         <>
-          <p className="text-sm font-medium text-foreground">
-            Click image to pick color:
-          </p>
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 

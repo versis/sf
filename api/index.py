@@ -157,32 +157,25 @@ def get_text_dimensions(text: str, font):
 class ImageGenerationRequest(BaseModel):
     croppedImageDataUrl: str
     hexColor: str
-    orientation: str = "vertical"
+    colorName: str
+    orientation: str
     # New text fields for the card, all optional for now
     cardName: Optional[str] = "OLIVE ALPINE SENTINEL" # Placeholder
     phoneticName: Optional[str] = "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]" # Placeholder
     article: Optional[str] = "[noun]" # Placeholder
     description: Optional[str] = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude." # Placeholder
     cardId: Optional[str] = "00000001 F" # Placeholder
-    # colorName is effectively cardName now, but we keep it for compatibility if frontend sends it
-    colorName: Optional[str] = "DARK EMBER"
 
 @app.post("/api/generate-image")
-@limiter.limit("10/minute") # Apply rate limit: 10 requests per minute per IP
+@limiter.limit("10/minute")
 async def generate_image_route(data: ImageGenerationRequest, request: FastAPIRequest):
     cropped_image_data_url = data.croppedImageDataUrl
     hex_color_input = data.hexColor
+    color_name = data.colorName
     orientation = data.orientation
 
-    # Use new text fields from request or fallback to existing colorName for the main name
-    card_name_text = data.cardName if data.cardName else data.colorName
-    phonetic_name_text = data.phoneticName
-    article_text = data.article
-    description_text = data.description
-    card_id_text = data.cardId
-    
-    if not cropped_image_data_url or not hex_color_input:
-        raise HTTPException(status_code=400, detail="Missing required data: croppedImageDataUrl or hexColor")
+    if not cropped_image_data_url or not hex_color_input or not color_name or not orientation:
+        raise HTTPException(status_code=400, detail="Missing required data: croppedImageDataUrl, hexColor, colorName, or orientation")
 
     # Check payload size
     payload_size_mb = len(cropped_image_data_url) / (1024 * 1024)
@@ -193,7 +186,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         )
     
     print(f"Received image data URL size: {payload_size_mb:.2f}MB")
-    print(f"Orientation: {orientation}")
+    print(f"Color Name: {color_name}")
+    print(f"Requested Card Orientation: {orientation}")
     
     rgb_color = hex_to_rgb(hex_color_input)
     if rgb_color is None:
@@ -204,7 +198,6 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
     print(f"Input HEX: {hex_color_input}")
     print(f"Converted RGB: {rgb_color}")
     print(f"Converted CMYK: {cmyk_color_tuple}")
-    print(f"Color Name: {card_name_text}")
 
     try:
         print("Attempting to decode base64 image data...")
@@ -242,237 +235,133 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             user_image_pil = user_image_pil.resize((new_width, new_height), Image.LANCZOS)
             print(f"Resized to: {new_width}x{new_height}")
 
-        # Card dimensions and style
-        # Define base dimensions
-        BASE_CARD_WIDTH = 1500
-        BASE_CARD_HEIGHT = 900
-        
-        # IMPORTANT: Set correct dimensions based on orientation
+        bg_color = (250, 250, 250)
+        card_width, card_height = 0, 0
+        swatch_panel_width, swatch_panel_height = 0, 0
+        image_panel_width, image_panel_height = 0, 0
+
         if orientation.lower() == "horizontal":
-            # For horizontal card: 1500x900
-            card_width = BASE_CARD_HEIGHT  # 1500
-            card_height = BASE_CARD_WIDTH  # 900
+            card_width, card_height = 1500, 900
+            swatch_panel_width = int(card_width * 0.50)  # 750px
+            swatch_panel_height = card_height          # 900px (full height for left panel)
+            image_panel_width = card_width - swatch_panel_width # 750px
+            image_panel_height = card_height         # 900px (full height for right panel)
+            print(f"Generating HORIZONTAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
+        elif orientation.lower() == "vertical":
+            card_width, card_height = 750, 1800
+            swatch_panel_width = int(card_width * 0.50) # 375px
+            swatch_panel_height = card_height         # 1800px (full height for left panel)
+            image_panel_width = card_width - swatch_panel_width # 375px
+            image_panel_height = card_height        # 1800px (full height for right panel)
+            print(f"Generating VERTICAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid orientation specified: {orientation}. Must be 'horizontal' or 'vertical'.")
 
-            # Top 50% is color swatch with text, Bottom 50% is image
-            text_panel_width = card_width
-            text_panel_height = card_height // 2
-            text_panel_x_offset = 0
-            text_panel_y_offset = 0
-            image_panel_width = card_width
-            image_panel_height = card_height - text_panel_height
-            image_panel_x_offset = 0
-            image_panel_y_offset = text_panel_height
-
-            print(f"Creating HORIZONTAL card: {card_width}x{card_height}")
-        else:  # vertical or default
-            # For vertical card: 900x1500
-            card_width = BASE_CARD_WIDTH  # 900
-            card_height = BASE_CARD_HEIGHT  # 1500
-
-            # Left 50% is color swatch with text, Right 50% is image
-            text_panel_width = card_width // 2
-            text_panel_height = card_height
-            text_panel_x_offset = 0
-            text_panel_y_offset = 0
-            image_panel_width = card_width - text_panel_width
-            image_panel_height = card_height
-            image_panel_x_offset = text_panel_width
-            image_panel_y_offset = 0
-
-            print(f"Creating VERTICAL card: {card_width}x{card_height}")
-            
-        # off-white background (will be masked by swatch and image)
-        bg_color = (250, 250, 250) # This is for the canvas before rounded corners only
-
-        # Create canvas with the correct dimensions
-        canvas = Image.new('RGBA', (card_width, card_height), (250, 250, 250, 255)) # Use bg_color for canvas base
+        canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
         draw = ImageDraw.Draw(canvas)
-        
-        # 1. Draw the color swatch panel (uses the selected rgb_color)
-        draw.rectangle(
-            [(text_panel_x_offset, text_panel_y_offset), 
-             (text_panel_x_offset + text_panel_width, text_panel_y_offset + text_panel_height)], 
-            fill=rgb_color
-        )
+        # Swatch is always on the left
+        draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
 
-        # Determine text color based on background brightness
         text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
 
-        # Adjust the text drawing based on orientation
-        if orientation.lower() == "horizontal":
-            # For horizontal card text layout
-            font_brand_h = get_font(70, weight="Bold") 
-            font_id_h = get_font(32, weight="Bold")
-            font_name_h = get_font(48, weight="Bold")
-            font_metrics_label_h = get_font(18, weight="Bold")
-            font_metrics_value_h = get_font(18, weight="Regular")
-            
-            text_padding_left_h = 40
-            bottom_padding_h = 30 # Padding from the bottom of the text_panel_height
-            line_height_metrics_h = get_text_dimensions("X", font_metrics_value_h)[1] + 10
-            
-            label_x_h = text_panel_x_offset + text_padding_left_h
-            value_x_h = text_panel_x_offset + text_padding_left_h + 60 
-            
-            current_y_h = text_panel_y_offset + text_panel_height - bottom_padding_h - get_text_dimensions("X", font_metrics_value_h)[1]
-            
-            draw.text((label_x_h, current_y_h), "RGB", font=font_metrics_label_h, fill=text_color_on_swatch)
-            draw.text((value_x_h, current_y_h), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value_h, fill=text_color_on_swatch)
-            current_y_h -= line_height_metrics_h
-            
-            draw.text((label_x_h, current_y_h), "CMYK", font=font_metrics_label_h, fill=text_color_on_swatch)
-            draw.text((value_x_h, current_y_h), f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}", font=font_metrics_value_h, fill=text_color_on_swatch)
-            current_y_h -= line_height_metrics_h
-            
-            draw.text((label_x_h, current_y_h), "HEX", font=font_metrics_label_h, fill=text_color_on_swatch)
-            draw.text((value_x_h, current_y_h), hex_color_input.upper(), font=font_metrics_value_h, fill=text_color_on_swatch)
-            
-            current_y_h -= 30 
-            
-            color_name_text_h = card_name_text.upper()
-            # Check fit for color name, adjust font if necessary
-            available_text_width_h = text_panel_width - (2 * text_padding_left_h)
-            if get_text_dimensions(color_name_text_h, font_name_h)[0] > available_text_width_h:
-                font_name_h = get_font(40, weight="Bold")
-                if get_text_dimensions(color_name_text_h, font_name_h)[0] > available_text_width_h:
-                    font_name_h = get_font(36, weight="Bold")
-            color_name_height_h = get_text_dimensions(color_name_text_h, font_name_h)[1]
-            current_y_h -= color_name_height_h
-            draw.text((text_panel_x_offset + text_padding_left_h, current_y_h), color_name_text_h, font=font_name_h, fill=text_color_on_swatch)
-            
-            id_text_h = card_id_text
-            id_height_h = get_text_dimensions(id_text_h, font_id_h)[1]
-            current_y_h -= (id_height_h + 12) 
-            draw.text((text_panel_x_offset + text_padding_left_h, current_y_h), id_text_h, font=font_id_h, fill=text_color_on_swatch)
-            
-            brand_text_h = "shadefreude"
-            brand_height_h = get_text_dimensions(brand_text_h, font_brand_h)[1]
-            current_y_h -= (brand_height_h + 12) 
-            draw.text((text_panel_x_offset + text_padding_left_h, current_y_h), brand_text_h, font=font_brand_h, fill=text_color_on_swatch)
+        # --- Text Layout for Swatch Panel (Left side) ---
+        # This logic needs to be adaptable to swatch_panel_width and swatch_panel_height
+        # For simplicity, using generic padding and font scaling. Refine as needed.
+        
+        text_padding_top = int(swatch_panel_height * 0.05) # Relative padding
+        text_padding_left = int(swatch_panel_width * 0.1)
+        text_padding_bottom = int(swatch_panel_height * 0.05)
+        line_spacing_major_scale = 0.015 # Scale factor for line spacing based on swatch height
+        line_spacing_minor_scale = 0.008
 
-            # Also add phonetic name and article text if provided
-            if phonetic_name_text:
-                current_y_h -= 20  # Some extra spacing
-                draw.text((text_panel_x_offset + text_padding_left_h, current_y_h), phonetic_name_text, 
-                          font=get_font(30, weight="Regular", style="Italic"), fill=text_color_on_swatch)
-                if article_text:
-                    current_y_h += get_text_dimensions(phonetic_name_text, get_font(30, weight="Regular", style="Italic"))[1] + 10
-                    draw.text((text_panel_x_offset + text_padding_left_h, current_y_h), article_text,
-                              font=get_font(30, weight="Regular"), fill=text_color_on_swatch)
-            
-            # Add description if provided
-            if description_text:
-                font_desc = get_font(24, weight="Regular")
-                desc_y = text_panel_y_offset + 50  # Start from top with padding
-                
-                # Word wrap description
-                words = description_text.split()
-                line = ""
-                for word in words:
-                    test_line = line + (" " if line else "") + word
-                    if get_text_dimensions(test_line, font_desc)[0] <= available_text_width_h:
-                        line = test_line
-                    else:
-                        draw.text((text_panel_x_offset + text_padding_left_h, desc_y), line, font=font_desc, fill=text_color_on_swatch)
-                        desc_y += get_text_dimensions(line, font_desc)[1] + 5  # Line spacing
-                        line = word
-                
-                # Draw last line
-                if line:
-                    draw.text((text_panel_x_offset + text_padding_left_h, desc_y), line, font=font_desc, fill=text_color_on_swatch)
-        else:
-            # For vertical card text layout
-            font_brand_v = get_font(80, weight="Bold")
-            font_id_v = get_font(36, weight="Bold")
-            font_name_v = get_font(52, weight="Bold")
-            font_metrics_label_v = get_font(20, weight="Bold")
-            font_metrics_value_v = get_font(20, weight="Regular")
-            
-            text_padding_left_v = 30  # Decreased for narrower panel (50%)
-            bottom_padding_v = 50
-            line_height_metrics_v = get_text_dimensions("X", font_metrics_value_v)[1] + 10
-            
-            label_x_v = text_panel_x_offset + text_padding_left_v
-            value_x_v = text_panel_x_offset + text_padding_left_v + 70
-            
-            current_y_v = text_panel_y_offset + text_panel_height - bottom_padding_v - get_text_dimensions("X", font_metrics_value_v)[1]
-            
-            draw.text((label_x_v, current_y_v), "RGB", font=font_metrics_label_v, fill=text_color_on_swatch)
-            draw.text((value_x_v, current_y_v), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value_v, fill=text_color_on_swatch)
-            current_y_v -= line_height_metrics_v
-            
-            draw.text((label_x_v, current_y_v), "CMYK", font=font_metrics_label_v, fill=text_color_on_swatch)
-            draw.text((value_x_v, current_y_v), f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}", font=font_metrics_value_v, fill=text_color_on_swatch)
-            current_y_v -= line_height_metrics_v
-            
-            draw.text((label_x_v, current_y_v), "HEX", font=font_metrics_label_v, fill=text_color_on_swatch)
-            draw.text((value_x_v, current_y_v), hex_color_input.upper(), font=font_metrics_value_v, fill=text_color_on_swatch)
-            
-            current_y_v -= 40
-            
-            color_name_text_v = card_name_text.upper()
-            available_text_width_v = text_panel_width - (2 * text_padding_left_v)
-            
-            # Check if name fits, use smaller font if needed
-            if get_text_dimensions(color_name_text_v, font_name_v)[0] > available_text_width_v:
-                font_name_v = get_font(42, weight="Bold")
-                if get_text_dimensions(color_name_text_v, font_name_v)[0] > available_text_width_v:
-                    font_name_v = get_font(36, weight="Bold")
-            
-            color_name_height_v = get_text_dimensions(color_name_text_v, font_name_v)[1]
-            current_y_v -= color_name_height_v
-            draw.text((text_panel_x_offset + text_padding_left_v, current_y_v), color_name_text_v, font=font_name_v, fill=text_color_on_swatch)
-            
-            id_text_v = card_id_text
-            id_height_v = get_text_dimensions(id_text_v, font_id_v)[1]
-            current_y_v -= (id_height_v + 15)
-            draw.text((text_panel_x_offset + text_padding_left_v, current_y_v), id_text_v, font=font_id_v, fill=text_color_on_swatch)
-            
-            brand_text_v = "shadefreude"
-            brand_height_v = get_text_dimensions(brand_text_v, font_brand_v)[1]
-            current_y_v -= (brand_height_v + 15)
-            draw.text((text_panel_x_offset + text_padding_left_v, current_y_v), brand_text_v, font=font_brand_v, fill=text_color_on_swatch)
+        # Dynamically adjust font sizes based on swatch panel width (more critical dimension for text lines)
+        base_font_size_scale = swatch_panel_width / 400 # Adjust 400 to find a good base
 
-            # Also add phonetic name and article text if provided
-            if phonetic_name_text:
-                current_y_v -= 20  # Some extra spacing
-                phonetic_font = get_font(32, weight="Regular", style="Italic")
-                draw.text((text_panel_x_offset + text_padding_left_v, current_y_v), phonetic_name_text, 
-                          font=phonetic_font, fill=text_color_on_swatch)
-                if article_text:
-                    current_y_v += get_text_dimensions(phonetic_name_text, phonetic_font)[1] + 10
-                    draw.text((text_panel_x_offset + text_padding_left_v, current_y_v), article_text,
-                              font=get_font(32, weight="Regular"), fill=text_color_on_swatch)
-            
-            # Add description if provided
-            if description_text:
-                font_desc = get_font(26, weight="Regular")
-                desc_y = text_panel_y_offset + 50  # Start from top with padding
-                
-                # Word wrap description
-                words = description_text.split()
-                line = ""
-                for word in words:
-                    test_line = line + (" " if line else "") + word
-                    if get_text_dimensions(test_line, font_desc)[0] <= available_text_width_v:
-                        line = test_line
-                    else:
-                        draw.text((text_panel_x_offset + text_padding_left_v, desc_y), line, font=font_desc, fill=text_color_on_swatch)
-                        desc_y += get_text_dimensions(line, font_desc)[1] + 5  # Line spacing
-                        line = word
-                
-                # Draw last line
-                if line:
-                    draw.text((text_panel_x_offset + text_padding_left_v, desc_y), line, font=font_desc, fill=text_color_on_swatch)
+        current_y = text_padding_top
+        font_color_name = get_font(int(50 * base_font_size_scale), bold=True)
+        font_noun = get_font(int(22 * base_font_size_scale), bold=False)
+        font_description = get_font(int(18 * base_font_size_scale), bold=False)
 
-        # 2. Paste the user image into the image panel
-        user_image_fitted = ImageOps.fit(
-            user_image_pil, 
-            (image_panel_width, image_panel_height),
-            Image.Resampling.LANCZOS
-        )
-        canvas.paste(user_image_fitted, (image_panel_x_offset, image_panel_y_offset), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
+        main_color_name_str = color_name.upper()
+        # Basic text wrapping for main_color_name_str
+        wrapped_color_name_lines = []
+        temp_line_color = ""
+        for word in main_color_name_str.split(' '):
+            if font_color_name.getmask(temp_line_color + word).size[0] <= (swatch_panel_width - 2 * text_padding_left):
+                temp_line_color += word + " "
+            else:
+                wrapped_color_name_lines.append(temp_line_color.strip())
+                temp_line_color = word + " "
+        wrapped_color_name_lines.append(temp_line_color.strip())
+        
+        for line in wrapped_color_name_lines:
+            draw.text((text_padding_left, current_y), line, font=font_color_name, fill=text_color_on_swatch)
+            current_y += font_color_name.getmask(line).size[1] + int(swatch_panel_height * line_spacing_minor_scale)
 
+        noun_str = "[noun]"
+        if color_name.upper() == "OLIVE ALPINE SENTINEL":
+            noun_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"
+        draw.text((text_padding_left, current_y), noun_str, font=font_noun, fill=text_color_on_swatch)
+        current_y += font_noun.getmask(noun_str).size[1] + int(swatch_panel_height * line_spacing_major_scale)
+
+        description_text = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
+        desc_line_height = font_description.getmask("Tg").size[1]
+        max_desc_width = swatch_panel_width - (2 * text_padding_left)
+        wrapped_desc_lines = []
+        current_desc_line = ""
+        for word in description_text.split(' '):
+            if font_description.getmask(current_desc_line + word).size[0] <= max_desc_width:
+                current_desc_line += word + " "
+            else:
+                wrapped_desc_lines.append(current_desc_line.strip())
+                current_desc_line = word + " "
+        wrapped_desc_lines.append(current_desc_line.strip())
+        
+        for line in wrapped_desc_lines:
+            if current_y + desc_line_height < swatch_panel_height - text_padding_bottom - (swatch_panel_height * 0.15): # Reserve ~15% bottom for metrics etc
+                draw.text((text_padding_left, current_y), line, font=font_description, fill=text_color_on_swatch)
+                current_y += desc_line_height + int(swatch_panel_height * line_spacing_minor_scale)
+            else:
+                break 
+
+        # Bottom-aligned text: Brand, ID, Metrics
+        font_brand_bottom = get_font(int(30 * base_font_size_scale), bold=(orientation.lower()!="horizontal")) # True for vertical, False for horizontal 
+        font_id_bottom = get_font(int(30 * base_font_size_scale), bold=False)
+        font_metrics_label = get_font(int(16 * base_font_size_scale), bold=True)
+        font_metrics_value = get_font(int(16 * base_font_size_scale), bold=False)
+        metrics_line_height = font_metrics_value.getmask("Tg").size[1] + int(swatch_panel_height * 0.005) # Small gap
+
+        brand_text = "shadefreude"
+        id_text = "00000001F"
+        
+        # Metrics are drawn from bottom up
+        current_metrics_y = swatch_panel_height - text_padding_bottom - font_metrics_value.getmask("Tg").size[1]
+        metrics_label_x = text_padding_left
+        metrics_value_x = text_padding_left + int(swatch_panel_width * 0.2) # Offset values from labels
+
+        draw.text((metrics_label_x, current_metrics_y), "RGB", font=font_metrics_label, fill=text_color_on_swatch)
+        draw.text((metrics_value_x, current_metrics_y), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value, fill=text_color_on_swatch)
+        current_metrics_y -= metrics_line_height
+        draw.text((metrics_label_x, current_metrics_y), "CMYK", font=font_metrics_label, fill=text_color_on_swatch)
+        draw.text((metrics_value_x, current_metrics_y), f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}", font=font_metrics_value, fill=text_color_on_swatch)
+        current_metrics_y -= metrics_line_height
+        draw.text((metrics_label_x, current_metrics_y), "HEX", font=font_metrics_label, fill=text_color_on_swatch)
+        draw.text((metrics_value_x, current_metrics_y), hex_color_input.upper(), font=font_metrics_value, fill=text_color_on_swatch)
+
+        # ID text above metrics
+        id_y_pos = current_metrics_y - metrics_line_height - font_id_bottom.getmask(id_text).size[1] 
+        draw.text((text_padding_left, id_y_pos), id_text, font=font_id_bottom, fill=text_color_on_swatch)
+
+        # Brand text above ID
+        brand_actual_height = font_brand_bottom.getmask(brand_text).size[1]
+        brand_y_pos = id_y_pos - brand_actual_height - int(swatch_panel_height * 0.01) # Small gap
+        draw.text((text_padding_left, brand_y_pos), brand_text, font=font_brand_bottom, fill=text_color_on_swatch)
+        
+        # Image panel is always on the right of the swatch panel
+        user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
+        canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
+    
+        print("User image pasted onto canvas.")
         # Apply rounded corners to entire card
         print("Applying rounded corners...")
         radius = 40
