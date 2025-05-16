@@ -505,12 +505,11 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
         # Position metrics with better alignment 
-        # Move metrics to the right by appropriate amount (approx 55% of panel width)
-        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.6)
+        # Move metrics further to the right
+        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.85)
         
-        # Move metrics down a bit as requested
-        # Position slightly below the center of brand text
-        metrics_start_y = brand_y + (brand_h / 2) + int(swatch_panel_height * 0.01)
+        # Move metrics up slightly from center of brand text
+        metrics_start_y = brand_y + (brand_h / 2) + int(swatch_panel_height * 0.001)
 
         # Calculate horizontal layout for metrics: labels and values
         metrics_labels = ["HEX", "CMYK", "RGB"]
