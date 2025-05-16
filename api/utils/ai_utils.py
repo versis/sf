@@ -1,51 +1,59 @@
 import os
 import json
 import time
+import asyncio
 from typing import Dict, Any
 from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
 
-from api.utils.logger import log # Corrected import path
+from api.utils.logger import log
 
 load_dotenv(".env.local")
 
+# Client for Azure OpenAI
 azure_client = AsyncAzureOpenAI(
     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"), # Using a recent, stable version
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-    timeout=30.0,  # Set client-level timeout to 30 seconds for API calls
 )
 
 async def generate_ai_card_details(color_name: str, hex_color: str, request_id: str = None) -> Dict[str, Any]:
     """
     Generates AI-based card details using Azure OpenAI.
     Returns a dictionary with card name, phonetic, part of speech, and description.
-    Timeout for this specific call is handled by the client config (30s).
+    Overall operation timeout is 58s enforced by asyncio.wait_for.
+    Client network timeout is 15s.
     """
-    log(f"Starting Azure OpenAI API call for color '{color_name}' (hex: {hex_color})", request_id=request_id)
+    
+    OVERALL_TIMEOUT = 58.0 # Slightly less than Vercel's 60s Hobby limit
+
+    log(f"Starting Azure OpenAI API call for color '{color_name}' (hex: {hex_color}). Overall timeout {OVERALL_TIMEOUT}s, client network timeout 15s.", request_id=request_id)
     api_call_start_time = time.time()
 
     try:
-        completion = await azure_client.chat.completions.create(
-            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini"), # Defaulting to gpt-4o-mini
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a creative assistant. For the given color, generate poetic and evocative card details."
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Generate details for a color card named '{color_name}' with hex value '{hex_color}'. I need these fields:\n"
-                        f"1. cardName: A creative and evocative alternative name for the color (max 3 words, ALL CAPS).\n"
-                        f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your new creative cardName.\n"
-                        f"3. article: The part of speech for the cardName (e.g., noun, adjective phrase).\n"
-                        f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by its name and hex value.\n\n"
-                        f"Format your response strictly as a JSON object with these exact keys: cardName, phoneticName, article, description."
-                    )
-                }
-            ],
-            response_format={"type": "json_object"},
+        completion = await asyncio.wait_for(
+            azure_client.chat.completions.create(
+                model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini"),
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a creative assistant. For the given color, generate poetic and evocative card details."
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Generate details for a color card named '{color_name}' with hex value '{hex_color}'. I need these fields:\n"
+                            f"1. cardName: A creative and evocative alternative name for the color (max 3 words, ALL CAPS).\n"
+                            f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your new creative cardName.\n"
+                            f"3. article: The part of speech for the cardName (e.g., noun, adjective phrase).\n"
+                            f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by its name and hex value.\n\n"
+                            f"Format your response strictly as a JSON object with these exact keys: cardName, phoneticName, article, description."
+                        )
+                    }
+                ],
+                response_format={"type": "json_object"}
+            ),
+            timeout=OVERALL_TIMEOUT
         )
         
         api_call_duration = time.time() - api_call_start_time
@@ -59,9 +67,7 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         response_data = json.loads(response_text)
         log(f"Parsed AI response: {json.dumps(response_data, indent=2)}", request_id=request_id)
 
-        # Validate and format the response data
         phonetic_raw = str(response_data.get("phoneticName", "")).strip()
-        # Ensure it's wrapped in brackets, but don't double-bracket if already present
         if phonetic_raw.startswith('[') and phonetic_raw.endswith(']'):
             phonetic_final = phonetic_raw
         else:
@@ -82,13 +88,21 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
         return final_details
 
+    except asyncio.TimeoutError:
+        log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", request_id=request_id)
+        log(f"Falling back to default details for '{color_name}' due to asyncio.TimeoutError", request_id=request_id)
+        return {
+            "cardName": color_name.upper(), 
+            "phoneticName": "['tɑɪm.aʊt]", # IPA for timeout
+            "article": "[fallback due to timeout]",
+            "description": f"AI-generated details for {color_name} took too long."
+        }
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", request_id=request_id)
-        # Fallback to default values if AI fails
         log(f"Falling back to default details for '{color_name}'", request_id=request_id)
         return {
-            "cardName": color_name.upper(), # Use original color name if AI fails
+            "cardName": color_name.upper(),
             "phoneticName": "['kʌlər 'neɪm]",
             "article": "[noun]",
-            "description": f"A beautiful color named {color_name} with hex code {hex_color}."
+            "description": f"A beautiful color named {color_name} with hex code {hex_color}. (Error during AI fetch)"
         } 
