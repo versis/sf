@@ -154,18 +154,15 @@ export default function HomePage() {
   const handleGenerateImageClick = async () => {
     if (!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor) {
       setGenerationError('Please ensure an image is cropped and a color has been actively selected.');
-      
-      // Highlight the instruction text if color hasn't been selected
       if (!userHasInteractedWithColor) {
         setShowColorInstructionHighlight(true);
-        // Increment key to trigger animation restart
         setColorInstructionKey(prev => prev + 1);
-        // Reset the highlight after 3 seconds
         setTimeout(() => setShowColorInstructionHighlight(false), 3000);
       }
       return;
     }
-    
+    if (isGenerating) return;
+
     // Reset the results state before generating new images
     setIsResultsStepCompleted(false);
     setIsGenerating(true);
@@ -392,27 +389,18 @@ export default function HomePage() {
                   Click on the image to pick the color.
                 </p>
                 <div className="flex justify-center w-full gap-4 mt-2">
-                  <div 
-                    onClick={() => {
-                      if (!userHasInteractedWithColor) {
-                        setShowColorInstructionHighlight(true);
-                        setColorInstructionKey(prev => prev + 1);
-                        setTimeout(() => setShowColorInstructionHighlight(false), 3000);
-                      } else {
-                        handleGenerateImageClick();
-                      }
-                    }}
-                    className="relative"
+                  <button
+                    type="button"
+                    onClick={handleGenerateImageClick}
+                    className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 
+                      ${(!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor || isGenerating) ? 
+                        'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : 
+                        '' // Active styles (already part of the base string)
+                      }`}
                   >
-                    <button
-                      type="button"
-                      disabled={!croppedImageDataUrl || !selectedHexColor || isGenerating || !userHasInteractedWithColor}
-                      className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                      {isGenerating ? 'Generating Card...' : 'Generate Card'}
-                    </button>
-                  </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
+                    {isGenerating ? 'Generating Card...' : 'Generate Card'}
+                  </button>
                 </div>
               </WizardStep>
             )}
@@ -482,23 +470,13 @@ export default function HomePage() {
         
         {isGenerating && currentWizardStep !=='results' && (
           <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mt-6">
-            <p className="text-sm text-center mb-2">Generating card...</p>
+            <p className="text-sm text-center mb-2">Generating card... please wait.</p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
                 className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
                 style={{ width: `${generationProgress}%` }}
               ></div>
             </div>
-          </div>
-        )}
-
-        {generationError && (
-          <div className="w-full bg-destructive/10 text-destructive p-4 rounded-md border-2 border-destructive mt-6">
-            <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span className="font-medium">Error:</span>
-            </div>
-            <p className="mt-1 ml-7 text-sm">{generationError}</p>
           </div>
         )}
       </div>
