@@ -115,19 +115,48 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal"):
         f"assets/fonts/{font_name}",        # In assets/fonts/ folder (fallback)
     ]
 
+    loaded_font = None
     for path_attempt in font_paths_to_try:
         try:
             print(f"Attempting to load font: {path_attempt}")
-            return ImageFont.truetype(path_attempt, size)
-        except IOError:
+            loaded_font = ImageFont.truetype(path_attempt, size)
+            print(f"Successfully loaded font: {path_attempt}")
+            return loaded_font
+        except IOError as e:
+            print(f"Failed to load font {path_attempt}: {e}")
             continue # Try next path
     
-    # Fallback if all attempts fail
-    print(f"Warning: Font '{font_name}' not found in expected paths. Using PIL default for size {size}.")
+    # Fallback if all attempts fail - try to find any Inter font
+    if not loaded_font:
+        generic_inter_paths = [
+            "api/fonts/Inter.ttf",
+            "api/fonts/Inter-Regular.ttf",
+            "assets/fonts/Inter.ttf"
+        ]
+        
+        for path in generic_inter_paths:
+            try:
+                print(f"Trying generic Inter font: {path}")
+                return ImageFont.truetype(path, size)
+            except IOError:
+                continue
+    
+    # Last resort - system fonts
+    print(f"Warning: Font '{font_name}' not found in any expected paths. Using system fallback.")
     try:
-        # Try to get a generic PIL default font of a given size
-        return ImageFont.truetype("arial.ttf", size) # Common fallback, may not be available
-    except IOError:
+        # Try common system fonts that support IPA
+        for system_font in ["Arial Unicode MS", "DejaVu Sans", "Arial", "Helvetica", "Tahoma"]:
+            try:
+                print(f"Trying system font: {system_font}")
+                return ImageFont.truetype(system_font, size)
+            except IOError:
+                continue
+                
+        # Last resort - PIL default
+        print("Using PIL default font as last resort")
+        return ImageFont.load_default()
+    except Exception as e:
+        print(f"Error loading any font: {e}")
         return ImageFont.load_default() # Absolute fallback
 # --- End Font Loading ---
 
@@ -303,13 +332,34 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             draw.text((text_padding_left, current_y), line, font=font_color_name, fill=text_color_on_swatch)
             current_y += font_color_name.getmask(line).size[1] + int(swatch_panel_height * line_spacing_minor_scale)
 
-        noun_str = "[noun]"
+        # Display part of speech (e.g. "[noun]")
+        article_str = "[noun]"
+        if data.article and data.article.strip():
+            article_str = data.article
+            
+        draw.text((text_padding_left, current_y), article_str, font=font_noun, fill=text_color_on_swatch)
+        current_y += font_noun.getmask(article_str).size[1] + int(swatch_panel_height * line_spacing_minor_scale)
+        
+        # Display IPA phonetic notation on the next line
+        phonetic_str = ""
         if color_name.upper() == "OLIVE ALPINE SENTINEL":
-            noun_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"
-        draw.text((text_padding_left, current_y), noun_str, font=font_noun, fill=text_color_on_swatch)
-        current_y += font_noun.getmask(noun_str).size[1] + int(swatch_panel_height * line_spacing_major_scale)
+            phonetic_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"
+        elif data.phoneticName and data.phoneticName.strip():
+            phonetic_str = data.phoneticName
+            
+        if phonetic_str:
+            draw.text((text_padding_left, current_y), phonetic_str, font=font_noun, fill=text_color_on_swatch)
+            current_y += font_noun.getmask(phonetic_str).size[1] + int(swatch_panel_height * line_spacing_major_scale)
+        else:
+            # Add some space if no phonetic string
+            current_y += int(swatch_panel_height * line_spacing_major_scale)
 
+        # Use custom description if provided, otherwise use default
         description_text = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
+        if data.description and data.description.strip():
+            description_text = data.description
+        
+        # Text wrapping for description
         desc_line_height = font_description.getmask("Tg").size[1]
         max_desc_width = swatch_panel_width - (2 * text_padding_left)
         wrapped_desc_lines = []
