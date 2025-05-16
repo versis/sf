@@ -6,7 +6,7 @@ import WizardStep from '@/components/WizardStep';
 import { useState, useRef, useEffect } from 'react';
 
 // Define types for wizard steps
-type WizardStepName = 'upload' | 'crop' | 'color' | 'results' | 'download';
+type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
 
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export default function HomePage() {
   
   // Scroll to the active step or results
   useEffect(() => {
-    if (currentWizardStep === 'results' || currentWizardStep === 'download') {
+    if (currentWizardStep === 'results') {
       resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [currentWizardStep]);
@@ -210,6 +210,8 @@ export default function HomePage() {
       
       setIsColorStepCompleted(true); // Mark step 3 complete
       setCurrentWizardStep('results'); // Move to step 4
+      setIsResultsStepCompleted(true); // Automatically mark results step as complete
+      setCurrentDisplayOrientation('horizontal'); // Default to horizontal view
       setGenerationProgress(100);
 
     } catch (error) {
@@ -225,20 +227,12 @@ export default function HomePage() {
     }
   };
 
-  const handleConfirmOrientation = () => {
-    if (!currentDisplayOrientation) return; // Should not happen if in results step with images
-    setConfirmedOrientation(currentDisplayOrientation);
-    setIsResultsStepCompleted(true);
-    setCurrentWizardStep('download');
-  };
-
   const setStep = (step: WizardStepName) => {
     // Basic forward navigation only if prerequisites met
     if (step === 'upload') setCurrentWizardStep('upload');
     else if (step === 'crop' && isUploadStepCompleted) setCurrentWizardStep('crop');
     else if (step === 'color' && isCropStepCompleted) setCurrentWizardStep('color');
     else if (step === 'results' && isColorStepCompleted) setCurrentWizardStep('results');
-    else if (step === 'download' && isResultsStepCompleted) setCurrentWizardStep('download');
   };
   
   // Helper to determine if a step header should be clickable (i.e., it's a past, completed step)
@@ -247,7 +241,6 @@ export default function HomePage() {
     if (stepName === 'crop' && (isCropStepCompleted || (currentWizardStep === 'crop' && isUploadStepCompleted))) return true;
     if (stepName === 'color' && (isColorStepCompleted || (currentWizardStep === 'color' && isCropStepCompleted))) return true;
     if (stepName === 'results' && (isResultsStepCompleted || (currentWizardStep === 'results' && isColorStepCompleted))) return true;
-    // Download step is not typically navigated back to via header click once confirmed
     return false;
   };
 
@@ -355,7 +348,7 @@ export default function HomePage() {
 
             {isColorStepCompleted && (
               <WizardStep
-                title="Choose Orientation"
+                title="View & Download Your Card"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
@@ -393,13 +386,23 @@ export default function HomePage() {
                         <p className="text-muted-foreground">Select an orientation to view.</p>
                       )}
                     </div>
+                    
+                    <div className="flex justify-center gap-4 mt-4">
+                      <button
+                        onClick={() => handleDownloadImage(currentDisplayOrientation)}
+                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
+                        className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download Card
+                      </button>
+                    </div>
+                    
                     <button
-                      onClick={handleConfirmOrientation}
-                      disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl) }
-                      className="mt-4 px-6 py-3 bg-input text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000000] hover:shadow-[2px_2px_0_0_#000000] active:shadow-[1px_1px_0_0_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      onClick={resetWizard}
+                      className="mt-6 px-4 py-2 text-sm text-muted-foreground hover:text-foreground underline"
                     >
-                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                       Confirm Orientation
+                      Create New Card
                     </button>
                   </div>
                 ) : (
@@ -407,46 +410,12 @@ export default function HomePage() {
                 )}
               </WizardStep>
             )}
-
-            {isResultsStepCompleted && confirmedOrientation && (
-              <WizardStep
-                title="Download Your Card"
-                stepNumber={5}
-                isActive={currentWizardStep === 'download'}
-                isCompleted={false}
-                onHeaderClick={undefined}
-              >
-                <div className="space-y-4 flex flex-col items-center">
-                  <p className="text-lg font-medium">Your unique card is ready!</p>
-                  <div className="flex justify-center w-full">
-                     {(confirmedOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
-                        <img src={generatedHorizontalImageUrl} alt="Confirmed horizontal card" className={`max-w-full rounded-md md:max-w-xl h-auto shadow-lg`} />
-                      ) : (confirmedOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                        <img src={generatedVerticalImageUrl} alt="Confirmed vertical card" className={`max-w-full rounded-md md:max-w-xs max-h-[70vh] h-auto shadow-lg`} />
-                      ) : null}
-                  </div>
-                  <button
-                      onClick={() => handleDownloadImage(confirmedOrientation)}
-                      className="px-3 py-2 md:px-4 md:py-2 bg-white text-black font-semibold border-2 border-black shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] active:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:border-muted-foreground"
-                  >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      Download Card
-                  </button>
-                  <button
-                      onClick={resetWizard}
-                      className="mt-6 px-4 py-2 text-sm text-muted-foreground hover:text-foreground underline"
-                  >
-                      Create New Card
-                  </button>
-                </div>
-              </WizardStep>
-            )}
           </section>
         </div>
         
-        {isGenerating && currentWizardStep !=='results' && currentWizardStep !=='download' && (
+        {isGenerating && currentWizardStep !=='results' && (
           <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mt-6">
-            <p className="text-sm text-center mb-2">Generating card... please wait.</p>
+            <p className="text-sm text-center mb-2">Generating cardi... please wait.</p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
                 className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
