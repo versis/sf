@@ -318,7 +318,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
         text_padding_top = int(swatch_panel_height * 0.05) 
-        text_padding_left = int(swatch_panel_width * 0.1)
+        text_padding_left = int(swatch_panel_width * 0.08) # Reduce left padding from 0.1 to 0.08
         text_padding_bottom = int(swatch_panel_height * 0.05)
         line_spacing_major_scale = 0.015 
         line_spacing_minor_scale = 0.008
@@ -335,16 +335,16 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y = text_padding_top
 
         # --- Top Section: Color Name, Phonetic/Noun, Description ---
-        font_color_name = get_font(int(40 * base_font_size_scale), weight="Bold") # Smaller title size
-        font_phonetic_noun = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Italic for phonetic
-        font_article = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Regular for article
+        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") # Smaller title size (was 40)
+        font_phonetic_noun = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Ensure Italic, smaller (was 22)
+        font_article = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono") # Smaller (was 22)
         font_description = get_font(int(19 * base_font_size_scale), weight="Regular") # Description text
 
         # Define brand-related fonts early
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         font_id_main = get_font(int(26 * base_font_size_scale), weight="Regular") # ID text
-        font_metrics_label_main = get_font(int(18 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels - larger
-        font_metrics_value_main = get_font(int(18 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values - larger
+        font_metrics_label_main = get_font(int(20 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels - larger (was 18)
+        font_metrics_value_main = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values - larger (was 18)
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -363,7 +363,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
         # Position brand at bottom left with more space to prevent ID overlap
-        brand_y = swatch_panel_height - text_padding_bottom - id_h - metrics_line_spacing - brand_h - int(swatch_panel_height * 0.03)
+        # Ensure enough space for brand_h, id_h, and metrics_line_spacing
+        brand_y = swatch_panel_height - text_padding_bottom - id_h - (metrics_line_spacing * 1.5) - brand_h
 
         # Now handle the title formatting with better letter spacing
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
@@ -443,7 +444,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
 
         # Position ID below brand with consistent spacing
-        id_y = brand_y + brand_h + int(metrics_line_spacing * 0.6) # Slightly closer
+        id_y = brand_y + brand_h + metrics_line_spacing # Use full metrics_line_spacing for clarity
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
         # Position metrics with better alignment for consistent appearance
