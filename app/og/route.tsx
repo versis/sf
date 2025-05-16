@@ -8,8 +8,8 @@ export const preferredRegion = ["iad1"];
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  const title = searchParams.get("title");
-  const description = searchParams.get("description");
+  const title = searchParams.get("title") || "Shadefreude";
+  const description = searchParams.get("description") || "Create beautiful color reference cards";
 
   const imageData = await fetch(
     new URL("./background.png", import.meta.url)
@@ -19,29 +19,72 @@ export async function GET(request: Request) {
     new URL("../../assets/geist-semibold.ttf", import.meta.url)
   ).then((res) => res.arrayBuffer());
 
+  // Create a sample color palette for the preview
+  const colors = [
+    "#FF5252", // Red
+    "#FF9800", // Orange
+    "#FFEB3B", // Yellow
+    "#4CAF50", // Green
+    "#2196F3", // Blue
+    "#9C27B0", // Purple
+  ];
+
   return new ImageResponse(
     (
       <div
-        tw="flex h-full w-full bg-black"
+        tw="flex h-full w-full bg-white"
         style={{ fontFamily: "Geist Sans" }}
       >
         {/* @ts-expect-error */}
-        <img src={imageData} alt="vercel opengraph background" />
-        <div tw="flex flex-col absolute h-full w-[750px] justify-center left-[50px] pr-[50px] pt-[116px] pb-[166px]">
-          <div
-            tw="text-zinc-50 tracking-tight flex-grow-1 flex flex-col justify-center leading-[1.1]"
-            style={{
-              textWrap: "balance",
-              fontWeight: 500,
-              fontSize: 80,
-              color: "black",
-              letterSpacing: "-0.05em",
-            }}
-          >
-            {title}
+        <img src={imageData} alt="shadefreude background" tw="absolute" />
+        
+        <div tw="flex flex-col absolute h-full w-full p-12">
+          {/* Header */}
+          <div tw="flex items-center mb-6">
+            <div 
+              tw="text-6xl font-bold tracking-tight" 
+              style={{ color: "#000000" }}
+            >
+              {title}
+            </div>
           </div>
-          <div tw="text-[40px]" style={{ color: "#7D7D7D" }}>
+          
+          {/* Color Showcase */}
+          <div tw="flex flex-row w-full my-4 gap-4">
+            {colors.map((color, i) => (
+              <div key={i} tw="flex flex-col">
+                <div 
+                  tw="h-32 w-32 rounded-lg shadow-lg" 
+                  style={{ backgroundColor: color }}
+                />
+              </div>
+            ))}
+          </div>
+          
+          {/* Description */}
+          <div 
+            tw="text-3xl mt-6" 
+            style={{ color: "#555555" }}
+          >
             {description}
+          </div>
+          
+          {/* Sample Card Preview */}
+          <div tw="absolute bottom-12 right-12 flex items-center">
+            <div 
+              tw="flex flex-col rounded-lg shadow-xl overflow-hidden border border-gray-200"
+              style={{ width: "300px", height: "450px" }}
+            >
+              <div 
+                style={{ backgroundColor: "#2196F3", height: "225px" }}
+              />
+              <div tw="bg-white p-4 flex flex-col" style={{ height: "225px" }}>
+                <div tw="text-2xl font-bold text-black mb-1">ALPINE BLUE</div>
+                <div tw="text-gray-500 mb-2">['ælpaɪn bluː]</div>
+                <div tw="text-sm text-gray-700">A deep blue reminiscent of clear mountain skies and alpine lakes.</div>
+                <div tw="mt-auto text-lg font-bold text-black">shadefreude</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
