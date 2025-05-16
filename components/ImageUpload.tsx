@@ -197,24 +197,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         canvasHeight
       );
 
-      // Use JPEG with high quality as initial output
-      const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+      // Output as PNG for lossless representation of the crop for the color picker
+      const base64ImagePNG = canvas.toDataURL('image/png');
+      const pngSizeMB = (base64ImagePNG.length * 0.75) / (1024 * 1024);
+      console.log(`Cropped image (PNG for color picker) size: ${pngSizeMB.toFixed(2)} MB`);
       
-      // Estimate size in MB
-      const initialSizeMB = (base64Image.length * 0.75) / (1024 * 1024);
-      console.log(`Initial cropped image size: ${initialSizeMB.toFixed(2)} MB`);
-      
-      // Apply adaptive compression if image is over target size
-      let finalImage = base64Image;
-      if (initialSizeMB > TARGET_SIZE_MB) {
-        setProcessingMessage(`Optimizing image... (${initialSizeMB.toFixed(1)}MB → targeting ${TARGET_SIZE_MB}MB)`);
-        finalImage = await compressImageToTargetSize(base64Image, TARGET_SIZE_MB);
-        const finalSizeMB = (finalImage.length * 0.75) / (1024 * 1024);
-        console.log(`Final image size after compression: ${finalSizeMB.toFixed(2)} MB`);
-        setProcessingMessage(`Image optimized: ${finalSizeMB.toFixed(1)}MB (${Math.round((finalSizeMB / initialSizeMB) * 100)}% of original)`);
-      }
-      
-      onImageCropped(finalImage);
+      // No more forced compression to target size here.
+      // The backend will handle final image compression and format.
+      onImageCropped(base64ImagePNG);
+
     } catch (error) {
       console.error('Error processing image:', error);
       setProcessingMessage('Failed to process image. Please try again.');
