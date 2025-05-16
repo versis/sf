@@ -181,6 +181,9 @@ export default function HomePage() {
     }
     if (isGenerating) return;
 
+    // Mark step 3 as completed immediately when generation starts
+    setIsColorStepCompleted(true); 
+
     // Reset the results state before generating new images
     setIsResultsStepCompleted(false);
     setIsGenerating(true);

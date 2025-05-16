@@ -1,11 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };
 
-export default async function Image({ params }: { params: {} }) {
+export default async function Image({ params }: { params: { رنگ?: string, نام_رنگ?: string } }, request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const color = searchParams.get("color") || "#2196F3";
+  const colorName = searchParams.get("colorName") || "COLOR REFERENCE CARD";
+
   const geistSemibold = await fetch(
     new URL("../../assets/geist-semibold.ttf", import.meta.url)
   ).then((res) => res.arrayBuffer());
@@ -32,24 +38,23 @@ export default async function Image({ params }: { params: {} }) {
             tw="text-3xl mt-6" 
             style={{ color: "#555555" }}
           >
-            Create personalized color reference cards with shadefreude.
+            View this personalized color reference card created with shadefreude.
           </div>
           
-          {/* Sample Card Preview */}
+          {/* Sample Card Preview - Now Dynamic */}
           <div tw="absolute flex items-center justify-center w-full h-full">
             <div 
               tw="flex flex-col rounded-lg shadow-xl overflow-hidden border border-gray-200"
               style={{ width: "350px", height: "500px" }}
             >
               <div 
-                style={{ backgroundColor: "#2196F3", height: "250px" }}
+                style={{ backgroundColor: color, height: "250px" }}
               />
               <div tw="bg-white p-4 flex flex-col" style={{ height: "250px" }}>
-                <div tw="text-2xl font-bold text-black mb-1">COLOR REFERENCE CARD</div>
-                <div tw="text-gray-500 mb-2">#2196F3</div>
+                <div tw="text-2xl font-bold text-black mb-1 truncate" style={{ maxWidth: '300px' }}>{colorName.toUpperCase()}</div>
+                <div tw="text-gray-500 mb-2">{color}</div>
                 <div tw="text-sm text-gray-700">
-                  A unique color reference card created with shadefreude.
-                  Perfect for designers, artists, and color enthusiasts.
+                  A unique color reference card. Perfect for designers, artists, and color enthusiasts.
                 </div>
                 <div tw="mt-auto text-lg font-bold text-black">sf.tinker.institute</div>
               </div>
