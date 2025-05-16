@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     siteName: "shadefreude",
     images: [
       {
-        url: "/og?title=shadefreude&description=Create beautiful color reference cards",
+        url: "https://sf.tinker.institute/og?title=shadefreude&description=Create beautiful color reference cards",
         width: 1200,
         height: 630,
         alt: "Shadefreude Card Preview"
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     description: "Create beautiful color reference cards with shadefreude",
     images: [
       {
-        url: "/og?title=Shadefreude&description=Create beautiful color reference cards",
+        url: "https://sf.tinker.institute/og?title=Shadefreude&description=Create beautiful color reference cards",
         width: 1200,
         height: 630,
         alt: "Shadefreude Card Preview"

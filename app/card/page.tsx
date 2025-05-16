@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// Dynamic metadata for this page will be handled by the root layout
+// since this is a client component and can't export metadata directly
+
 export default function CardPage() {
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [hexColor, setHexColor] = useState<string>('#000000');
