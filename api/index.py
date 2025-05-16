@@ -335,10 +335,10 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         
         # Use IBM Plex Mono Regular for ID text 
         font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular", font_family="Mono") # ID text with monospace
-        # Use IBM Plex Mono Regular for metrics labels
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics labels 
-        # Use IBM Plex Mono Regular for metrics values
-        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values
+        # Use IBM Plex Mono Light for metrics labels to make them lighter
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
+        # Use IBM Plex Mono Light for metrics values to make them lighter
+        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
