@@ -308,20 +308,23 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         line_spacing_major_scale = 0.015 # Scale factor for line spacing based on swatch height
         line_spacing_minor_scale = 0.008
 
-        # Dynamically adjust font sizes based on swatch panel width (more critical dimension for text lines)
-        base_font_size_scale = swatch_panel_width / 400 # Adjust 400 to find a good base
+        # Dynamically adjust font sizes based on swatch panel width
+        base_font_size_scale = swatch_panel_width / 450 # Adjusted base for more intuitive scaling factors
 
         current_y = text_padding_top
-        font_color_name = get_font(int(50 * base_font_size_scale), weight="Bold")
-        font_noun = get_font(int(22 * base_font_size_scale), weight="Regular")
+
+        # --- Top Section: Color Name, Phonetic/Noun, Description ---
+        font_color_name = get_font(int(60 * base_font_size_scale), weight="Bold") # Slightly reduced from 50 to 60 scaling factor from 400 to 450 base
+        font_phonetic_noun = get_font(int(20 * base_font_size_scale), weight="Regular")
         font_description = get_font(int(18 * base_font_size_scale), weight="Regular")
 
         main_color_name_str = color_name.upper()
-        # Basic text wrapping for main_color_name_str
+        # Wrapped color name (if needed)
         wrapped_color_name_lines = []
         temp_line_color = ""
         for word in main_color_name_str.split(' '):
-            if font_color_name.getmask(temp_line_color + word).size[0] <= (swatch_panel_width - 2 * text_padding_left):
+            # Test with font_color_name.getmask(word).size[0] if get_text_dimensions is problematic
+            if get_text_dimensions(temp_line_color + word, font_color_name)[0] <= (swatch_panel_width - 2 * text_padding_left):
                 temp_line_color += word + " "
             else:
                 wrapped_color_name_lines.append(temp_line_color.strip())
@@ -330,91 +333,115 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         
         for line in wrapped_color_name_lines:
             draw.text((text_padding_left, current_y), line, font=font_color_name, fill=text_color_on_swatch)
-            current_y += font_color_name.getmask(line).size[1] + int(swatch_panel_height * line_spacing_minor_scale)
+            current_y += get_text_dimensions(line, font_color_name)[1] + int(swatch_panel_height * line_spacing_minor_scale * 0.8)
 
-        # Display part of speech (e.g. "[noun]")
-        article_str = "[noun]"
-        if data.article and data.article.strip():
-            article_str = data.article
-            
-        draw.text((text_padding_left, current_y), article_str, font=font_noun, fill=text_color_on_swatch)
-        current_y += font_noun.getmask(article_str).size[1] + int(swatch_panel_height * line_spacing_minor_scale)
-        
-        # Display IPA phonetic notation on the next line
+
+        article_str = data.article.strip() if data.article and data.article.strip() else "[noun]"
         phonetic_str = ""
-        if color_name.upper() == "OLIVE ALPINE SENTINEL":
+        if color_name.upper() == "OLIVE ALPINE SENTINEL": # Specific example
             phonetic_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"
         elif data.phoneticName and data.phoneticName.strip():
-            phonetic_str = data.phoneticName
-            
-        if phonetic_str:
-            draw.text((text_padding_left, current_y), phonetic_str, font=font_noun, fill=text_color_on_swatch)
-            current_y += font_noun.getmask(phonetic_str).size[1] + int(swatch_panel_height * line_spacing_major_scale)
-        else:
-            # Add some space if no phonetic string
-            current_y += int(swatch_panel_height * line_spacing_major_scale)
-
-        # Use custom description if provided, otherwise use default
-        description_text = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
-        if data.description and data.description.strip():
-            description_text = data.description
+            phonetic_str = data.phoneticName.strip()
         
-        # Text wrapping for description
-        desc_line_height = font_description.getmask("Tg").size[1]
+        # Combine phonetic and article on one line if phonetic_str exists
+        combined_phonetic_article = f"{phonetic_str} {article_str}".strip() if phonetic_str else article_str
+        
+        draw.text((text_padding_left, current_y), combined_phonetic_article, font=font_phonetic_noun, fill=text_color_on_swatch)
+        current_y += get_text_dimensions(combined_phonetic_article, font_phonetic_noun)[1] + int(swatch_panel_height * line_spacing_major_scale)
+
+        # Description text
+        description_to_draw = data.description if data.description and data.description.strip() else "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
+        desc_line_height = get_text_dimensions("Tg", font_description)[1] 
         max_desc_width = swatch_panel_width - (2 * text_padding_left)
         wrapped_desc_lines = []
         current_desc_line = ""
-        for word in description_text.split(' '):
-            if font_description.getmask(current_desc_line + word).size[0] <= max_desc_width:
+        for word in description_to_draw.split(' '):
+            if get_text_dimensions(current_desc_line + word, font_description)[0] <= max_desc_width:
                 current_desc_line += word + " "
             else:
                 wrapped_desc_lines.append(current_desc_line.strip())
                 current_desc_line = word + " "
         wrapped_desc_lines.append(current_desc_line.strip())
         
-        for line in wrapped_desc_lines:
-            if current_y + desc_line_height < swatch_panel_height - text_padding_bottom - (swatch_panel_height * 0.15): # Reserve ~15% bottom for metrics etc
-                draw.text((text_padding_left, current_y), line, font=font_description, fill=text_color_on_swatch)
-                current_y += desc_line_height + int(swatch_panel_height * line_spacing_minor_scale)
+        # Limit number of description lines to avoid pushing metrics off
+        max_desc_lines = 5 
+        for i, line in enumerate(wrapped_desc_lines):
+            if i < max_desc_lines:
+                 # Check remaining space before drawing description line
+                if current_y + desc_line_height < swatch_panel_height - text_padding_bottom - (swatch_panel_height * 0.25): # Reserve ~25% for bottom block
+                    draw.text((text_padding_left, current_y), line, font=font_description, fill=text_color_on_swatch)
+                    current_y += desc_line_height + int(swatch_panel_height * line_spacing_minor_scale * 0.7)
+                else:
+                    break 
             else:
-                break 
+                break
 
-        # Bottom-aligned text: Brand, ID, Metrics
-        font_brand_bottom = get_font(int(30 * base_font_size_scale), weight="Bold" if orientation.lower()!="horizontal" else "Regular") # Bold for vertical, Regular for horizontal 
-        font_id_bottom = get_font(int(30 * base_font_size_scale), weight="Regular")
-        font_metrics_label = get_font(int(16 * base_font_size_scale), weight="Bold")
-        font_metrics_value = get_font(int(16 * base_font_size_scale), weight="Regular")
-        metrics_line_height = font_metrics_value.getmask("Tg").size[1] + int(swatch_panel_height * 0.005) # Small gap
+        # --- Bottom Section: Brand, ID, Metrics ---
+        # Target: Large 'shadefreude', ID below it, Metrics (larger) to the right.
 
+        font_brand_main = get_font(int(75 * base_font_size_scale), weight="Bold") # Made significantly larger
+        font_id_main = get_font(int(28 * base_font_size_scale), weight="Regular")    # Smaller than brand
+        font_metrics_label_main = get_font(int(20 * base_font_size_scale), weight="Bold") # Larger metrics
+        font_metrics_value_main = get_font(int(20 * base_font_size_scale), weight="Regular") # Larger metrics
+
+        metrics_line_spacing = int(swatch_panel_height * 0.01) # Small gap between metric lines
+        
         brand_text = "shadefreude"
-        id_text = "00000001F"
+        id_text = data.cardId if data.cardId and data.cardId.strip() else "00000001F"
+
+        brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
+        id_w, id_h = get_text_dimensions(id_text, font_id_main)
+
+        # Position brand at bottom left
+        brand_y = swatch_panel_height - text_padding_bottom - id_h - metrics_line_spacing - brand_h 
+        draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
+
+        # Position ID below brand
+        id_y = brand_y + brand_h + metrics_line_spacing 
+        draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
         
-        # Metrics are drawn from bottom up
-        current_metrics_y = swatch_panel_height - text_padding_bottom - font_metrics_value.getmask("Tg").size[1]
-        metrics_label_x = text_padding_left
-        metrics_value_x = text_padding_left + int(swatch_panel_width * 0.2) # Offset values from labels
+        # Metrics to the right of the brand/ID block
+        metrics_start_x = text_padding_left + brand_w + int(swatch_panel_width * 0.05) # Start X after brand + padding
+        if metrics_start_x < text_padding_left + id_w + int(swatch_panel_width * 0.05): # if ID is wider
+             metrics_start_x = text_padding_left + id_w + int(swatch_panel_width * 0.05)
 
-        draw.text((metrics_label_x, current_metrics_y), "RGB", font=font_metrics_label, fill=text_color_on_swatch)
-        draw.text((metrics_value_x, current_metrics_y), f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}", font=font_metrics_value, fill=text_color_on_swatch)
-        current_metrics_y -= metrics_line_height
-        draw.text((metrics_label_x, current_metrics_y), "CMYK", font=font_metrics_label, fill=text_color_on_swatch)
-        draw.text((metrics_value_x, current_metrics_y), f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}", font=font_metrics_value, fill=text_color_on_swatch)
-        current_metrics_y -= metrics_line_height
-        draw.text((metrics_label_x, current_metrics_y), "HEX", font=font_metrics_label, fill=text_color_on_swatch)
-        draw.text((metrics_value_x, current_metrics_y), hex_color_input.upper(), font=font_metrics_value, fill=text_color_on_swatch)
 
-        # ID text above metrics
-        id_y_pos = current_metrics_y - metrics_line_height - font_id_bottom.getmask(id_text).size[1] 
-        draw.text((text_padding_left, id_y_pos), id_text, font=font_id_bottom, fill=text_color_on_swatch)
+        # Ensure metrics don't overflow swatch panel width
+        max_metrics_label_width = get_text_dimensions("CMYK", font_metrics_label_main)[0]
+        # Approximate value width, can be dynamic if needed
+        approx_value_width = get_text_dimensions("255 255 255", font_metrics_value_main)[0] 
+        metrics_value_x_offset = max_metrics_label_width + int(swatch_panel_width * 0.02)
 
-        # Brand text above ID
-        brand_actual_height = font_brand_bottom.getmask(brand_text).size[1]
-        brand_y_pos = id_y_pos - brand_actual_height - int(swatch_panel_height * 0.01) # Small gap
-        draw.text((text_padding_left, brand_y_pos), brand_text, font=font_brand_bottom, fill=text_color_on_swatch)
+
+        if metrics_start_x + metrics_value_x_offset + approx_value_width > swatch_panel_width - text_padding_left: # text_padding_right equivalent
+            # If too wide, reduce offset or make font smaller, or stack them.
+            # For now, let's adjust metrics_start_x to ensure it fits, potentially overlapping brand/id if space is very tight
+            needed_width = metrics_value_x_offset + approx_value_width
+            metrics_start_x = swatch_panel_width - text_padding_left - needed_width
+            # This could still be an issue if brand/id is very wide. A more robust solution would be to dynamically choose stacking or resizing.
+
+
+        # Metrics align with the bottom of the ID text. Metrics draw from top down.
+        # Top of the metrics block, aligned with top of Brand text for visual balance or slightly lower
+        metrics_start_y = brand_y + int(brand_h * 0.1) # Start metrics slightly below top of brand
+
+        current_metrics_y = metrics_start_y
+
+        hex_val_str = hex_color_input.upper()
+        draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing
+
+        cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
+        draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing
         
-        # Position image panel based on orientation
-        # For horizontal: image is on the right
-        # For vertical: image is on the bottom
+        rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+        draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        
+        # Image panel is always on the right of the swatch panel
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
         if orientation.lower() == "horizontal":
             canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
