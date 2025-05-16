@@ -382,16 +382,16 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y = text_padding_top
 
         # --- Top Section: Color Name, Phonetic/Noun, Description ---
-        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") # Smaller title size (was 40)
-        font_phonetic_noun = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Ensure Italic, smaller (was 22)
-        font_article = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono") # Smaller (was 22)
-        font_description = get_font(int(19 * base_font_size_scale), weight="Regular") # Description text
+        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") # Keep title size as is
+        font_phonetic_noun = get_font(int(26 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Make IPA text even bigger
+        font_article = get_font(int(26 * base_font_size_scale), weight="Regular", font_family="Mono") # Make article text even bigger
+        font_description = get_font(int(25 * base_font_size_scale), weight="Regular") # Make description text even bigger
 
         # Define brand-related fonts early
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
-        font_id_main = get_font(int(26 * base_font_size_scale), weight="Regular") # ID text
-        font_metrics_label_main = get_font(int(20 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels - larger (was 18)
-        font_metrics_value_main = get_font(int(20 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values - larger (was 18)
+        font_id_main = get_font(int(32 * base_font_size_scale), weight="Regular") # Make ID text bigger
+        font_metrics_label_main = get_font(int(21 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels
+        font_metrics_value_main = get_font(int(21 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -409,12 +409,14 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         id_h = get_text_dimensions(id_text, font_id_main)[1]
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position bottom elements first (ID and metrics)
-        bottom_margin = text_padding_bottom
+        # Position bottom elements first (ID and metrics) with a slight adjustment
+        # Make sure bottom elements have proper space from the bottom edge
+        bottom_margin = text_padding_bottom + int(swatch_panel_height * 0.01)
         id_y = swatch_panel_height - bottom_margin - id_h
 
-        # Position brand closer to the bottom elements but still separate
-        brand_y = id_y - brand_h - (metrics_line_spacing * 2.5)
+        # Position brand with metrics next to it (move both further up from ID)
+        # Allow more space between brand/metrics and the ID
+        brand_y = id_y - brand_h - int(swatch_panel_height * 0.06)
 
         # Now handle the title formatting with better letter spacing
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
@@ -502,34 +504,52 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Position ID at the fixed position determined earlier
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
-        # Position metrics with better alignment for consistent appearance
-        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.60) # Move slightly more right
-        metrics_start_y = id_y # Position metrics at the same height as ID
+        # Position metrics with better alignment 
+        # Move metrics to the right by appropriate amount (approx 55% of panel width)
+        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.55)
+        
+        # Align metrics with the brand text vertically instead of ID
+        # This moves the metrics up to be at the same height as "shadefreude"
+        metrics_start_y = brand_y
 
-        # Calculate alignment for consistent right-aligned metrics
+        # Calculate horizontal layout for metrics: labels and values
         metrics_labels = ["HEX", "CMYK", "RGB"]
         max_label_width = max(get_text_dimensions(label, font_metrics_label_main)[0] for label in metrics_labels)
-        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.06) # More spacing between label and value
+        # Provide consistent spacing between label and value
+        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05)
+        
+        # To ensure metrics don't run off the edge, calculate max width for positioning
+        hex_val_str = hex_color_input.upper()
+        cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
+        rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+        metrics_values = [hex_val_str, cmyk_val_str, rgb_val_str]
+        
+        # Adjust if needed to prevent overflow
+        max_val_width = max(get_text_dimensions(val, font_metrics_value_main)[0] for val in metrics_values)
+        if metrics_start_x + metrics_value_x_offset + max_val_width > swatch_panel_width - text_padding_left:
+            # If would overflow, adjust position leftward
+            metrics_start_x = swatch_panel_width - text_padding_left - max_val_width - metrics_value_x_offset
 
-        # Adjusted line spacing between metrics
-        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.018) # Slightly increased
+        # Adjust spacing between metrics lines
+        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.015) # Tighter vertical spacing
 
+        # Start metrics at the same vertical position as ID
         current_metrics_y = metrics_start_y
 
         # HEX value with better alignment
-        hex_val_str = hex_color_input.upper()
+        # We already defined hex_val_str above
         draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
         current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
         # CMYK value with better spacing
-        cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
+        # We already defined cmyk_val_str above
         draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
         current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
         # RGB value with better spacing
-        rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+        # We already defined rgb_val_str above
         draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
 
