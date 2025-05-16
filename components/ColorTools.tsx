@@ -47,13 +47,13 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     if (previewCanvas) {
       const prevCtx = previewCanvas.getContext('2d');
       if (prevCtx) {
-        // Set fixed dimensions for the preview canvas (matching card aspect ratio)
-        previewCanvas.width = 500; // Example width, aspect ratio 1000/600 = 500/300
+        // New dimensions for a 2:1 aspect ratio canvas, with a square image panel
+        previewCanvas.width = 600; // Example: Swatch 300x300, Image 300x300
         previewCanvas.height = 300;
 
-        const swatchWidth = previewCanvas.width * 0.50;
+        const swatchWidth = previewCanvas.width * 0.50; // 50% for swatch
         const imagePanelXStart = swatchWidth;
-        const imagePanelWidth = previewCanvas.width - swatchWidth;
+        const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image, making it square with height
 
         // Draw color swatch
         prevCtx.fillStyle = hexColor;
@@ -169,8 +169,8 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto" 
-            style={{ aspectRatio: '1000 / 600' }} 
+            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto"
+            style={{ aspectRatio: '2 / 1' }} // Updated to 2:1 for the overall preview canvas
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />

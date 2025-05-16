@@ -357,7 +357,7 @@ export default function HomePage() {
                   showUploader={false}
                   showCropper={true}
                   initialPreviewUrl={uploadStepPreviewUrl}
-                  aspectRatio={5/6}
+                  aspectRatio={1}
                   key={`cropper-${uploadStepPreviewUrl}`}
                 />
               </WizardStep>
@@ -437,9 +437,9 @@ export default function HomePage() {
 
                   <div className="flex justify-center w-full">
                     {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
-                      <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-xl h-auto shadow-lg`} />
+                      <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl h-auto`} />
                     ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                      <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-xs max-h-[70vh] h-auto shadow-lg`} />
+                      <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-sm max-h-[80vh] h-auto`} />
                     ) : (
                       <p className="text-muted-foreground">Select an orientation to view.</p>
                     )}

@@ -264,52 +264,63 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             user_image_pil = user_image_pil.resize((new_width, new_height), Image.LANCZOS)
             print(f"Resized to: {new_width}x{new_height}")
 
+        # Card dimensions and style
+        VERTICAL_CARD_W, VERTICAL_CARD_H = 900, 1800 # Adjusted Vertical Card Dimensions
+        HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1800, 900 # Adjusted Horizontal Card Dimensions
         bg_color = (250, 250, 250)
-        card_width, card_height = 0, 0
-        swatch_panel_width, swatch_panel_height = 0, 0
-        image_panel_width, image_panel_height = 0, 0
 
         if orientation.lower() == "horizontal":
-            card_width, card_height = 1500, 900
-            swatch_panel_width = int(card_width * 0.50)  # 750px
+            card_width, card_height = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+            print(f"Creating HORIZONTAL card: {card_width}x{card_height}")
+
+            swatch_panel_width = int(card_width * 0.50)  # 900px
             swatch_panel_height = card_height          # 900px (full height for left panel)
-            image_panel_width = card_width - swatch_panel_width # 750px
+            image_panel_width = card_width - swatch_panel_width # 900px
             image_panel_height = card_height         # 900px (full height for right panel)
-            print(f"Generating HORIZONTAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
+            print(f" HORIZONTAL Swatch: {swatch_panel_width}x{swatch_panel_height}, Image Panel: {image_panel_width}x{image_panel_height}")
+
         elif orientation.lower() == "vertical":
-            card_width, card_height = 750, 1800
-            swatch_panel_width = card_width         # 750px (full width for top panel)
-            swatch_panel_height = int(card_height * 0.50) # 900px
-            image_panel_width = card_width          # 750px (full width for bottom panel)
-            image_panel_height = card_height - swatch_panel_height # 900px
-            print(f"Generating VERTICAL card ({card_width}x{card_height}) -> Swatch: {swatch_panel_width}x{swatch_panel_height}, Image: {image_panel_width}x{image_panel_height}")
+            card_width, card_height = VERTICAL_CARD_W, VERTICAL_CARD_H # 900x1800
+            print(f"Creating VERTICAL card: {card_width}x{card_height}")
+
+            # Vertical: Top Swatch, Bottom Image
+            swatch_panel_width = card_width # Full width: 900px
+            swatch_panel_height = int(card_height * 0.50) # Top half: 900px height
+            image_panel_width = card_width  # Full width: 900px
+            image_panel_height = card_height - swatch_panel_height # Bottom half: 900px height
+            print(f" VERTICAL Swatch: {swatch_panel_width}x{swatch_panel_height}, Image Panel: {image_panel_width}x{image_panel_height}")
         else:
             raise HTTPException(status_code=400, detail=f"Invalid orientation specified: {orientation}. Must be 'horizontal' or 'vertical'.")
 
         canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
         draw = ImageDraw.Draw(canvas)
         
-        # For horizontal orientation, swatch is on the left
-        # For vertical orientation, swatch is on the top
+        # Draw swatch panel based on orientation
         if orientation.lower() == "horizontal":
+            # Horizontal: Swatch is on the LEFT
             draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
-        else:  # vertical
+        else: # Vertical: Swatch is on the TOP
             draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
 
         text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
 
-        # --- Text Layout for Swatch Panel (Left side) ---
-        # This logic needs to be adaptable to swatch_panel_width and swatch_panel_height
-        # For simplicity, using generic padding and font scaling. Refine as needed.
-        
-        text_padding_top = int(swatch_panel_height * 0.05) # Relative padding
+        # --- Text Layout for Swatch Panel ---
+        # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
+        # swatch_panel_width and swatch_panel_height define the area for text.
+        text_padding_top = int(swatch_panel_height * 0.05) 
         text_padding_left = int(swatch_panel_width * 0.1)
         text_padding_bottom = int(swatch_panel_height * 0.05)
-        line_spacing_major_scale = 0.015 # Scale factor for line spacing based on swatch height
+        line_spacing_major_scale = 0.015 
         line_spacing_minor_scale = 0.008
 
-        # Dynamically adjust font sizes based on swatch panel width
-        base_font_size_scale = swatch_panel_width / 450 # Adjusted base for more intuitive scaling factors
+        if swatch_panel_width == 0: swatch_panel_width = 1 # Avoid division by zero for base_font_size_scale
+        if swatch_panel_width >= 900: 
+            base_font_size_scale = swatch_panel_width / 750 # Adjusted for wider horizontal swatch
+        elif swatch_panel_width >= 450: 
+            base_font_size_scale = swatch_panel_width / 450 # For vertical swatch (width 900 -> scale becomes 2)
+                                                          # Or horizontal swatch if it was narrower (width 750 -> scale ~1.6)
+        else: 
+            base_font_size_scale = swatch_panel_width / 350
 
         current_y = text_padding_top
 
@@ -441,11 +452,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
         
-        # Image panel is always on the right of the swatch panel
+        # Image panel placement
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
         if orientation.lower() == "horizontal":
+            # Horizontal: Image is on the RIGHT
             canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
-        else:  # vertical
+        else: # Vertical: Image is on the BOTTOM
             canvas.paste(user_image_fitted, (0, swatch_panel_height), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
     
         print("User image pasted onto canvas.")
