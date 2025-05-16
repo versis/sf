@@ -503,7 +503,7 @@ export default function HomePage() {
         {isGenerating && (
           <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mt-6">
             <p className="text-sm text-center mb-2">
-              {generationProgress < 100 ? 'Generating cards... please wait.' : 'Processing completed cards...'}
+              {generationProgress < 100 ? 'Generating card... please wait.' : 'Processing completed card...'}
             </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
