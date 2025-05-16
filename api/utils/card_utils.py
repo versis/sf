@@ -140,15 +140,15 @@ async def generate_card_image_bytes(
     base_font_scale = swatch_w / (750 if swatch_w >= 900 else (450 if swatch_w >= 450 else 350))
     current_y = pad_t
 
-    # Fonts
-    f_title = get_font(int(38 * base_font_scale), "Bold", request_id=request_id)
-    f_phonetic = get_font(int(26 * base_font_scale), "Light", "Italic", request_id=request_id)
-    f_article = get_font(int(26 * base_font_scale), "Light", request_id=request_id)
-    f_desc = get_font(int(25 * base_font_scale), "Regular", request_id=request_id)
-    f_brand = get_font(int(60 * base_font_scale), "Bold", request_id=request_id)
-    f_id = get_font(int(37 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_label = get_font(int(23 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_val = get_font(int(23 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    # Fonts (Adjusted base sizes for a less oversized look)
+    f_title = get_font(int(30 * base_font_scale), "Bold", request_id=request_id)
+    f_phonetic = get_font(int(21 * base_font_scale), "Light", "Italic", request_id=request_id)
+    f_article = get_font(int(21 * base_font_scale), "Light", request_id=request_id)
+    f_desc = get_font(int(20 * base_font_scale), "Regular", request_id=request_id)
+    f_brand = get_font(int(45 * base_font_scale), "Bold", request_id=request_id)
+    f_id = get_font(int(28 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_label = get_font(int(18 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_val = get_font(int(18 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Card Name (from AI or default)
     card_name_display = card_details.get("cardName", "MISSING NAME").upper()
