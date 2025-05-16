@@ -1,16 +1,14 @@
 {
   "functions": {
-    "api/**": {
+    "api/**/*.py": { 
+      "runtime": "vercel-python@4.0.0",
+      "maxDuration": 60,
       "excludeFiles": "{.next,.git,node_modules}/**"
-    },
-    "api/index.py": {
-      "maxDuration": 60
     }
   },
   "routes": [
     {
-      "src": "/api/generate-cards",
-      "methods": ["POST"],
+      "src": "/api/(.*)", 
       "dest": "/api/index.py"
     }
   ]
