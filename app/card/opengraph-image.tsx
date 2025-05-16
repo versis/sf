@@ -19,51 +19,20 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
   return new ImageResponse(
     (
       <div
-        tw="flex h-full w-full bg-white"
+        tw="flex flex-col items-center justify-center h-full w-full bg-white"
         style={{ fontFamily: "Geist Sans" }}
       >
-        <div tw="flex flex-col absolute h-full w-full p-16">
-          {/* Header */}
-          <div tw="flex items-center mb-8">
-            <div 
-              tw="text-6xl font-bold tracking-tight" 
-              style={{ color: "#000000" }}
-            >
-              shadefreude
-            </div>
-          </div>
-          
-          {/* Description */}
-          <div 
-            tw="text-3xl mt-6" 
-            style={{ color: "#555555" }}
-          >
-            View this personalized color reference card created with shadefreude.
-          </div>
-          
-          {/* Sample Card Preview - Now Dynamic */}
-          <div tw="absolute flex items-center justify-center w-full h-full">
-            <div 
-              tw="flex flex-col rounded-lg shadow-xl overflow-hidden border border-gray-200"
-              style={{ width: "380px", height: "540px" }}
-            >
-              <div 
-                style={{ backgroundColor: color, height: "270px" }}
-              />
-              <div tw="bg-white p-6 flex flex-col" style={{ height: "270px" }}>
-                <div tw="text-3xl font-bold text-black mb-1 truncate" style={{ maxWidth: '350px' }}>{colorName.toUpperCase()}</div>
-                <div tw="text-gray-500 mb-2">{color}</div>
-                <div tw="text-sm text-gray-700">
-                  A unique color reference card. Perfect for designers, artists, and color enthusiasts.
-                </div>
-                <div tw="mt-auto text-lg font-bold text-black">sf.tinker.institute</div>
-              </div>
-            </div>
-          </div>
-          
-          <div tw="absolute bottom-16 left-16 text-xl font-semibold text-gray-700">
-            part of tinker.institute
-          </div>
+        <div tw="flex items-center justify-center">
+          <span tw="text-8xl font-bold">shade</span>
+          <span tw="text-8xl font-bold bg-white border-4 border-blue-600 px-4 mx-2" style={{ borderColor: "#0000FF" }}>freude</span>
+        </div>
+        
+        <div tw="mt-6 text-3xl text-gray-700">
+          Color card: <span tw="font-semibold">{colorName}</span>
+        </div>
+        
+        <div tw="mt-8 text-3xl text-gray-600">
+          part of <span tw="text-gray-800">tinker.institute</span>
         </div>
       </div>
     ),
