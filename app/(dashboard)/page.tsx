@@ -25,6 +25,7 @@ export default function HomePage() {
   const [userHasInteractedWithColor, setUserHasInteractedWithColor] = useState(false);
   const [showColorInstructionHighlight, setShowColorInstructionHighlight] = useState(false);
   const [colorInstructionKey, setColorInstructionKey] = useState(0);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -39,6 +40,20 @@ export default function HomePage() {
       resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [currentWizardStep]);
+
+  // Detect if user is on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768); // standard breakpoint for mobile
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIfMobile);
+    };
+  }, []);
 
   useEffect(() => {
     let urlsToRevoke: string[] = [];
@@ -172,6 +187,9 @@ export default function HomePage() {
     setGenerationError(null);
     setGenerationProgress(0);
     
+    // Immediately move to step 4 (results) to show progress bar there
+    setCurrentWizardStep('results');
+    
     // Start the smooth progress animation
     const progressInterval = 70; // Update every 70ms
     const totalDuration = 12000; // 12 seconds
@@ -257,8 +275,10 @@ export default function HomePage() {
         setCurrentWizardStep('results'); // Move to step 4
         setIsResultsStepCompleted(true); // Automatically mark results step as complete
         
-        // Set the display orientation to whichever card was successfully generated
-        if (horizontalSuccess) {
+        // Set the display orientation to mobile-friendly or based on availability
+        if (isMobile && verticalSuccess) {
+          setCurrentDisplayOrientation('vertical');
+        } else if (horizontalSuccess) {
           setCurrentDisplayOrientation('horizontal');
         } else if (verticalSuccess) {
           setCurrentDisplayOrientation('vertical');
@@ -442,7 +462,7 @@ export default function HomePage() {
               </WizardStep>
             )}
 
-            {isColorStepCompleted && currentWizardStep === 'results' && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
+            {(isCropStepCompleted && (currentWizardStep === 'results' || isGenerating)) && (
               <WizardStep
                 title="Claim Your Card"
                 stepNumber={4}
@@ -450,74 +470,122 @@ export default function HomePage() {
                 isCompleted={isResultsStepCompleted}
                 onHeaderClick={isStepHeaderClickable('results') ? () => setStep('results') : undefined}
               >
-                <div className="space-y-4 flex flex-col items-center">
-                  <div className="flex justify-center gap-6 mb-4">
-                    <button 
-                      onClick={() => setCurrentDisplayOrientation('horizontal')}
-                      className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
-                      title="Display Horizontal Card"
-                      disabled={isGenerating || !generatedHorizontalImageUrl}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" /></svg>
-                      <span className="text-xs mt-1">Horizontal</span>
-                    </button>
-                    <button
-                      onClick={() => setCurrentDisplayOrientation('vertical')}
-                      className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
-                      title="Display Vertical Card"
-                      disabled={isGenerating || !generatedVerticalImageUrl}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2" /></svg>
-                      <span className="text-xs mt-1">Vertical</span>
-                    </button>
+                {isGenerating && (
+                  <div className="w-full mb-6">
+                    <p className="text-sm text-center mb-2">
+                      {generationProgress < 100 ? 'Generating card... please wait.' : 'Processing completed card...'}
+                    </p>
+                    <div className="h-2 w-full bg-muted overflow-hidden rounded">
+                      <div 
+                        className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
+                        style={{ width: `${generationProgress}%` }}
+                      ></div>
+                    </div>
                   </div>
+                )}
+                
+                {!isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
+                  <div className="space-y-4 flex flex-col items-center">
+                    <div className="flex justify-center gap-6 mb-4">
+                      <button 
+                        onClick={() => setCurrentDisplayOrientation('horizontal')}
+                        className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
+                        title="Display Horizontal Card"
+                        disabled={isGenerating || !generatedHorizontalImageUrl}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" /></svg>
+                        <span className="text-xs mt-1">Horizontal</span>
+                      </button>
+                      <button
+                        onClick={() => setCurrentDisplayOrientation('vertical')}
+                        className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
+                        title="Display Vertical Card"
+                        disabled={isGenerating || !generatedVerticalImageUrl}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2" /></svg>
+                        <span className="text-xs mt-1">Vertical</span>
+                      </button>
+                    </div>
 
-                  <div className="flex justify-center w-full">
-                    {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
-                      <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl h-auto`} />
-                    ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                      <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-sm max-h-[80vh] h-auto`} />
-                    ) : (
-                      <p className="text-muted-foreground">Select an orientation to view.</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex justify-center gap-4 mt-4">
+                    <div className="flex justify-center w-full">
+                      {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
+                        <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl h-auto`} />
+                      ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
+                        <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-sm max-h-[80vh] h-auto`} />
+                      ) : (
+                        <p className="text-muted-foreground">Select an orientation to view.</p>
+                      )}
+                    </div>
+                    
+                    <div className="flex justify-center gap-4 mt-4">
+                      <button
+                        onClick={() => handleDownloadImage(currentDisplayOrientation)}
+                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
+                        className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Get the current URL for sharing
+                          const shareUrl = `${window.location.origin}/card?orientation=${currentDisplayOrientation}&color=${encodeURIComponent(selectedHexColor)}&colorName=${encodeURIComponent(colorNameInput)}`;
+                          
+                          // Save images to sessionStorage for the share page to access
+                          if (generatedHorizontalImageUrl) {
+                            sessionStorage.setItem('horizontalCardUrl', generatedHorizontalImageUrl);
+                          }
+                          if (generatedVerticalImageUrl) {
+                            sessionStorage.setItem('verticalCardUrl', generatedVerticalImageUrl);
+                          }
+                          
+                          // Try using the Web Share API if available (mobile devices)
+                          if (navigator.share) {
+                            navigator.share({
+                              title: `${colorNameInput} - Shadefreude Color Card`,
+                              text: 'Check out this color card I created with Shadefreude!',
+                              url: shareUrl
+                            })
+                            .catch(err => {
+                              console.error('Error sharing:', err);
+                              // Fallback if sharing fails
+                              window.location.href = shareUrl;
+                            });
+                          } else {
+                            // Copy to clipboard on desktop
+                            navigator.clipboard.writeText(shareUrl)
+                              .then(() => {
+                                alert('Share link copied to clipboard!');
+                                // Still navigate to the share page
+                                window.location.href = shareUrl;
+                              })
+                              .catch(err => {
+                                console.error('Failed to copy:', err);
+                                // Fallback - just navigate
+                                window.location.href = shareUrl;
+                              });
+                          }
+                        }}
+                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
+                        className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Share
+                      </button>
+                    </div>
+                    
                     <button
-                      onClick={() => handleDownloadImage(currentDisplayOrientation)}
-                      disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
-                      className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
+                      onClick={resetWizard}
+                      className="mt-6 px-4 py-2 text-sm text-muted-foreground hover:text-foreground underline"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      Claim Your Card
+                      Create New Card
                     </button>
                   </div>
-                  
-                  <button
-                    onClick={resetWizard}
-                    className="mt-6 px-4 py-2 text-sm text-muted-foreground hover:text-foreground underline"
-                  >
-                    Create New Card
-                  </button>
-                </div>
+                )}
               </WizardStep>
             )}
           </section>
         </div>
-        
-        {isGenerating && (
-          <div className="w-full bg-background p-4 rounded-md border-2 border-foreground mt-6">
-            <p className="text-sm text-center mb-2">
-              {generationProgress < 100 ? 'Generating card... please wait.' : 'Processing completed card...'}
-            </p>
-            <div className="h-2 w-full bg-muted overflow-hidden rounded">
-              <div 
-                className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
-                style={{ width: `${generationProgress}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
