@@ -350,7 +350,7 @@ export default function HomePage() {
 
             {isColorStepCompleted && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
               <WizardStep
-                title="View & Download Your Card"
+                title="Claim Your Card"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
