@@ -481,7 +481,7 @@ export default function HomePage() {
         {isGenerating && (
                   <div className="w-full mb-6">
                     <p className="text-xs text-center text-blue-600 mb-2">
-                      Generating card... It might take 30-60 seconds.
+                      Hang on for 30-60 seconds...
                     </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 

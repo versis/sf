@@ -145,7 +145,7 @@ async def generate_card_image_bytes(
     f_phonetic = get_font(int(20 * base_font_scale), "Light", "Italic", request_id=request_id)
     f_article = get_font(int(20 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(18 * base_font_scale), "Regular", request_id=request_id)
-    f_brand = get_font(int(4 * base_font_scale), "Bold", request_id=request_id)
+    f_brand = get_font(int(38 * base_font_scale), "Bold", request_id=request_id)
     f_id = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_label = get_font(int(16 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_val = get_font(int(16 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
@@ -195,40 +195,67 @@ async def generate_card_image_bytes(
     wrapped_desc.append(current_line.strip())
     
     brand_text = "shadefreude"
+    # Get font heights for layout
     _, brand_h = get_text_dimensions(brand_text, f_brand)
-    brand_y_pos = swatch_h - pad_b - brand_h - int(swatch_h * 0.09)
+    id_display_for_height_calc = card_details.get("cardId", "0000000 XX X")
+    _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
+    _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
+
+    # Define vertical spacing
+    space_between_brand_id = int(swatch_h * 0.015) # Space between brand and ID
+    space_between_id_metrics = int(swatch_h * 0.03) # Space between ID and metrics block
+    line_spacing_metrics = int(swatch_h * 0.018) # Already defined, used for spacing within metrics
+
+    # --- New Y-Positioning Logic for Bottom Elements ---
+
+    # 1. Position Brand ("shadefreude") higher up
+    # Let's target around 70% down the swatch height as a starting point for the brand text
+    # This moves it significantly up from the absolute bottom padding.
+    brand_y_pos = int(swatch_h * 0.72) 
+
+    # 2. Position Card ID below the brand
+    id_y_pos = brand_y_pos + brand_h + space_between_brand_id
+
+    # 3. Position Metrics block below the Card ID
+    metrics_start_y = id_y_pos + id_h + space_between_id_metrics
+
+    # --- End New Y-Positioning Logic ---
 
     for i, line_d in enumerate(wrapped_desc):
+        # Ensure description does not overlap with the new, higher brand position
         if i < 4 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.05)):
             draw.text((pad_l, current_y), line_d, font=f_desc, fill=text_color)
             current_y += desc_line_h + int(swatch_h * 0.004)
         else: break
 
-    # Brand, ID, Metrics
+    # Draw Brand, ID, Metrics with new Y positions
     draw.text((pad_l, brand_y_pos), brand_text, font=f_brand, fill=text_color)
-    id_display = card_details.get("cardId", "0000000 XX X") # cardId from request or default
-    original_bottom_y_ref = swatch_h - pad_b - brand_h - int(swatch_h * 0.10)
-    id_y_pos = original_bottom_y_ref + brand_h + int(swatch_h * 0.04)
+    
+    id_display = card_details.get("cardId", "0000000 XX X")
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    metrics_x_offset = int(swatch_w * 0.54)
-    metrics_start_x = pad_l + metrics_x_offset
-    metrics_start_y = original_bottom_y_ref + int(brand_h * 0.8)
+    metrics_x_offset = int(swatch_w * 0.54) # Horizontal offset for metrics can remain similar
+    metrics_labels_start_x = pad_l + metrics_x_offset
     hex_val = hex_color_input.upper()
     cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
     rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
     
     metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)]
-    max_label_w = max(get_text_dimensions(label[0], f_metrics_label)[0] for label in metric_data)
-    val_x_offset = max_label_w + int(swatch_w * 0.05)
-    line_spacing_metrics = int(swatch_h * 0.018)
+    # Calculate where the metric values start, to the right of the labels
+    max_label_w = 0
+    if metric_data: # Ensure metric_data is not empty
+        max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data)
+    
+    val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.03) # Small gap after longest label
+    
     current_metrics_y = metrics_start_y
 
     for label, value in metric_data:
-        draw.text((metrics_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color)
-        draw.text((metrics_start_x + val_x_offset, current_metrics_y), value, font=f_metrics_val, fill=text_color)
-        _, h_metric_label = get_text_dimensions(label, f_metrics_label)
-        current_metrics_y += h_metric_label + line_spacing_metrics
+        draw.text((metrics_labels_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color)
+        draw.text((val_x_start, current_metrics_y), value, font=f_metrics_val, fill=text_color)
+        # Use the actual height of the current label for incrementing Y
+        _, h_current_metric_label = get_text_dimensions(label, f_metrics_label)
+        current_metrics_y += h_current_metric_label + line_spacing_metrics
     
     log("Text rendering complete", request_id=request_id)
 

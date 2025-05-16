@@ -234,8 +234,13 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             ).model_dump()
         )
 
+    # Check environment variable to decide on AI generation
+    # Defaults to True (use AI) if variable is not set or not explicitly "false"
+    enable_ai_env = os.environ.get("ENABLE_AI_CARD_DETAILS", "true").lower()
+    use_ai = enable_ai_env != "false"
+
     if data.cardName and data.phoneticName and data.article and data.description:
-        log("User provided all card details. Skipping AI generation.", request_id=request_id)
+        log("User provided all card details. Skipping AI generation logic.", request_id=request_id)
         final_card_details = {
             "cardName": data.cardName.strip().upper(),
             "phoneticName": data.phoneticName.strip(),
@@ -243,8 +248,17 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             "description": data.description.strip(),
             "cardId": data.cardId.strip() if data.cardId else default_card_id
         }
+    elif not use_ai:
+        log(f"ENABLE_AI_CARD_DETAILS is '{enable_ai_env}'. Skipping AI and using fallback text details.", request_id=request_id)
+        final_card_details = {
+            "cardName": data.colorName.strip().upper(), 
+            "phoneticName": "['fɔːl.bæk də.ˈfɔːlt]", # Phonetic for "fallback default"
+            "article": "[AI disabled]",
+            "description": f"This is {data.colorName.strip()}. AI-generated details are currently disabled.",
+            "cardId": data.cardId.strip() if data.cardId else default_card_id
+        }
     else:
-        log("User did not provide all details, proceeding with AI generation.", request_id=request_id)
+        log("User did not provide all details OR AI is enabled. Proceeding with AI generation.", request_id=request_id)
         try:
             ai_generated_details = await generate_ai_card_details(data.colorName, data.hexColor, request_id)
             final_card_details = ai_generated_details

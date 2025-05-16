@@ -69,6 +69,19 @@ AZURE_OPENAI_DEPLOYMENT=ti-o4-mini
 
 Make sure the deployment name matches what you created in your Azure OpenAI resource.
 
+### Controlling AI Card Detail Generation
+
+You can control whether the AI attempts to generate card details using the following environment variable:
+
+- `ENABLE_AI_CARD_DETAILS`: 
+    - Set to `false` to disable AI generation and use fallback text details.
+    - If not set, or set to `true` (or any other value), AI generation will be enabled by default.
+
+```env
+# Optional: Control AI card detail generation
+ENABLE_AI_CARD_DETAILS=true # set to false to disable AI, defaults to true if not set
+```
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:
