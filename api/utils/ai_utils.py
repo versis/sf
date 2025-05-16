@@ -21,13 +21,12 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
     """
     Generates AI-based card details using Azure OpenAI.
     Returns a dictionary with card name, phonetic, part of speech, and description.
-    Overall operation timeout is 58s enforced by asyncio.wait_for.
-    Client network timeout is 15s.
+    Overall operation timeout is 59s enforced by asyncio.wait_for.
     """
     
-    OVERALL_TIMEOUT = 58.0 # Slightly less than Vercel's 60s Hobby limit
+    OVERALL_TIMEOUT = 59.0 # Slightly less than Vercel's 60s Hobby limit
 
-    log(f"Starting Azure OpenAI API call for color '{color_name}' (hex: {hex_color}). Overall timeout {OVERALL_TIMEOUT}s, client network timeout 15s.", request_id=request_id)
+    log(f"Starting Azure OpenAI API call for color '{color_name}' (hex: {hex_color}). Overall timeout {OVERALL_TIMEOUT}s.", request_id=request_id)
     api_call_start_time = time.time()
 
     try:
