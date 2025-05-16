@@ -94,6 +94,13 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     Weight: "Regular", "Bold", "Light", "Medium", "SemiBold", "ExtraBold", "Black", "Thin", "ExtraLight"
     Style: "Normal", "Italic"
     """
+    # Import at function level to ensure availability in all scopes
+    import os
+    
+    # Get the current working directory to help with debugging
+    cwd = os.getcwd()
+    print(f"Current working directory: {cwd}")
+    
     font_style_suffix = ""
     if style.lower() == "italic":
         font_style_suffix = "Italic"
@@ -107,48 +114,65 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # Try common monospace fonts that support IPA symbols with proper styling
-        monospace_fonts = ["DejaVu Sans Mono", "Courier New", "Consolas", "Liberation Mono"]
+        # For consistency with the previous working version, use Inter for everything
+        # even for "Mono" text, just use the italic variant if requested
         
-        # For italic, try fonts explicitly with italic or oblique in the name
-        if style.lower() == "italic":
-            italic_mono_fonts = [
-                "DejaVu Sans Mono Oblique", "DejaVu Sans Mono Italic",
-                "Courier New Italic", "Consolas Italic", "Liberation Mono Italic"
-            ]
-            # Try italic versions first
-            for mono_font in italic_mono_fonts:
-                try:
-                    return ImageFont.truetype(mono_font, size)
-                except IOError:
-                    continue
+        # Use the same Inter font as for regular text
+        regular_font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
         
-        # If italic fonts failed or not requested, try regular versions
-        for mono_font in monospace_fonts:
+        # Same font paths as for regular Inter
+        inter_paths = [
+            f"assets/fonts/{regular_font_name}",       # Primary path for Vercel deployment
+            f"api/assets/fonts/{regular_font_name}",   # Alternative path for api/assets structure
+            f"{cwd}/assets/fonts/{regular_font_name}", # Absolute path to assets
+            f"api/fonts/{regular_font_name}"           # Original path (backward compatibility)
+        ]
+        
+        # Try to load Inter font
+        for path in inter_paths:
             try:
-                # If italic is requested, try to force slant angle
+                print(f"Using Inter for 'Mono' text: {path}")
+                return ImageFont.truetype(path, size)
+            except IOError as e:
+                print(f"Failed to load Inter for 'Mono': {e}")
+                continue
+                
+        # Fallbacks if Inter doesn't work
+        print("Falling back to system fonts for 'Mono' text")
+        system_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Roboto"]
+        
+        for system_font in system_fonts:
+            try:
                 if style.lower() == "italic":
-                    font = ImageFont.truetype(mono_font, size)
-                    # Some PIL versions support this for forcing italic
-                    if hasattr(font, 'set_variation_by_name'):
-                        try:
-                            font.set_variation_by_name('Italic')
-                            return font
-                        except:
-                            pass
-                return ImageFont.truetype(mono_font, size)
+                    try:
+                        return ImageFont.truetype(f"{system_font} Italic", size)
+                    except IOError:
+                        pass
+                return ImageFont.truetype(system_font, size)
             except IOError:
                 continue
     
     # Match the filename pattern: Inter_XXpt-WeightStyle.ttf
     font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
     
+    # Updated paths with new assets location as priority
     font_paths_to_try = [
-        f"api/fonts/{font_name}",          # Primary path where fonts are located
+        f"assets/fonts/{font_name}",        # Primary path for Vercel deployment
+        f"api/assets/fonts/{font_name}",    # Alternative path for api/assets structure
+        f"{cwd}/assets/fonts/{font_name}",  # Absolute path to assets
+        f"{cwd}/api/assets/fonts/{font_name}", # Absolute path to api/assets
+        f"api/fonts/{font_name}",           # Original path (backward compatibility)
         font_name,                          # Direct name (fallback)
-        f"api/{font_name}",                 # In api/ folder (fallback)
-        f"assets/fonts/{font_name}",        # In assets/fonts/ folder (fallback)
     ]
+
+    # Debug available directories
+    try:
+        if os.path.exists("assets"):
+            print(f"Assets directory exists. Contents: {os.listdir('assets')}")
+            if os.path.exists("assets/fonts"):
+                print(f"assets/fonts directory exists. Sample files: {os.listdir('assets/fonts')[:3]}")
+    except Exception as e:
+        print(f"Error checking directories: {e}")
 
     loaded_font = None
     for path_attempt in font_paths_to_try:
@@ -164,9 +188,10 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     # Fallback if all attempts fail - try to find any Inter font
     if not loaded_font:
         generic_inter_paths = [
-            "api/fonts/Inter.ttf",
+            "assets/fonts/Inter_24pt-Regular.ttf",  # New primary fallback
+            "assets/fonts/Inter_18pt-Regular.ttf",  # Alternative size
+            "api/fonts/Inter.ttf",                  # Legacy path
             "api/fonts/Inter-Regular.ttf",
-            "assets/fonts/Inter.ttf"
         ]
         
         for path in generic_inter_paths:
@@ -380,31 +405,44 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y = text_padding_top
 
         # --- Top Section: Color Name, Phonetic/Noun, Description ---
-        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") # Keep title size as is
-        font_phonetic_noun = get_font(int(26 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Make IPA text even bigger
-        font_article = get_font(int(26 * base_font_size_scale), weight="Regular", font_family="Mono") # Make article text even bigger
-        font_description = get_font(int(25 * base_font_size_scale), weight="Regular") # Make description text even bigger
+        # Consistent font weights & styles to match the second image
+        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") 
+        # Use Light Italic for phonetic text - matches the thinner look in the reference image
+        font_phonetic_noun = get_font(int(26 * base_font_size_scale), weight="Light", style="Italic") 
+        # Use Light weight for article text to match the reference
+        font_article = get_font(int(26 * base_font_size_scale), weight="Light") 
+        # Use regular Inter for description
+        font_description = get_font(int(25 * base_font_size_scale), weight="Regular")
 
-        # Define brand-related fonts early
+        # Define brand-related fonts early - using Inter for all
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         
-        # Make ID even bigger and more prominent with heavier weight
-        font_id_main = get_font(int(36 * base_font_size_scale), weight="Bold", font_family="Mono") # ID text - larger and heavier weight
-        # Increase metrics font size by 1 as requested
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Bold", font_family="Mono") # Slightly larger metrics labels
-        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Slightly larger metrics values
+        # Use Inter for ID text, matching the look in the second image
+        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular") # ID text - consistent style
+        # Use Inter for metrics labels and values
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Bold") # Metrics labels
+        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular") # Metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
 
-        # Ensure ID has proper format with space before F
+        # Ensure ID has proper spacing in the format "0000023 FE T"
         if data.cardId and data.cardId.strip():
-            if data.cardId[-2] != " " and data.cardId[-1].upper() == "F":
-                id_text = data.cardId[:-1] + " " + data.cardId[-1]
+            # Remove all spaces first to normalize
+            clean_id = data.cardId.replace(" ", "")
+            
+            # Get the parts based on expected format (7 digits + 2 letters + 1 letter)
+            if len(clean_id) >= 10:
+                digits = clean_id[0:7]
+                middle = clean_id[7:9]
+                end = clean_id[9] if len(clean_id) > 9 else ""
+                # Format with proper spacing
+                id_text = f"{digits} {middle} {end}"
             else:
+                # If ID doesn't match expected format, use as is
                 id_text = data.cardId
         else:
-            id_text = "0000023 FE T"  # Updated to requested ID format
+            id_text = "0000023 FE T"  # Default ID format
 
         brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
         id_h = get_text_dimensions(id_text, font_id_main)[1]
@@ -420,47 +458,88 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
         main_color_name_str = color_name.upper()
         
-        # For better text alignment, we'll use regular text without trying to add spaces
-        # Instead, we'll rely on the font weight and style to create the proper appearance
-        draw.text((text_padding_left, current_y), main_color_name_str, font=font_color_name, fill=text_color_on_swatch)
+        # Add very subtle letter spacing to the title by drawing each character with a small offset
+        current_x = text_padding_left
+        for char in main_color_name_str:
+            draw.text((current_x, current_y), char, font=font_color_name, fill=text_color_on_swatch)
+            char_width = get_text_dimensions(char, font_color_name)[0]
+            # Add very small extra spacing between characters
+            current_x += char_width + int(swatch_panel_width * 0.002)
         current_y += get_text_dimensions(main_color_name_str, font_color_name)[1] + int(swatch_panel_height * 0.03) # Slightly more space
 
-        # Format phonetic text and article - COMBINED on same line
+        # Format phonetic text with proper spacing and styling
         # Use data.phoneticName if provided, otherwise use a sample phonetic text
         phonetic_str = data.phoneticName if data.phoneticName and data.phoneticName.strip() else "[ɒlɪv ælpaɪn sɛntɪnəl]"
-        # Remove surrounding brackets as we'll add them in the rendering
+        # Clean up the format - remove brackets as we'll add them consistently
         phonetic_str = phonetic_str.strip().strip('[]')
-        phonetic_str = f"[{phonetic_str}]"  # Add consistent brackets
+        # Add more spacing between characters for the phonetic text
+        spaced_phonetic = " ".join(phonetic_str)
+        # Use lighter font weight with proper spacing for IPA symbols
+        phonetic_str = f"[{phonetic_str}]"
         
-        # Use data.article if provided, otherwise use "[noun]"
+        # Format the article text properly
         article_str = data.article if data.article and data.article.strip() else "[noun]"
+        # Make sure it has brackets if they're missing
+        if not article_str.startswith('['):
+            article_str = f"[{article_str.strip('[]')}]"
 
         # Draw phonetic text and article on SAME line
         if orientation.lower() == "horizontal":
-            # Draw phonetic text in italic
-            draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+            # Draw phonetic text in italic with letter spacing
+            # Get bracket width first
+            open_bracket_width = get_text_dimensions("[", font_phonetic_noun)[0]
             
-            # Get width of phonetic text to position article text
-            phonetic_width = get_text_dimensions(phonetic_str, font_phonetic_noun)[0]
+            # Draw opening bracket
+            draw.text((text_padding_left, current_y), "[", font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_x = text_padding_left + open_bracket_width
+            
+            # Draw each phonetic character with slight spacing
+            phonetic_content = phonetic_str.strip("[]")
+            for char in phonetic_content:
+                draw.text((current_x, current_y), char, font=font_phonetic_noun, fill=text_color_on_swatch)
+                char_width = get_text_dimensions(char, font_phonetic_noun)[0]
+                # Add spacing between characters
+                current_x += char_width + int(swatch_panel_width * 0.005)
+            
+            # Draw closing bracket
+            draw.text((current_x, current_y), "]", font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_x += get_text_dimensions("]", font_phonetic_noun)[0]
+            
+            # Get height of phonetic text
             phonetic_height = get_text_dimensions(phonetic_str, font_phonetic_noun)[1]
             
-            # Draw article text in regular font style right after phonetic text
-            article_x = text_padding_left + phonetic_width + int(swatch_panel_width * 0.02)
+            # Draw article text in light font style right after phonetic text
+            article_x = current_x + int(swatch_panel_width * 0.02)
             draw.text((article_x, current_y), article_str, font=font_article, fill=text_color_on_swatch)
             
             # Move down after both are drawn
             current_y += phonetic_height + int(swatch_panel_height * 0.03)
         else:
-            # For vertical orientation
-            # Draw phonetic text in italic
-            draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+            # For vertical orientation - with letter spacing
+            # Get bracket width first
+            open_bracket_width = get_text_dimensions("[", font_phonetic_noun)[0]
             
-            # Get width of phonetic text to position article text
-            phonetic_width = get_text_dimensions(phonetic_str, font_phonetic_noun)[0]
+            # Draw opening bracket
+            draw.text((text_padding_left, current_y), "[", font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_x = text_padding_left + open_bracket_width
+            
+            # Draw each phonetic character with slight spacing
+            phonetic_content = phonetic_str.strip("[]")
+            for char in phonetic_content:
+                draw.text((current_x, current_y), char, font=font_phonetic_noun, fill=text_color_on_swatch)
+                char_width = get_text_dimensions(char, font_phonetic_noun)[0]
+                # Add spacing between characters
+                current_x += char_width + int(swatch_panel_width * 0.005)
+            
+            # Draw closing bracket
+            draw.text((current_x, current_y), "]", font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_x += get_text_dimensions("]", font_phonetic_noun)[0]
+            
+            # Get height of phonetic text
             phonetic_height = get_text_dimensions(phonetic_str, font_phonetic_noun)[1]
             
-            # Draw article text in regular font style right after phonetic text
-            article_x = text_padding_left + phonetic_width + int(swatch_panel_width * 0.02)
+            # Draw article text in light font style right after phonetic text  
+            article_x = current_x + int(swatch_panel_width * 0.02)
             draw.text((article_x, current_y), article_str, font=font_article, fill=text_color_on_swatch)
             
             # Move down after both are drawn
@@ -499,8 +578,14 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Draw the brand and metrics
         draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
 
-        # Position ID at the fixed position determined earlier
-        draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
+        # Position ID at the fixed position determined earlier - use letter spacing
+        # Add subtle extra letter spacing by drawing each character separately
+        current_x = text_padding_left
+        for char in id_text:
+            draw.text((current_x, id_y), char, font=font_id_main, fill=text_color_on_swatch)
+            char_width = get_text_dimensions(char, font_id_main)[0]
+            # Add a small extra spacing between characters
+            current_x += char_width + int(swatch_panel_width * 0.004)
 
                 # Simplify metrics positioning - use a fixed position relative to brand text
         hex_val_str = hex_color_input.upper()
@@ -531,22 +616,39 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Start metrics at the same vertical position as ID
         current_metrics_y = metrics_start_y
 
-        # HEX value with better alignment
-        # We already defined hex_val_str above
+        # HEX value with better alignment and letter spacing
         draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        
+        # Draw HEX value with letter spacing
+        value_x = metrics_start_x + metrics_value_x_offset
+        for char in hex_val_str:
+            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
+            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
+            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
+        
         current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
         # CMYK value with better spacing
-        # We already defined cmyk_val_str above
         draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        
+        # Draw CMYK value with letter spacing
+        value_x = metrics_start_x + metrics_value_x_offset
+        for char in cmyk_val_str:
+            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
+            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
+            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
+            
         current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
         # RGB value with better spacing
-        # We already defined rgb_val_str above
         draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
+        
+        # Draw RGB value with letter spacing
+        value_x = metrics_start_x + metrics_value_x_offset
+        for char in rgb_val_str:
+            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
+            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
+            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
 
         # Image panel placement
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
