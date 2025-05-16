@@ -134,7 +134,7 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
             
             # If IBM Plex Mono fails, try Inter as fallback
             print("Falling back to Inter for monospace text")
-            inter_fallback = f"assets/fonts/Inter_{pt_suffix}-Regular.ttf"
+            inter_fallback = f"assets/fonts/inter/Inter_{pt_suffix}-Regular.ttf"
             try:
                 return ImageFont.truetype(inter_fallback, size)
             except:
@@ -144,8 +144,8 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     # For Inter font (default)
     font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
     
-    # Just one path to Inter fonts - no duplicates
-    inter_path = f"assets/fonts/{font_name}"
+    # Just one path to Inter fonts - now in inter directory
+    inter_path = f"assets/fonts/inter/{font_name}"
     
     print(f"Attempting to load Inter: {inter_path}")
     try:
