@@ -250,7 +250,7 @@ class ImageGenerationRequest(BaseModel):
     phoneticName: Optional[str] = "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]" # Placeholder
     article: Optional[str] = "[noun]" # Placeholder
     description: Optional[str] = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude." # Placeholder
-    cardId: Optional[str] = "00000001 F" # Placeholder
+    cardId: Optional[str] = "0000023 FE P" # Updated ID format
 
 @app.post("/api/generate-image")
 @limiter.limit("10/minute")
@@ -365,7 +365,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
         text_padding_top = int(swatch_panel_height * 0.05) 
-        text_padding_left = int(swatch_panel_width * 0.08) # Reduce left padding from 0.1 to 0.08
+        text_padding_left = int(swatch_panel_width * 0.06) # Further reduce left padding to move text closer to edge
         text_padding_bottom = int(swatch_panel_height * 0.05)
         line_spacing_major_scale = 0.015 
         line_spacing_minor_scale = 0.008
@@ -389,9 +389,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
 
         # Define brand-related fonts early
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
-        font_id_main = get_font(int(32 * base_font_size_scale), weight="Regular") # Make ID text bigger
-        font_metrics_label_main = get_font(int(21 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels
-        font_metrics_value_main = get_font(int(21 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values
+        
+        # Make ID even bigger and more prominent with heavier weight
+        font_id_main = get_font(int(36 * base_font_size_scale), weight="Bold", font_family="Mono") # ID text - larger and heavier weight
+        # Make the color definitions bigger as requested
+        font_metrics_label_main = get_font(int(24 * base_font_size_scale), weight="Bold", font_family="Mono") # Larger metrics labels
+        font_metrics_value_main = get_font(int(24 * base_font_size_scale), weight="SemiBold", font_family="Mono") # Larger metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -403,20 +406,17 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             else:
                 id_text = data.cardId
         else:
-            id_text = "00000001 F"  # Default with proper spacing
+            id_text = "0000023 FE P"  # Updated to requested ID format
 
         brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
         id_h = get_text_dimensions(id_text, font_id_main)[1]
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position bottom elements first (ID and metrics) with a slight adjustment
-        # Make sure bottom elements have proper space from the bottom edge
-        bottom_margin = text_padding_bottom + int(swatch_panel_height * 0.01)
-        id_y = swatch_panel_height - bottom_margin - id_h
-
-        # Position brand with metrics next to it (move both further up from ID)
-        # Allow more space between brand/metrics and the ID
-        brand_y = id_y - brand_h - int(swatch_panel_height * 0.06)
+        # Position brand text further down as requested
+        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.09)
+        
+        # Add more space between brand and ID as requested
+        id_y = brand_y + brand_h + int(swatch_panel_height * 0.04) # Increased spacing
 
         # Now handle the title formatting with better letter spacing
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
@@ -506,11 +506,11 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
 
         # Position metrics with better alignment 
         # Move metrics to the right by appropriate amount (approx 55% of panel width)
-        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.55)
+        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.6)
         
-        # Align metrics with the brand text vertically instead of ID
-        # This moves the metrics up to be at the same height as "shadefreude"
-        metrics_start_y = brand_y
+        # Move metrics down a bit as requested
+        # Position slightly below the center of brand text
+        metrics_start_y = brand_y + (brand_h / 2) + int(swatch_panel_height * 0.01)
 
         # Calculate horizontal layout for metrics: labels and values
         metrics_labels = ["HEX", "CMYK", "RGB"]
