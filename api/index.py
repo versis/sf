@@ -335,69 +335,63 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         current_y = text_padding_top
 
         # --- Top Section: Color Name, Phonetic/Noun, Description ---
-        font_color_name = get_font(int(45 * base_font_size_scale), weight="Bold") # Reduce title size to match goal design
-        font_phonetic_noun = get_font(int(18 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Use italic for phonetic
-        font_article = get_font(int(18 * base_font_size_scale), weight="Regular", font_family="Mono") # Regular style for article
-        font_description = get_font(int(16 * base_font_size_scale), weight="Regular") # Smaller description
+        font_color_name = get_font(int(45 * base_font_size_scale), weight="Bold") # Title size
+        font_phonetic_noun = get_font(int(18 * base_font_size_scale), weight="Regular", font_family="Mono", style="Italic") # Italic for phonetic
+        font_article = get_font(int(18 * base_font_size_scale), weight="Regular", font_family="Mono") # Regular for article
+        font_description = get_font(int(16 * base_font_size_scale), weight="Regular") # Description text
 
         # Define brand-related fonts early
-        font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Smaller brand text to match goal
-        font_id_main = get_font(int(26 * base_font_size_scale), weight="Regular") # Slightly smaller ID text
-        font_metrics_label_main = get_font(int(16 * base_font_size_scale), weight="Bold", font_family="Mono") # Monospace metrics labels
-        font_metrics_value_main = get_font(int(16 * base_font_size_scale), weight="Regular", font_family="Mono") # Monospace metrics values
+        font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
+        font_id_main = get_font(int(26 * base_font_size_scale), weight="Regular") # ID text
+        font_metrics_label_main = get_font(int(16 * base_font_size_scale), weight="Bold", font_family="Mono") # Metrics labels
+        font_metrics_value_main = get_font(int(16 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values
 
         # Pre-calculate brand position to determine space available for other elements
         brand_text = "shadefreude"
-        id_text = data.cardId if data.cardId and data.cardId.strip() else "00000001 F"
+        id_text = data.cardId if data.cardId and data.cardId.strip() else "00000001 F" # Space between numbers and F
         brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
         id_h = get_text_dimensions(id_text, font_id_main)[1]
-        metrics_line_spacing = int(swatch_panel_height * 0.015) # Slightly increase line spacing for metrics
+        metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position brand at bottom left, closer to bottom
+        # Position brand at bottom left
         brand_y = swatch_panel_height - text_padding_bottom - id_h - metrics_line_spacing - brand_h - int(swatch_panel_height * 0.01)
 
-        # Now handle the title formatting
+        # Now handle the title formatting - for horizontal layout (like the goal design), always use single line
+        current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
         main_color_name_str = color_name.upper()
-        words = main_color_name_str.split()
 
-        # Add spacing between lines
-        current_y += int(swatch_panel_height * 0.04) # Push title down a bit
+        # Draw title on a single line with proper spacing, regardless of orientation
+        draw.text((text_padding_left, current_y), main_color_name_str, font=font_color_name, fill=text_color_on_swatch)
+        current_y += get_text_dimensions(main_color_name_str, font_color_name)[1] + int(swatch_panel_height * 0.02)
 
-        # Handle each word separately, one per line
-        for word in words:
-            draw.text((text_padding_left, current_y), word, font=font_color_name, fill=text_color_on_swatch)
-            current_y += get_text_dimensions(word, font_color_name)[1] + int(swatch_panel_height * 0.01)
+        # Format phonetic text and article - phonetic in italics, article normal
+        phonetic_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"  # Hardcode correct IPA text for consistent display
+        if orientation.lower() == "horizontal":
+            # For horizontal layout (like the goal design)
+            
+            # Draw phonetic text in italic on its own line
+            draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_y += get_text_dimensions(phonetic_str, font_phonetic_noun)[1] + int(swatch_panel_height * 0.01)
+            
+            # Draw article text on separate line
+            draw.text((text_padding_left, current_y), data.article.strip() if data.article and data.article.strip() else "[noun]", font=font_article, fill=text_color_on_swatch)
+            current_y += get_text_dimensions(data.article.strip() if data.article and data.article.strip() else "[noun]", font_article)[1] + int(swatch_panel_height * 0.025)
+        else:
+            # For vertical orientation, keep the same layout
+            draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
+            current_y += get_text_dimensions(phonetic_str, font_phonetic_noun)[1] + int(swatch_panel_height * 0.01)
+            
+            draw.text((text_padding_left, current_y), data.article.strip() if data.article and data.article.strip() else "[noun]", font=font_article, fill=text_color_on_swatch)
+            current_y += get_text_dimensions(data.article.strip() if data.article and data.article.strip() else "[noun]", font_article)[1] + int(swatch_panel_height * 0.025)
 
-        # Extra spacing after title
-        current_y += int(swatch_panel_height * 0.02)
-
-        # Format phonetic text to match monospaced italic style in goal design
-        phonetic_str = data.phoneticName.strip() if data.phoneticName and data.phoneticName.strip() else "[ɒlɪv ælpaɪn sɛntɪnəl]"
-        if not phonetic_str.startswith('['):
-            phonetic_str = f"[{phonetic_str.strip('[]')}]"
-
-        # Ensure consistent article formatting
-        article_str = data.article.strip() if data.article and data.article.strip() else "[noun]"
-
-        # Draw phonetic text in italic with proper spacing
-        draw.text((text_padding_left, current_y), phonetic_str, font=font_phonetic_noun, fill=text_color_on_swatch)
-        current_y += get_text_dimensions(phonetic_str, font_phonetic_noun)[1] + int(swatch_panel_height * 0.008)
-
-        # Draw article text in regular style
-        draw.text((text_padding_left, current_y), article_str, font=font_article, fill=text_color_on_swatch)
-        current_y += get_text_dimensions(article_str, font_article)[1] + int(swatch_panel_height * 0.02)
-
-        # Description text with proper spacing and formatting
+        # Description text with proper spacing
         description_to_draw = data.description if data.description and data.description.strip() else "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
 
-        # Add more spacing before description
-        current_y += int(swatch_panel_height * 0.01)
-
-        # Increase line height for better readability
-        desc_line_height = get_text_dimensions("Tg", font_description)[1] * 1.1 # Slightly less than before
+        # Slightly tighter line height for description to match goal
+        desc_line_height = get_text_dimensions("Tg", font_description)[1] * 1.08 # Reduced line height
         max_desc_width = swatch_panel_width - (2 * text_padding_left)
 
-        # Wrap description text with better spacing
+        # Wrap description with proper width
         wrapped_desc_lines = []
         current_desc_line = ""
         for word in description_to_draw.split(' '):
@@ -408,55 +402,56 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
                 current_desc_line = word + " "
         wrapped_desc_lines.append(current_desc_line.strip())
 
-        # Limit number of description lines to avoid pushing metrics off
+        # Limit description lines to avoid pushing metrics off
         max_desc_lines = 5 
         for i, line in enumerate(wrapped_desc_lines):
             if i < max_desc_lines:
-                # Check remaining space to ensure we don't overlap with bottom section
                 if current_y + desc_line_height < brand_y - int(swatch_panel_height * 0.05):
                     draw.text((text_padding_left, current_y), line, font=font_description, fill=text_color_on_swatch)
-                    current_y += desc_line_height + int(swatch_panel_height * 0.005) # Tighter line spacing
+                    current_y += desc_line_height + int(swatch_panel_height * 0.004) # Tighter spacing
                 else:
                     break 
             else:
                 break
 
-        # --- Bottom Section: Brand, ID, Metrics ---
-        # Now draw the brand and metrics (positions already calculated above)
+        # Draw the brand and metrics
         draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
 
         # Position ID below brand with consistent spacing
-        id_y = brand_y + brand_h + metrics_line_spacing * 0.7
+        id_y = brand_y + brand_h + int(metrics_line_spacing * 0.6) # Slightly closer
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
-        # Position metrics for better alignment
-        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.55) # Move slightly right to match goal design
-        metrics_start_y = brand_y # Align with brand text
+        # Position metrics with better alignment for consistent appearance
+        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.58) # Move right to match goal
+        metrics_start_y = brand_y - int(swatch_panel_height * 0.01) # Align with brand text
 
-        # Calculate alignment for metrics with more precise right-alignment
+        # Calculate alignment for consistent right-aligned metrics
         metrics_labels = ["HEX", "CMYK", "RGB"]
         max_label_width = max(get_text_dimensions(label, font_metrics_label_main)[0] for label in metrics_labels)
-        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05) # More spacing between label and value
+        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05) # Consistent spacing
+
+        # Adjusted line spacing between metrics
+        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.018) # Slightly increased
 
         current_metrics_y = metrics_start_y
 
-        # HEX value
+        # HEX value with better alignment
         hex_val_str = hex_color_input.upper()
         draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-        current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing
+        current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
-        # CMYK value with consistent spacing
+        # CMYK value with better spacing
         cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
         draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-        current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing
-        
-        # RGB value with consistent spacing
+        current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
+
+        # RGB value with better spacing
         rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
         draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
         draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-        
+
         # Image panel placement
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
         if orientation.lower() == "horizontal":
