@@ -99,6 +99,7 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     
     # Get the current working directory to help with debugging
     cwd = os.getcwd()
+    print(f"Current working directory: {cwd}")
     
     font_style_suffix = ""
     if style.lower() == "italic":
@@ -113,22 +114,29 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # Use IBM Plex Mono for monospace text
-        if weight == "Light":
-            ibm_plex_path = "IBMPlexMono-Light.ttf"
-        elif weight in ["Medium", "Bold", "SemiBold"]:
-            ibm_plex_path = "IBMPlexMono-Medium.ttf"
-        else:
-            ibm_plex_path = "IBMPlexMono-Regular.ttf"
+        # For monospace text, always use Regular weight for better visibility
+        # This overrides the Light weight to ensure it's not too thin
+        ibm_plex_path = "IBMPlexMono-Regular.ttf"
         
         # Just one path to IBM Plex Mono fonts - no duplicates
         ibm_plex_mono_path = f"assets/fonts/mono/{ibm_plex_path}"
         
+        print(f"Attempting to load IBM Plex Mono: {ibm_plex_mono_path}")
         try:
-            return ImageFont.truetype(ibm_plex_mono_path, size)
-        except IOError:
-                         # If IBM Plex Mono fails, just use the default font
-             return ImageFont.load_default()
+            loaded_font = ImageFont.truetype(ibm_plex_mono_path, size)
+            print(f"Successfully loaded IBM Plex Mono")
+            return loaded_font
+        except IOError as e:
+            print(f"Failed to load IBM Plex Mono: {e}")
+            
+            # If IBM Plex Mono fails, try Inter as fallback
+            print("Falling back to Inter for monospace text")
+            inter_fallback = f"assets/fonts/Inter_{pt_suffix}-Regular.ttf"
+            try:
+                return ImageFont.truetype(inter_fallback, size)
+            except:
+                # Last resort
+                return ImageFont.load_default()
     
     # For Inter font (default)
     font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
@@ -136,11 +144,15 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     # Just one path to Inter fonts - no duplicates
     inter_path = f"assets/fonts/{font_name}"
     
+    print(f"Attempting to load Inter: {inter_path}")
     try:
-        return ImageFont.truetype(inter_path, size)
-    except IOError:
-                 # Just use the default font if Inter fails
-         return ImageFont.load_default()
+        loaded_font = ImageFont.truetype(inter_path, size)
+        print(f"Successfully loaded Inter")
+        return loaded_font
+    except IOError as e:
+        print(f"Failed to load Inter: {e}")
+        # Just use the default font if Inter fails
+        return ImageFont.load_default()
 # --- End Font Loading ---
 
 # --- Helper Function for Font Measurements ---
@@ -318,12 +330,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Define brand-related fonts early - using Inter for all
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         
-        # Use IBM Plex Mono Light for ID text - lighter appearance
-        font_id_main = get_font(int(36 * base_font_size_scale), weight="Light", font_family="Mono") # ID text with lighter weight
-        # Use IBM Plex Mono Light for metrics labels
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
-        # Use IBM Plex Mono Light for metrics values
-        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Metrics values
+        # Use IBM Plex Mono Regular for ID text 
+        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular", font_family="Mono") # ID text with monospace
+        # Use IBM Plex Mono Regular for metrics labels
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics labels 
+        # Use IBM Plex Mono Regular for metrics values
+        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
