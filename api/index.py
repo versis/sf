@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Query, HTTPException, Request as FastAPIRequest
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 # from .utils.prompt import ClientMessage, convert_to_openai_messages # Commented out
 # from .utils.tools import get_current_weather # Commented out
 
@@ -42,6 +42,13 @@ app.add_middleware(
 # client = OpenAI(
 #     api_key=os.environ.get("OPENAI_API_KEY"),
 # )
+
+# Azure OpenAI client initialization
+azure_client = AzureOpenAI(
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2023-05-15"),
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT")
+)
 
 # class ChatRequest(BaseModel):
 #     messages: List[ClientMessage]
@@ -193,6 +200,83 @@ class ImageGenerationRequest(BaseModel):
     description: Optional[str] = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude." # Placeholder
     cardId: Optional[str] = "0000023 FE T" # Updated ID format
 
+# New function to generate card details using Azure OpenAI
+async def generate_card_details(color_name: str, hex_color: str):
+    """
+    Generate AI-based card details using Azure OpenAI.
+    Returns a dictionary with card name, phonetic, part of speech, and description.
+    """
+    try:
+        # Ensure Azure OpenAI client is configured
+        if not os.environ.get("AZURE_OPENAI_API_KEY") or not os.environ.get("AZURE_OPENAI_ENDPOINT"):
+            print("Azure OpenAI not configured, using default values")
+            return {
+                "cardName": color_name.upper(),
+                "phoneticName": "['kʌlər 'neɪm]",
+                "article": "[noun]",
+                "description": f"A color with the name {color_name} and hex code {hex_color}."
+            }
+        
+        # Create a system message defining what we want
+        completion = azure_client.chat.completions.create(
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4"),
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are a creative assistant that generates poetic and evocative color card details."
+                },
+                {
+                    "role": "user", 
+                    "content": f"Generate details for a color card with the color name '{color_name}' and hex value '{hex_color}'. I need:\n"
+                               f"1. A creative card name (3 words maximum, all caps)\n"
+                               f"2. Phonetic pronunciation (using IPA symbols) for that creative name\n"
+                               f"3. A part of speech (usually 'noun')\n"
+                               f"4. A poetic description (max 30 words) that evokes the feeling and mood of this color\n\n"
+                               f"Format your response as JSON with keys: cardName, phoneticName, article, description"
+                }
+            ],
+            temperature=0.7,
+            max_tokens=250,
+            response_format={"type": "json_object"}
+        )
+        
+        # Extract the text from the response
+        response_text = completion.choices[0].message.content
+        
+        # Parse the JSON response
+        response_data = json.loads(response_text)
+        
+        # Apply further formatting if needed
+        card_name = response_data.get("cardName", "").upper()
+        phonetic_name = response_data.get("phoneticName", "")
+        # Add brackets if not present
+        if not phonetic_name.startswith("["):
+            phonetic_name = f"[{phonetic_name.strip('[]')}]"
+            
+        article = response_data.get("article", "[noun]")
+        # Add brackets if not present
+        if not article.startswith("["):
+            article = f"[{article.strip('[]')}]"
+            
+        description = response_data.get("description", "")
+        
+        return {
+            "cardName": card_name,
+            "phoneticName": phonetic_name,
+            "article": article,
+            "description": description
+        }
+        
+    except Exception as e:
+        print(f"Error generating card details: {str(e)}")
+        # Return default values if there's an error
+        return {
+            "cardName": color_name.upper(),
+            "phoneticName": "['kʌlər 'neɪm]",
+            "article": "[noun]",
+            "description": f"A color with the name {color_name} and hex code {hex_color}."
+        }
+
 @app.post("/api/generate-image")
 @limiter.limit("10/minute")
 async def generate_image_route(data: ImageGenerationRequest, request: FastAPIRequest):
@@ -225,6 +309,23 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
     print(f"Input HEX: {hex_color_input}")
     print(f"Converted RGB: {rgb_color}")
     print(f"Converted CMYK: {cmyk_color_tuple}")
+    
+    # Generate AI card details if not provided by the user
+    use_ai_details = False
+    if (not data.cardName or data.cardName == "OLIVE ALPINE SENTINEL") and \
+       (not data.phoneticName or data.phoneticName == "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]") and \
+       (not data.article or data.article == "[noun]") and \
+       (not data.description or data.description == "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."):
+        use_ai_details = True
+    
+    if use_ai_details:
+        print("Generating AI card details...")
+        ai_details = await generate_card_details(color_name, hex_color_input)
+        data.cardName = ai_details["cardName"]
+        data.phoneticName = ai_details["phoneticName"]
+        data.article = ai_details["article"]
+        data.description = ai_details["description"]
+        print(f"AI generated details: {ai_details}")
 
     try:
         print("Attempting to decode base64 image data...")
@@ -280,7 +381,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         elif orientation.lower() == "vertical":
             card_width, card_height = VERTICAL_CARD_W, VERTICAL_CARD_H # 900x1800
             print(f"Creating VERTICAL card: {card_width}x{card_height}")
-
+            
             # Vertical: Top Swatch, Bottom Image
             swatch_panel_width = card_width # Full width: 900px
             swatch_panel_height = int(card_height * 0.50) # Top half: 900px height
@@ -300,8 +401,8 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         else: # Vertical: Swatch is on the TOP
             draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
 
-        text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
-
+            text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
+            
         # --- Text Layout for Swatch Panel ---
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
@@ -556,7 +657,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
         else: # Vertical: Image is on the BOTTOM
             canvas.paste(user_image_fitted, (0, swatch_panel_height), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
-    
+        
         print("User image pasted onto canvas.")
         # Apply rounded corners to entire card
         print("Applying rounded corners...")
@@ -703,3 +804,41 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
 #     response = StreamingResponse(stream_text(openai_messages, protocol))
 #     response.headers['x-vercel-ai-data-stream'] = 'v1'
 #     return response
+
+class CardDetailsRequest(BaseModel):
+    hexColor: str
+    colorName: str
+
+@app.post("/api/generate-card-details")
+@limiter.limit("10/minute")
+async def generate_card_details_route(data: CardDetailsRequest, request: FastAPIRequest):
+    """
+    Generate AI-based card details using Azure OpenAI.
+    This endpoint can be called separately before image generation.
+    """
+    try:
+        hex_color = data.hexColor
+        color_name = data.colorName
+        
+        if not hex_color or not color_name:
+            raise HTTPException(status_code=400, detail="Missing required data: hexColor or colorName")
+            
+        # Validate hex color format
+        rgb_color = hex_to_rgb(hex_color)
+        if rgb_color is None:
+            raise HTTPException(status_code=400, detail=f"Invalid HEX color format: {hex_color}")
+            
+        # Generate the card details
+        card_details = await generate_card_details(color_name, hex_color)
+        
+        return {
+            "success": True,
+            "cardDetails": card_details
+        }
+        
+    except HTTPException as e:
+        # Re-raise HTTPException
+        raise e
+    except Exception as e:
+        print(f"Error generating card details: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate card details: {str(e)}")

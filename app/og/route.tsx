@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         <div tw="flex items-center justify-center">
           <span tw="text-8xl font-bold">shade</span>
           <span tw="text-8xl font-bold bg-white border-4 border-blue-600 px-4 mx-2" style={{ borderColor: "#0000FF" }}>freude</span>
-        </div>
+          </div>
         <div tw="mt-8 text-3xl text-gray-600">
           part of <span tw="text-gray-800">tinker.institute</span>
         </div>

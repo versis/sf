@@ -2,6 +2,17 @@
 
 This template demonstrates the usage of [Data Stream Protocol](https://sdk.vercel.ai/docs/ai-sdk-ui/stream-protocol#data-stream-protocol) to stream chat completions from a Python endpoint ([FastAPI](https://fastapi.tiangolo.com)) and display them using the [useChat](https://sdk.vercel.ai/docs/ai-sdk-ui/chatbot#chatbot) hook in your Next.js application.
 
+## Card Details AI Generation
+
+This project now includes AI-powered card detail generation using Azure OpenAI API. The following features are supported:
+
+- Automatic generation of card name (creative and evocative)
+- Phonetic pronunciation (using IPA symbols)
+- Part of speech (typically noun)
+- Descriptive text for the color
+
+The system will automatically generate these details when you provide a color name and hex value without specifying your own card details.
+
 ## Deploy your own
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-python-streaming&env=OPENAI_API_KEY&envDescription=API%20keys%20needed%20for%20application&envLink=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-python-streaming%2Fblob%2Fmain%2F.env.example)
@@ -33,9 +44,25 @@ To run the example locally you need to:
 7. `uv pip install -r requirements.txt` to install the required Python dependencies using uv.
 8. `pnpm dev` to launch the development server.
 
+## Environment Variables
+
+To use the Azure OpenAI integration, you need to set the following environment variables in your `.env.local` file:
+
+```
+# OpenAI API - Original configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Azure OpenAI API - New configuration
+AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2023-05-15
+AZURE_OPENAI_DEPLOYMENT=gpt-4 # Or your deployment name
+```
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:
 
 - [AI SDK Documentation](https://sdk.vercel.ai/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
+- [Azure OpenAI Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
