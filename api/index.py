@@ -504,7 +504,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
         # Position metrics relative to original position, not brand position
-        metrics_x_offset = int(swatch_panel_width * 0.55)  # Moved left from original 0.57
+        metrics_x_offset = int(swatch_panel_width * 0.54)  # Moved left from original 0.57
         metrics_start_x = text_padding_left + metrics_x_offset
         
         # Keep metrics aligned with original position
