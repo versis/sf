@@ -33,12 +33,9 @@ export default function CardPage() {
     const colorParam = searchParams.get('color');
     const colorNameParam = searchParams.get('colorName');
     
-    // Set default orientation based on device
-    if (orientationParam && (orientationParam === 'horizontal' || orientationParam === 'vertical')) {
-      setOrientation(orientationParam);
-    } else {
-      setOrientation(isMobile ? 'vertical' : 'horizontal');
-    }
+    // Set orientation based on device type
+    const preferredOrientation = isMobile ? 'vertical' : 'horizontal';
+    setOrientation(preferredOrientation);
     
     if (colorParam) {
       setHexColor(colorParam);
@@ -52,15 +49,29 @@ export default function CardPage() {
     const horizontalUrl = sessionStorage.getItem('horizontalCardUrl');
     const verticalUrl = sessionStorage.getItem('verticalCardUrl');
     
-    if ((orientation === 'horizontal' && horizontalUrl) || 
-        (orientation === 'vertical' && verticalUrl)) {
-      setCardUrl(orientation === 'horizontal' ? horizontalUrl : verticalUrl);
+    if ((preferredOrientation === 'horizontal' && horizontalUrl) || 
+        (preferredOrientation === 'vertical' && verticalUrl)) {
+      setCardUrl(preferredOrientation === 'horizontal' ? horizontalUrl : verticalUrl);
       setLoading(false);
     } else {
       // Fallback: Use API endpoint to get or generate the card
-      fetchCardFromApi(orientationParam, colorParam);
+      fetchCardFromApi(preferredOrientation, colorParam);
     }
-  }, [isMobile, orientation]);
+  }, [isMobile]);
+
+  // Add a new effect to handle orientation changes
+  useEffect(() => {
+    const horizontalUrl = sessionStorage.getItem('horizontalCardUrl');
+    const verticalUrl = sessionStorage.getItem('verticalCardUrl');
+    
+    if (orientation === 'horizontal' && horizontalUrl) {
+      setCardUrl(horizontalUrl);
+    } else if (orientation === 'vertical' && verticalUrl) {
+      setCardUrl(verticalUrl);
+    } else {
+      fetchCardFromApi(orientation, hexColor);
+    }
+  }, [orientation]);
   
   const fetchCardFromApi = async (orientationParam: string | null, colorParam: string | null) => {
     try {
@@ -113,6 +124,8 @@ export default function CardPage() {
           <p>A personalized color card created with shadefreude - capturing the perfect hue from your image.</p>
           <p>Use it for inspiration, color matching, or as a reference for your design projects.</p>
         </div>
+
+        <hr className="my-8 border-t-2 border-foreground w-full" />
         
         <div className="mt-8 flex flex-col items-center justify-center">
           {loading ? (
@@ -157,20 +170,49 @@ export default function CardPage() {
                 )}
               </div>
               
-              <div className="flex justify-center gap-4 mt-8">
+              <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-4 mt-8 w-full max-w-sm md:max-w-none px-4 md:px-0">
                 <button
                   onClick={handleDownload}
-                  className="px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2"
+                  className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Download
                 </button>
+                <button
+                  onClick={() => {
+                    // Try using the Web Share API if available (mobile devices)
+                    const shareUrl = window.location.href;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: `${colorName} - Shadefreude Color Card`,
+                        text: 'Check out this color card I created with shadefreude!',
+                        url: shareUrl
+                      })
+                      .catch(err => {
+                        console.error('Error sharing:', err);
+                      });
+                    } else {
+                      // Copy to clipboard on desktop
+                      navigator.clipboard.writeText(shareUrl)
+                        .then(() => {
+                          alert('Share link copied to clipboard!');
+                        })
+                        .catch(err => {
+                          console.error('Failed to copy:', err);
+                        });
+                    }
+                  }}
+                  className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  Share
+                </button>
                 <Link
                   href="/"
-                  className="px-4 py-2 md:px-6 md:py-3 bg-blue-700 text-white font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2"
+                  className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  Create Your Own
+                  Create Your Own Unique Card
                 </Link>
               </div>
             </>
