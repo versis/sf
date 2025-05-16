@@ -1,41 +1,42 @@
 import os
 import json
-from typing import List, Optional
-from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
+import time
+import uuid
+import base64
+import re
+from typing import Optional, Dict, Any, List
+
+from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, HTTPException, Request as FastAPIRequest
-from fastapi.responses import StreamingResponse, FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI, AzureOpenAI
-# from .utils.prompt import ClientMessage, convert_to_openai_messages # Commented out
-# from .utils.tools import get_current_weather # Commented out
 
-import io
-import re 
-import base64 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from api.utils.logger import log
+from api.utils.ai_utils import generate_ai_card_details
+from api.utils.card_utils import generate_card_image_bytes, hex_to_rgb
 
 # Rate limiting with slowapi
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import uvicorn
 
 load_dotenv(".env.local")
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
 
-app.state.limiter = limiter # type: ignore
+app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://sf.tinker.institute", "https://sf-livid.vercel.app", "http://localhost:3000"], # Updated production URLs
+    allow_origins=["https://sf.tinker.institute", "https://sf-livid.vercel.app", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["POST"], # Restrict methods
-    allow_headers=["Content-Type"], # Restrict headers
+    allow_methods=["POST"],
+    allow_headers=["Content-Type"],
 )
 
 # OpenAI client initialization is kept for future use
@@ -43,12 +44,12 @@ app.add_middleware(
 #     api_key=os.environ.get("OPENAI_API_KEY"),
 # )
 
-# Azure OpenAI client initialization
-azure_client = AzureOpenAI(
-    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
-    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT")
-)
+# Azure OpenAI client initialization (REMOVED - now handled in api/utils/ai_utils.py)
+# azure_client = AzureOpenAI(
+#     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+#     api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+#     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT")
+# )
 
 # class ChatRequest(BaseModel):
 #     messages: List[ClientMessage]
@@ -188,511 +189,132 @@ def get_text_dimensions(text: str, font):
         # Return a failsafe dimension
         return len(text) * 10, font.size
 
-class ImageGenerationRequest(BaseModel):
+# --- Pydantic Models ---
+class GenerateCardsRequest(BaseModel):
     croppedImageDataUrl: str
     hexColor: str
     colorName: str
+    cardName: Optional[str] = None
+    phoneticName: Optional[str] = None
+    article: Optional[str] = None
+    description: Optional[str] = None
+    cardId: Optional[str] = "0000023 FE T"
+
+class CardImageResponseItem(BaseModel):
     orientation: str
-    # New text fields for the card, all optional for now
-    cardName: Optional[str] = "OLIVE ALPINE SENTINEL" # Placeholder
-    phoneticName: Optional[str] = "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]" # Placeholder
-    article: Optional[str] = "[noun]" # Placeholder
-    description: Optional[str] = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude." # Placeholder
-    cardId: Optional[str] = "0000023 FE T" # Updated ID format
+    image_base64: str
+    filename: str
 
-# New function to generate card details using Azure OpenAI
-async def generate_card_details(color_name: str, hex_color: str):
-    """
-    Generate AI-based card details using Azure OpenAI.
-    Returns a dictionary with card name, phonetic, part of speech, and description.
-    """
-    try:
-        # Ensure Azure OpenAI client is configured
-        if not os.environ.get("AZURE_OPENAI_API_KEY") or not os.environ.get("AZURE_OPENAI_ENDPOINT"):
-            print("Azure OpenAI not configured, using default values")
-            return {
-                "cardName": color_name.upper(),
-                "phoneticName": "['kʌlər 'neɪm]",
+class GenerateCardsResponse(BaseModel):
+    request_id: str
+    ai_details_used: Dict[str, Any]
+    generated_cards: List[CardImageResponseItem]
+    error: Optional[str] = None
+
+# --- Unified API Endpoint ---
+@app.post("/api/generate-cards", response_model=GenerateCardsResponse)
+@limiter.limit("5/minute")
+async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIRequest):
+    request_id = str(uuid.uuid4())[:8]
+    log(f"Unified /api/generate-cards request received", request_id=request_id)
+    request_start_time = time.time()
+
+    final_card_details: Dict[str, Any] = {}
+    default_card_id = "0000023 FE T"
+
+    if not hex_to_rgb(data.hexColor):
+        log(f"Invalid hexColor format provided: {data.hexColor}", request_id=request_id)
+        return JSONResponse(
+            status_code=400,
+            content=GenerateCardsResponse(
+                request_id=request_id, 
+                ai_details_used={},
+                generated_cards=[],
+                error=f"Invalid hexColor format: {data.hexColor}"
+            ).model_dump()
+        )
+
+    if data.cardName and data.phoneticName and data.article and data.description:
+        log("User provided all card details. Skipping AI generation.", request_id=request_id)
+        final_card_details = {
+            "cardName": data.cardName.strip().upper(),
+            "phoneticName": data.phoneticName.strip(),
+            "article": data.article.strip(),
+            "description": data.description.strip(),
+            "cardId": data.cardId.strip() if data.cardId else default_card_id
+        }
+    else:
+        log("User did not provide all details, proceeding with AI generation.", request_id=request_id)
+        try:
+            ai_generated_details = await generate_ai_card_details(data.colorName, data.hexColor, request_id)
+            final_card_details = ai_generated_details
+            final_card_details["cardId"] = data.cardId.strip() if data.cardId else default_card_id
+        except Exception as e:
+            log(f"AI details generation ultimately failed: {str(e)}. Using fallback text details.", request_id=request_id)
+            final_card_details = {
+                "cardName": data.colorName.strip().upper(), 
+                "phoneticName": "['fɔːl.bæk]",
                 "article": "[noun]",
-                "description": f"A color with the name {color_name} and hex code {hex_color}."
+                "description": f"A beautiful color named {data.colorName.strip()}. (AI generation yielded fallback)",
+                "cardId": data.cardId.strip() if data.cardId else default_card_id
             }
-        
-        # Create a system message defining what we want
-        completion = azure_client.chat.completions.create(
-            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4"),
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a creative assistant that generates poetic and evocative color card details."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Generate details for a color card with the color name '{color_name}' and hex value '{hex_color}'. I need:\n"
-                               f"1. A creative card name (3 words maximum, all caps)\n"
-                               f"2. Phonetic pronunciation (using IPA symbols) for that creative name\n"
-                               f"3. A part of speech (usually 'noun')\n"
-                               f"4. A poetic description (max 30 words) that evokes the feeling and mood of this color\n\n"
-                               f"Format your response as JSON with keys: cardName, phoneticName, article, description"
-                }
-            ],
-            temperature=0.7,
-            max_completion_tokens=250,
-            response_format={"type": "json_object"}
-        )
-        
-        # Extract the text from the response
-        response_text = completion.choices[0].message.content
-        
-        # Parse the JSON response
-        response_data = json.loads(response_text)
-        
-        # Apply further formatting if needed
-        card_name = response_data.get("cardName", "").upper()
-        phonetic_name = response_data.get("phoneticName", "")
-        # Add brackets if not present
-        if not phonetic_name.startswith("["):
-            phonetic_name = f"[{phonetic_name.strip('[]')}]"
-            
-        article = response_data.get("article", "[noun]")
-        # Add brackets if not present
-        if not article.startswith("["):
-            article = f"[{article.strip('[]')}]"
-            
-        description = response_data.get("description", "")
-        
-        return {
-            "cardName": card_name,
-            "phoneticName": phonetic_name,
-            "article": article,
-            "description": description
-        }
-        
-    except Exception as e:
-        print(f"Error generating card details: {str(e)}")
-        # Return default values if there's an error
-        return {
-            "cardName": color_name.upper(),
-            "phoneticName": "['kʌlər 'neɪm]",
-            "article": "[noun]",
-            "description": f"A color with the name {color_name} and hex code {hex_color}."
-        }
 
-@app.post("/api/generate-image")
-@limiter.limit("10/minute")
-async def generate_image_route(data: ImageGenerationRequest, request: FastAPIRequest):
-    cropped_image_data_url = data.croppedImageDataUrl
-    hex_color_input = data.hexColor
-    color_name = data.colorName
-    orientation = data.orientation
+    log(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
-    if not cropped_image_data_url or not hex_color_input or not color_name or not orientation:
-        raise HTTPException(status_code=400, detail="Missing required data: croppedImageDataUrl, hexColor, colorName, or orientation")
-
-    # Check payload size
-    payload_size_mb = len(cropped_image_data_url) / (1024 * 1024)
-    if payload_size_mb > 4.5:  # Limit to 4.5MB to stay under 5MB Vercel limit
-        raise HTTPException(
-            status_code=413, 
-            detail=f"Image too large ({payload_size_mb:.1f}MB). Please reduce image size to under 4.5MB."
-        )
-    
-    print(f"Received image data URL size: {payload_size_mb:.2f}MB")
-    print(f"Color Name: {color_name}")
-    print(f"Requested Card Orientation: {orientation}")
-    
-    rgb_color = hex_to_rgb(hex_color_input)
-    if rgb_color is None:
-        raise HTTPException(status_code=400, detail=f"Invalid HEX color format: {hex_color_input}")
-    
-    cmyk_color_tuple = rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])
-    
-    print(f"Input HEX: {hex_color_input}")
-    print(f"Converted RGB: {rgb_color}")
-    print(f"Converted CMYK: {cmyk_color_tuple}")
-    
-    # Generate AI card details if not provided by the user
-    use_ai_details = False
-    if (not data.cardName or data.cardName == "OLIVE ALPINE SENTINEL") and \
-       (not data.phoneticName or data.phoneticName == "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]") and \
-       (not data.article or data.article == "[noun]") and \
-       (not data.description or data.description == "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."):
-        use_ai_details = True
-    
-    if use_ai_details:
-        print("Generating AI card details...")
-        ai_details = await generate_card_details(color_name, hex_color_input)
-        data.cardName = ai_details["cardName"]
-        data.phoneticName = ai_details["phoneticName"]
-        data.article = ai_details["article"]
-        data.description = ai_details["description"]
-        print(f"AI generated details: {ai_details}")
+    generated_cards_response_items: List[CardImageResponseItem] = []
+    orientations_to_generate = ["horizontal", "vertical"]
 
     try:
-        print("Attempting to decode base64 image data...")
-        if ';base64,' not in cropped_image_data_url:
-            print("Error: Invalid image data URL format - missing base64 delimiter.")
-            raise HTTPException(status_code=400, detail="Invalid image data URL format")
-        header, encoded = cropped_image_data_url.split(';base64,', 1)
+        for orientation in orientations_to_generate:
+            log(f"Generating {orientation} card image...", request_id=request_id)
+            image_bytes = await generate_card_image_bytes(
+                cropped_image_data_url=data.croppedImageDataUrl,
+                card_details=final_card_details,
+                hex_color_input=data.hexColor,
+                orientation=orientation,
+                request_id=request_id
+            )
+            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            generated_cards_response_items.append(
+                CardImageResponseItem(
+                    orientation=orientation,
+                    image_base64=image_base64,
+                    filename=f"card_{final_card_details['cardName'].replace(' ', '_')}_{orientation}_{request_id}.jpg"
+                )
+            )
+            log(f"Successfully generated {orientation} card image.", request_id=request_id)
         
-        try:
-            image_data = base64.b64decode(encoded)
-        except Exception as e:
-            print(f"Base64 decoding error: {e}")
-            raise HTTPException(status_code=400, detail=f"Failed to decode base64 image: {str(e)}")
+        total_duration = time.time() - request_start_time
+        log(f"All cards generated successfully in {total_duration:.2f} seconds.", request_id=request_id)
         
-        # Validate decoded image data
-        if len(image_data) == 0:
-            raise HTTPException(status_code=400, detail="Decoded image data is empty")
-            
-        try:
-            img_buffer = io.BytesIO(image_data)
-            user_image_pil = Image.open(img_buffer).convert("RGBA")
-            print(f"User image decoded successfully. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}")
-        except Exception as e:
-            print(f"Error opening image data: {e}")
-            raise HTTPException(status_code=400, detail=f"Failed to open image data: {str(e)}")
+        return GenerateCardsResponse(
+            request_id=request_id,
+            ai_details_used=final_card_details,
+            generated_cards=generated_cards_response_items
+        )
 
-        # Check image dimensions
-        if user_image_pil.width > 4000 or user_image_pil.height > 4000:
-            print(f"Image too large: {user_image_pil.width}x{user_image_pil.height}")
-            # Resize to manageable dimensions
-            max_dim = 4000
-            ratio = min(max_dim / user_image_pil.width, max_dim / user_image_pil.height)
-            new_width = int(user_image_pil.width * ratio)
-            new_height = int(user_image_pil.height * ratio)
-            user_image_pil = user_image_pil.resize((new_width, new_height), Image.LANCZOS)
-            print(f"Resized to: {new_width}x{new_height}")
-
-        # Card dimensions and style
-        VERTICAL_CARD_W, VERTICAL_CARD_H = 900, 1800 # Adjusted Vertical Card Dimensions
-        HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1800, 900 # Adjusted Horizontal Card Dimensions
-        bg_color = (250, 250, 250)
-
-        if orientation.lower() == "horizontal":
-            card_width, card_height = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
-            print(f"Creating HORIZONTAL card: {card_width}x{card_height}")
-
-            swatch_panel_width = int(card_width * 0.50)  # 900px
-            swatch_panel_height = card_height          # 900px (full height for left panel)
-            image_panel_width = card_width - swatch_panel_width # 900px
-            image_panel_height = card_height         # 900px (full height for right panel)
-            print(f" HORIZONTAL Swatch: {swatch_panel_width}x{swatch_panel_height}, Image Panel: {image_panel_width}x{image_panel_height}")
-
-        elif orientation.lower() == "vertical":
-            card_width, card_height = VERTICAL_CARD_W, VERTICAL_CARD_H # 900x1800
-            print(f"Creating VERTICAL card: {card_width}x{card_height}")
-            
-            # Vertical: Top Swatch, Bottom Image
-            swatch_panel_width = card_width # Full width: 900px
-            swatch_panel_height = int(card_height * 0.50) # Top half: 900px height
-            image_panel_width = card_width  # Full width: 900px
-            image_panel_height = card_height - swatch_panel_height # Bottom half: 900px height
-            print(f" VERTICAL Swatch: {swatch_panel_width}x{swatch_panel_height}, Image Panel: {image_panel_width}x{image_panel_height}")
-        else:
-            raise HTTPException(status_code=400, detail=f"Invalid orientation specified: {orientation}. Must be 'horizontal' or 'vertical'.")
-
-        canvas = Image.new('RGBA', (card_width, card_height), bg_color + (255,))
-        draw = ImageDraw.Draw(canvas)
-        
-        # Draw swatch panel based on orientation
-        if orientation.lower() == "horizontal":
-            # Horizontal: Swatch is on the LEFT
-            draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
-        else: # Vertical: Swatch is on the TOP
-            draw.rectangle([(0, 0), (swatch_panel_width, swatch_panel_height)], fill=rgb_color)
-
-        # Calculate text color for contrast against the swatch color
-        text_color_on_swatch = (20, 20, 20) if sum(rgb_color) > 128 * 3 else (245, 245, 245)
-            
-        # --- Text Layout for Swatch Panel ---
-        # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
-        # swatch_panel_width and swatch_panel_height define the area for text.
-        text_padding_left = int(swatch_panel_width * 0.09) # Increased left padding
-        text_padding_top = int(swatch_panel_height * 0.02) # Increased top padding
-        text_padding_bottom = int(swatch_panel_height * 0.08) # Increased bottom padding
-
-        if swatch_panel_width == 0: swatch_panel_width = 1 # Avoid division by zero for base_font_size_scale
-        if swatch_panel_width >= 900: 
-            base_font_size_scale = swatch_panel_width / 750 # Adjusted for wider horizontal swatch
-        elif swatch_panel_width >= 450: 
-            base_font_size_scale = swatch_panel_width / 450 # For vertical swatch (width 900 -> scale becomes 2)
-                                                          # Or horizontal swatch if it was narrower (width 750 -> scale ~1.6)
-        else: 
-            base_font_size_scale = swatch_panel_width / 350
-
-        current_y = text_padding_top
-
-        # --- Top Section: Color Name, Phonetic/Noun, Description ---
-        # Consistent font weights & styles to match the second image
-        font_color_name = get_font(int(38 * base_font_size_scale), weight="Bold") 
-        # Use Light Italic for phonetic text - matches the thinner look in the reference image
-        font_phonetic_noun = get_font(int(26 * base_font_size_scale), weight="Light", style="Italic") 
-        # Use Light weight for article text to match the reference
-        font_article = get_font(int(26 * base_font_size_scale), weight="Light") 
-        # Use regular Inter for description
-        font_description = get_font(int(25 * base_font_size_scale), weight="Regular")
-
-        # Define brand-related fonts early - using Inter for all
-        font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
-        
-        # Use IBM Plex Mono Regular for ID text 
-        font_id_main = get_font(int(37 * base_font_size_scale), weight="Light", font_family="Mono") # ID text with monospace
-        # Use IBM Plex Mono Light for metrics labels to make them lighter
-        font_metrics_label_main = get_font(int(23 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics labels
-        # Use IBM Plex Mono Light for metrics values to make them lighter
-        font_metrics_value_main = get_font(int(23 * base_font_size_scale), weight="Light", font_family="Mono") # Lighter metrics values
-
-        # Pre-calculate brand position with increased spacing to prevent overlap
-        brand_text = "shadefreude"
-
-        # Ensure ID has proper spacing in the format "0000023 FE T"
-        if data.cardId and data.cardId.strip():
-            # Remove all spaces first to normalize
-            clean_id = data.cardId.replace(" ", "")
-            
-            # Get the parts based on expected format (7 digits + 2 letters + 1 letter)
-            if len(clean_id) >= 10:
-                digits = clean_id[0:7]
-                middle = clean_id[7:9]
-                end = clean_id[9] if len(clean_id) > 9 else ""
-                # Format with proper spacing
-                id_text = f"{digits} {middle} {end}"
-            else:
-                # If ID doesn't match expected format, use as is
-                id_text = data.cardId
-        else:
-            id_text = "0000023 FE T"  # Default ID format
-
-        brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
-        id_h = get_text_dimensions(id_text, font_id_main)[1]
-        metrics_line_spacing = int(swatch_panel_height * 0.015)
-
-        # Keep original positions for ID and metrics, but move brand text up
-        # Original position for ID and metrics reference point
-        original_bottom_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.10)
-        
-        # Move brand text up higher than original position
-        brand_y = swatch_panel_height - text_padding_bottom - brand_h - int(swatch_panel_height * 0.09) # Moved up from original
-        
-        # Keep ID at original relative position (calculated from original_bottom_y, not brand_y)
-        id_y = original_bottom_y + brand_h + int(swatch_panel_height * 0.04) # Relative to original position
-
-        # Now handle the title formatting with better letter spacing
-        current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
-        main_color_name_str = color_name.upper()
-        
-        # Add very subtle letter spacing to the title by drawing each character with a small offset
-        current_x = text_padding_left
-        for char in main_color_name_str:
-            draw.text((current_x, current_y), char, font=font_color_name, fill=text_color_on_swatch)
-            char_width = get_text_dimensions(char, font_color_name)[0]
-            # Add very small extra spacing between characters
-            current_x += char_width + int(swatch_panel_width * 0.002)
-        current_y += get_text_dimensions(main_color_name_str, font_color_name)[1] + int(swatch_panel_height * 0.03) # Slightly more space
-
-        # Format phonetic text with proper spacing and styling
-        # Use data.phoneticName if provided, otherwise use a sample phonetic text
-        phonetic_str = data.phoneticName if data.phoneticName and data.phoneticName.strip() else "[ɒlɪv ælpaɪn sɛntɪnəl]"
-        # Clean up the format - remove brackets as we'll add them consistently
-        phonetic_str = phonetic_str.strip().strip('[]')
-        # Add more spacing between characters for the phonetic text
-        spaced_phonetic = " ".join(phonetic_str)
-        # Use lighter font weight with proper spacing for IPA symbols
-        phonetic_str = f"[{phonetic_str}]"
-        
-        # Format the article text properly
-        article_str = data.article if data.article and data.article.strip() else "[noun]"
-        # Make sure it has brackets if they're missing
-        if not article_str.startswith('['):
-            article_str = f"[{article_str.strip('[]')}]"
-
-        # Draw phonetic text and article on SAME line
-        if orientation.lower() == "horizontal":
-            # Draw phonetic text in italic with letter spacing
-            # Get bracket width first
-            open_bracket_width = get_text_dimensions("[", font_phonetic_noun)[0]
-            
-            # Draw opening bracket
-            draw.text((text_padding_left, current_y), "[", font=font_phonetic_noun, fill=text_color_on_swatch)
-            current_x = text_padding_left + open_bracket_width
-            
-            # Draw each phonetic character with slight spacing
-            phonetic_content = phonetic_str.strip("[]")
-            for char in phonetic_content:
-                draw.text((current_x, current_y), char, font=font_phonetic_noun, fill=text_color_on_swatch)
-                char_width = get_text_dimensions(char, font_phonetic_noun)[0]
-                # Add spacing between characters
-                current_x += char_width + int(swatch_panel_width * 0.005)
-            
-            # Draw closing bracket
-            draw.text((current_x, current_y), "]", font=font_phonetic_noun, fill=text_color_on_swatch)
-            current_x += get_text_dimensions("]", font_phonetic_noun)[0]
-            
-            # Get height of phonetic text
-            phonetic_height = get_text_dimensions(phonetic_str, font_phonetic_noun)[1]
-            
-            # Draw article text in light font style right after phonetic text
-            article_x = current_x + int(swatch_panel_width * 0.02)
-            draw.text((article_x, current_y), article_str, font=font_article, fill=text_color_on_swatch)
-            
-            # Move down after both are drawn
-            current_y += phonetic_height + int(swatch_panel_height * 0.03)
-        else:
-            # For vertical orientation - with letter spacing
-            # Get bracket width first
-            open_bracket_width = get_text_dimensions("[", font_phonetic_noun)[0]
-            
-            # Draw opening bracket
-            draw.text((text_padding_left, current_y), "[", font=font_phonetic_noun, fill=text_color_on_swatch)
-            current_x = text_padding_left + open_bracket_width
-            
-            # Draw each phonetic character with slight spacing
-            phonetic_content = phonetic_str.strip("[]")
-            for char in phonetic_content:
-                draw.text((current_x, current_y), char, font=font_phonetic_noun, fill=text_color_on_swatch)
-                char_width = get_text_dimensions(char, font_phonetic_noun)[0]
-                # Add spacing between characters
-                current_x += char_width + int(swatch_panel_width * 0.005)
-            
-            # Draw closing bracket
-            draw.text((current_x, current_y), "]", font=font_phonetic_noun, fill=text_color_on_swatch)
-            current_x += get_text_dimensions("]", font_phonetic_noun)[0]
-            
-            # Get height of phonetic text
-            phonetic_height = get_text_dimensions(phonetic_str, font_phonetic_noun)[1]
-            
-            # Draw article text in light font style right after phonetic text  
-            article_x = current_x + int(swatch_panel_width * 0.02)
-            draw.text((article_x, current_y), article_str, font=font_article, fill=text_color_on_swatch)
-            
-            # Move down after both are drawn
-            current_y += phonetic_height + int(swatch_panel_height * 0.03)
-
-        # Description text with proper spacing
-        description_to_draw = data.description if data.description and data.description.strip() else "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude."
-
-        # Slightly tighter line height for description to match goal
-        desc_line_height = get_text_dimensions("Tg", font_description)[1] * 1.08 # Reduced line height
-        max_desc_width = swatch_panel_width - (2 * text_padding_left)
-
-        # Wrap description with proper width
-        wrapped_desc_lines = []
-        current_desc_line = ""
-        for word in description_to_draw.split(' '):
-            if get_text_dimensions(current_desc_line + word, font_description)[0] <= max_desc_width:
-                current_desc_line += word + " "
-            else:
-                wrapped_desc_lines.append(current_desc_line.strip())
-                current_desc_line = word + " "
-        wrapped_desc_lines.append(current_desc_line.strip())
-
-        # Limit description lines to avoid pushing metrics off
-        max_desc_lines = 5 
-        for i, line in enumerate(wrapped_desc_lines):
-            if i < max_desc_lines:
-                if current_y + desc_line_height < brand_y - int(swatch_panel_height * 0.05):
-                    draw.text((text_padding_left, current_y), line, font=font_description, fill=text_color_on_swatch)
-                    current_y += desc_line_height + int(swatch_panel_height * 0.004) # Tighter spacing
-                else:
-                    break 
-            else:
-                break
-
-        # Draw the brand and metrics
-        draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
-
-        # Position ID at the fixed position determined earlier - use a monospace font
-        # For monospace fonts, we don't need much additional spacing
-        draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
-
-        # Position metrics relative to original position, not brand position
-        metrics_x_offset = int(swatch_panel_width * 0.54)  # Moved left from original 0.57
-        metrics_start_x = text_padding_left + metrics_x_offset
-        
-        # Keep metrics aligned with original position
-        metrics_start_y = original_bottom_y + int(brand_h * 0.8)  # Based on original position
-        
-        # Make the spacing between label and value consistent
-        hex_val_str = hex_color_input.upper()
-        cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
-        rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
-        
-        # Calculate available space
-        brand_text_width = get_text_dimensions(brand_text, font_brand_main)[0]
-        available_width = swatch_panel_width - text_padding_left - brand_text_width
-        
-        # Make the spacing between label and value consistent
-        metrics_labels = ["HEX", "CMYK", "RGB"] 
-        max_label_width = max(get_text_dimensions(label, font_metrics_label_main)[0] for label in metrics_labels)
-        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05)
-        
-        # No need for overflow check since we're calculating from the right edge already
-
-        # Adjust spacing between metrics lines
-        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.018) # Slightly increased vertical spacing for better readability
-
-        # Start metrics at the same vertical position as ID
-        current_metrics_y = metrics_start_y
-
-        # HEX value with monospace font
-        draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
-        # Draw HEX value directly - monospace font already has proper spacing
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-        current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
-
-        # CMYK value with monospace font
-        draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
-        # Draw CMYK value directly - monospace font already has proper spacing  
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-        current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
-
-        # RGB value with monospace font
-        draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
-        # Draw RGB value directly - monospace font already has proper spacing
-        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
-
-        # Image panel placement
-        user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
-        if orientation.lower() == "horizontal":
-            # Horizontal: Image is on the RIGHT
-            canvas.paste(user_image_fitted, (swatch_panel_width, 0), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
-        else: # Vertical: Image is on the BOTTOM
-            canvas.paste(user_image_fitted, (0, swatch_panel_height), user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
-        
-        print("User image pasted onto canvas.")
-        # Apply rounded corners to entire card
-        print("Applying rounded corners...")
-        radius = 40
-        
-        # Create a high-quality anti-aliased mask
-        mask = Image.new('L', (card_width * 2, card_height * 2), 0)
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.rounded_rectangle([(0,0), ((card_width*2)-1, (card_height*2)-1)], radius=radius*2, fill=255)
-        mask = mask.resize((card_width, card_height), Image.Resampling.LANCZOS)
-        
-        # Apply mask to the canvas
-        # Ensure canvas is RGBA before putting alpha mask
-        if canvas.mode != 'RGBA':
-            canvas = canvas.convert('RGBA')
-        canvas.putalpha(mask)
-        
-        # Save as PNG with transparency
-        img_byte_arr = io.BytesIO()
-        # Use higher quality settings for PNG
-        canvas.save(img_byte_arr, format='PNG', compress_level=1)
-        img_byte_arr.seek(0)
-        print("Canvas saved to byte array as PNG with improved edge quality.")
-        
-        print("Sending composed Shadefreude card image.")
-        return StreamingResponse(img_byte_arr, media_type='image/png')
-
-    except HTTPException as e: # Re-raise HTTPException
-        raise e
+    except ValueError as ve:
+        log(f"ValueError during card generation: {str(ve)}", request_id=request_id)
+        return JSONResponse(
+            status_code=400,
+            content=GenerateCardsResponse(
+                request_id=request_id, 
+                ai_details_used=final_card_details, 
+                generated_cards=[], 
+                error=str(ve)
+            ).model_dump()
+        )
     except Exception as e:
-        print(f"Error during image composition: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to compose image: {str(e)}")
+        log(f"General error during card generation processing: {str(e)}", request_id=request_id)
+        return JSONResponse(
+            status_code=500,
+            content=GenerateCardsResponse(
+                request_id=request_id, 
+                ai_details_used=final_card_details, 
+                generated_cards=[], 
+                error="Internal server error during image processing."
+            ).model_dump()
+        )
 
 # available_tools = {
 #     "get_current_weather": get_current_weather,
@@ -843,3 +465,12 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
     except Exception as e:
         print(f"Error generating card details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate card details: {str(e)}")
+
+# To run locally (ensure uvicorn is installed: pip install uvicorn)
+if __name__ == "__main__":
+    # Ensure ASSETS_BASE_PATH in card_utils.py is correct for local running
+    # If index.py is in /api, and assets are in /assets, card_utils.ASSETS_BASE_PATH might need to be "../assets"
+    # Or, ensure the CWD is the project root when running uvicorn.
+    # For uvicorn from project root: uvicorn api.index:app --reload
+    log("Starting Uvicorn server for local development...")
+    uvicorn.run("index:app", app_dir="api", host="0.0.0.0", port=8000, reload=True, reload_dirs=["api"], timeout_keep_alive=75)

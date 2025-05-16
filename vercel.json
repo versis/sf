@@ -2,6 +2,16 @@
   "functions": {
     "api/**": {
       "excludeFiles": "{.next,.git,node_modules}/**"
+    },
+    "api/index.py": {
+      "maxDuration": 60
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/generate-cards",
+      "methods": ["POST"],
+      "dest": "/api/index.py"
+    }
+  ]
 }
