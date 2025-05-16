@@ -80,7 +80,7 @@ export async function GET(request: Request) {
               />
               <div tw="bg-white p-4 flex flex-col" style={{ height: "225px" }}>
                 <div tw="text-2xl font-bold text-black mb-1">ALPINE BLUE</div>
-                <div tw="text-gray-500 mb-2">['ælpaɪn bluː]</div>
+                <div tw="text-gray-500 mb-2">[&apos;ælpaɪn bluː]</div>
                 <div tw="text-sm text-gray-700">A deep blue reminiscent of clear mountain skies and alpine lakes.</div>
                 <div tw="mt-auto text-lg font-bold text-black">shadefreude</div>
               </div>

@@ -114,41 +114,117 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # For consistency with the previous working version, use Inter for everything
-        # even for "Mono" text, just use the italic variant if requested
-        
-        # Use the same Inter font as for regular text
-        regular_font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
-        
-        # Same font paths as for regular Inter
-        inter_paths = [
-            f"assets/fonts/{regular_font_name}",       # Primary path for Vercel deployment
-            f"api/assets/fonts/{regular_font_name}",   # Alternative path for api/assets structure
-            f"{cwd}/assets/fonts/{regular_font_name}", # Absolute path to assets
-            f"api/fonts/{regular_font_name}"           # Original path (backward compatibility)
+        # Use the IBM Plex Mono we downloaded
+        if weight == "Light":
+            ibm_plex_path = "IBMPlexMono-Light.ttf"
+        elif weight == "Medium" or weight == "Bold":
+            ibm_plex_path = "IBMPlexMono-Medium.ttf"
+        else:
+            ibm_plex_path = "IBMPlexMono-Regular.ttf"
+            
+        # Primary paths for the downloaded IBM Plex Mono fonts
+        ibm_plex_paths = [
+            f"assets/fonts/mono/{ibm_plex_path}",
+            f"api/assets/fonts/mono/{ibm_plex_path}",
+            f"{cwd}/assets/fonts/mono/{ibm_plex_path}",
+            f"{cwd}/api/assets/fonts/mono/{ibm_plex_path}"
         ]
         
-        # Try to load Inter font
-        for path in inter_paths:
+        # Try our downloaded IBM Plex Mono fonts first
+        for path in ibm_plex_paths:
             try:
-                print(f"Using Inter for 'Mono' text: {path}")
+                print(f"Trying downloaded IBM Plex Mono: {path}")
                 return ImageFont.truetype(path, size)
             except IOError as e:
-                print(f"Failed to load Inter for 'Mono': {e}")
+                print(f"Failed to load downloaded IBM Plex Mono: {e}")
+                continue
+        
+        # Fallback to system IBM Plex Mono variants
+        ibm_plex_mono_variants = [
+            "IBMPlexMono-Regular", "IBM Plex Mono", "IBMPlexMono", 
+            "IBM Plex Mono Regular", "IBMPlexMono-Text"
+        ]
+        
+        # Try system IBM Plex Mono
+        for font in ibm_plex_mono_variants:
+            try:
+                print(f"Trying system IBM Plex Mono variant: {font}")
+                return ImageFont.truetype(font, size)
+            except IOError:
                 continue
                 
-        # Fallbacks if Inter doesn't work
-        print("Falling back to system fonts for 'Mono' text")
-        system_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Roboto"]
+        # Then try other macOS system monospace fonts
+        macos_mono_fonts = [
+            "Menlo-Regular", "Monaco", "Courier", "CourierNewPSMT", 
+            "AndaleMono", "PTMono-Regular"
+        ]
         
-        for system_font in system_fonts:
+        # For italic, use the corresponding italic versions
+        if style.lower() == "italic":
+            # Since we don't have italic IBM Plex Mono downloaded, try system versions
+            ibm_plex_mono_italic = [
+                "IBMPlexMono-Italic", "IBM Plex Mono Italic", 
+                "IBMPlexMono-TextItalic", "IBM Plex Mono Italic Text"
+            ]
+            
+            # Try system IBM Plex Mono italic variants
+            for font in ibm_plex_mono_italic:
+                try:
+                    print(f"Trying IBM Plex Mono italic system font: {font}")
+                    return ImageFont.truetype(font, size)
+                except IOError:
+                    continue
+            
+            # Other macOS monospace italic fonts
+            macos_mono_italic = [
+                "Menlo-Italic", "Monaco-Italic", "Courier-Oblique", 
+                "CourierNewPS-ItalicMT", "AndaleMono-Italic", "PTMono-Italic"
+            ]
+            
+            # Try macOS-specific mono italic fonts first
+            for font_name in macos_mono_italic:
+                try:
+                    print(f"Trying macOS monospace italic font: {font_name}")
+                    return ImageFont.truetype(font_name, size)
+                except IOError:
+                    continue
+        
+        # Try macOS-specific mono fonts
+        for font_name in macos_mono_fonts:
             try:
+                print(f"Trying macOS monospace font: {font_name}")
+                return ImageFont.truetype(font_name, size)
+            except IOError:
+                continue
+                
+        # Try common cross-platform monospace fonts
+        cross_platform_mono = ["DejaVu Sans Mono", "Liberation Mono", "Consolas", "Courier New"]
+        
+        for font_name in cross_platform_mono:
+            try:
+                font_with_style = font_name
                 if style.lower() == "italic":
-                    try:
-                        return ImageFont.truetype(f"{system_font} Italic", size)
-                    except IOError:
-                        pass
-                return ImageFont.truetype(system_font, size)
+                    font_with_style += " Italic"
+                print(f"Trying cross-platform mono font: {font_with_style}")
+                return ImageFont.truetype(font_with_style, size)
+            except IOError:
+                continue
+        
+        # Use Inter as fallback if no monospace fonts are available
+        print("No monospace fonts found, falling back to Inter")
+        regular_font_name = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
+        
+        inter_paths = [
+            f"assets/fonts/{regular_font_name}",
+            f"api/assets/fonts/{regular_font_name}",
+            f"{cwd}/assets/fonts/{regular_font_name}",
+            f"api/fonts/{regular_font_name}"
+        ]
+        
+        for path in inter_paths:
+            try:
+                print(f"Using Inter as fallback for 'Mono': {path}")
+                return ImageFont.truetype(path, size)
             except IOError:
                 continue
     
@@ -417,11 +493,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Define brand-related fonts early - using Inter for all
         font_brand_main = get_font(int(60 * base_font_size_scale), weight="Bold") # Brand text
         
-        # Use Inter for ID text, matching the look in the second image
-        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular") # ID text - consistent style
-        # Use Inter for metrics labels and values
-        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Bold") # Metrics labels
-        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular") # Metrics values
+        # Use IBM Plex Mono font for ID text 
+        font_id_main = get_font(int(36 * base_font_size_scale), weight="Regular", font_family="Mono") # ID text with monospace
+        # Use IBM Plex Mono for metrics labels with medium weight
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Medium", font_family="Mono") # Metrics labels
+        # Use IBM Plex Mono Light for metrics values
+        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Light", font_family="Mono") # Metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -578,14 +655,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Draw the brand and metrics
         draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
 
-        # Position ID at the fixed position determined earlier - use letter spacing
-        # Add subtle extra letter spacing by drawing each character separately
-        current_x = text_padding_left
-        for char in id_text:
-            draw.text((current_x, id_y), char, font=font_id_main, fill=text_color_on_swatch)
-            char_width = get_text_dimensions(char, font_id_main)[0]
-            # Add a small extra spacing between characters
-            current_x += char_width + int(swatch_panel_width * 0.004)
+        # Position ID at the fixed position determined earlier - use a monospace font
+        # For monospace fonts, we don't need much additional spacing
+        draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
                 # Simplify metrics positioning - use a fixed position relative to brand text
         hex_val_str = hex_color_input.upper()
@@ -616,39 +688,22 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Start metrics at the same vertical position as ID
         current_metrics_y = metrics_start_y
 
-        # HEX value with better alignment and letter spacing
+        # HEX value with monospace font
         draw.text((metrics_start_x, current_metrics_y), "HEX", font=font_metrics_label_main, fill=text_color_on_swatch)
-        
-        # Draw HEX value with letter spacing
-        value_x = metrics_start_x + metrics_value_x_offset
-        for char in hex_val_str:
-            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
-            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
-            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
-        
+        # Draw HEX value directly - monospace font already has proper spacing
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), hex_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
         current_metrics_y += get_text_dimensions("HEX", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
-        # CMYK value with better spacing
+        # CMYK value with monospace font
         draw.text((metrics_start_x, current_metrics_y), "CMYK", font=font_metrics_label_main, fill=text_color_on_swatch)
-        
-        # Draw CMYK value with letter spacing
-        value_x = metrics_start_x + metrics_value_x_offset
-        for char in cmyk_val_str:
-            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
-            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
-            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
-            
+        # Draw CMYK value directly - monospace font already has proper spacing  
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), cmyk_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
         current_metrics_y += get_text_dimensions("CMYK", font_metrics_label_main)[1] + metrics_line_spacing_adjusted
 
-        # RGB value with better spacing
+        # RGB value with monospace font
         draw.text((metrics_start_x, current_metrics_y), "RGB", font=font_metrics_label_main, fill=text_color_on_swatch)
-        
-        # Draw RGB value with letter spacing
-        value_x = metrics_start_x + metrics_value_x_offset
-        for char in rgb_val_str:
-            draw.text((value_x, current_metrics_y), char, font=font_metrics_value_main, fill=text_color_on_swatch)
-            char_width = get_text_dimensions(char, font_metrics_value_main)[0]
-            value_x += char_width + int(swatch_panel_width * 0.003)  # Subtle spacing
+        # Draw RGB value directly - monospace font already has proper spacing
+        draw.text((metrics_start_x + metrics_value_x_offset, current_metrics_y), rgb_val_str, font=font_metrics_value_main, fill=text_color_on_swatch)
 
         # Image panel placement
         user_image_fitted = ImageOps.fit(user_image_pil, (image_panel_width, image_panel_height), Image.Resampling.LANCZOS)
