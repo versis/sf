@@ -248,7 +248,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {showCropper && previewUrl && (
         <div className="space-y-4 flex flex-col items-center">
           <div className="w-full flex justify-center">
-            <div className="max-w-[38.4rem] max-h-[55vh] overflow-auto">
+            <div className="max-w-[38.4rem] max-h-[40vh] overflow-auto">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -263,7 +263,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   src={previewUrl}
                   alt="Selected preview for cropping"
                   onLoad={onImageLoad}
-                  style={{ maxHeight: '60vh', display: previewUrl ? 'block' : 'none' }}
+                  style={{ maxHeight: '40vh', display: previewUrl ? 'block' : 'none' }}
                   className="border border-foreground mx-auto"
                 />
               </ReactCrop>

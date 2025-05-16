@@ -117,7 +117,8 @@ export default function HomePage() {
     reader.readAsDataURL(file);
   };
 
-  const aspectRatio = 5/6; // 5:6 ratio for the 750x900 image panel
+  // Make sure this matches the same ratio as in the backend (750x900 for image panel)
+  const aspectRatio = 5/6; // 5:6 ratio (width:height) for the 750x900 image panel
 
   const handleCroppedImage = (dataUrl: string | null) => {
     setCroppedImageDataUrl(dataUrl);
