@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface WizardStepProps {
   title: string;
@@ -21,6 +21,14 @@ const WizardStep: React.FC<WizardStepProps> = ({
   children,
   isFutureStep,
 }) => {
+  // Add state to track expanded/collapsed state
+  const [isExpanded, setIsExpanded] = useState(isActive);
+  
+  // Update isExpanded when isActive changes
+  React.useEffect(() => {
+    setIsExpanded(isActive);
+  }, [isActive]);
+  
   let headerClasses = "text-xl font-semibold p-4 flex justify-between items-center";
   if (onHeaderClick && !isFutureStep) headerClasses += " cursor-pointer";
 
@@ -40,11 +48,21 @@ const WizardStep: React.FC<WizardStepProps> = ({
   // Conditional border: No bottom border for the last step (now step 5)
   const stepWrapperClasses = `${isFutureStep && !isCompleted ? 'opacity-60' : ''} ${stepNumber === 5 ? '' : 'border-b-2 border-foreground'}`;
 
+  // Handle header click to toggle expansion while also calling the original onHeaderClick
+  const handleHeaderClick = () => {
+    if (!isFutureStep && onHeaderClick) {
+      // Toggle expanded state when header is clicked
+      setIsExpanded(!isExpanded);
+      // Still call the original onHeaderClick to maintain the step navigation
+      onHeaderClick();
+    }
+  };
+
   return (
     <div className={stepWrapperClasses}>
       <h3
         className={headerClasses}
-        onClick={isFutureStep ? undefined : onHeaderClick}
+        onClick={isFutureStep ? undefined : handleHeaderClick}
       >
         <div className="flex items-center">
           <span className="font-semibold">Step {stepNumber}:&nbsp;</span>
@@ -54,9 +72,9 @@ const WizardStep: React.FC<WizardStepProps> = ({
           }
         </div>
         
-        {onHeaderClick && !isFutureStep && (isActive ? '[-]' : '[+]')}
+        {onHeaderClick && !isFutureStep && (isExpanded ? '[-]' : '[+]')}
       </h3>
-      {isActive && <div className="p-4 md:p-6 space-y-6 bg-card">{children}</div>}
+      {isExpanded && <div className="p-4 md:p-6 space-y-6 bg-card">{children}</div>}
     </div>
   );
 };

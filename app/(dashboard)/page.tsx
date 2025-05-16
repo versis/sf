@@ -174,7 +174,7 @@ export default function HomePage() {
     
     // Start the smooth progress animation
     const progressInterval = 70; // Update every 70ms
-    const totalDuration = 7000; // 7 seconds
+    const totalDuration = 12000; // 12 seconds
     const totalSteps = totalDuration / progressInterval;
     const progressIncrement = 100 / totalSteps;
     
@@ -290,6 +290,11 @@ export default function HomePage() {
   };
 
   const setStep = (step: WizardStepName) => {
+    // If clicking the current step, don't change it (let WizardStep handle collapsing)
+    if (step === currentWizardStep) {
+      return;
+    }
+    
     // Basic forward navigation only if prerequisites met
     if (step === 'upload') setCurrentWizardStep('upload');
     else if (step === 'crop' && isUploadStepCompleted) setCurrentWizardStep('crop');
