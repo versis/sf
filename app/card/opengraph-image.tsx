@@ -24,7 +24,7 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
       >
         <div tw="flex flex-col absolute h-full w-full p-16">
           {/* Header */}
-          <div tw="flex items-center mb-6">
+          <div tw="flex items-center mb-8">
             <div 
               tw="text-6xl font-bold tracking-tight" 
               style={{ color: "#000000" }}
@@ -45,13 +45,13 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
           <div tw="absolute flex items-center justify-center w-full h-full">
             <div 
               tw="flex flex-col rounded-lg shadow-xl overflow-hidden border border-gray-200"
-              style={{ width: "350px", height: "500px" }}
+              style={{ width: "380px", height: "540px" }}
             >
               <div 
-                style={{ backgroundColor: color, height: "250px" }}
+                style={{ backgroundColor: color, height: "270px" }}
               />
-              <div tw="bg-white p-6 flex flex-col" style={{ height: "250px" }}>
-                <div tw="text-2xl font-bold text-black mb-1 truncate" style={{ maxWidth: '300px' }}>{colorName.toUpperCase()}</div>
+              <div tw="bg-white p-6 flex flex-col" style={{ height: "270px" }}>
+                <div tw="text-3xl font-bold text-black mb-1 truncate" style={{ maxWidth: '350px' }}>{colorName.toUpperCase()}</div>
                 <div tw="text-gray-500 mb-2">{color}</div>
                 <div tw="text-sm text-gray-700">
                   A unique color reference card. Perfect for designers, artists, and color enthusiasts.
@@ -61,7 +61,7 @@ export default async function Image({ params }: { params: { رنگ?: string, ن�
             </div>
           </div>
           
-          <div tw="absolute bottom-16 left-16 text-xl font-semibold">
+          <div tw="absolute bottom-16 left-16 text-xl font-semibold text-gray-700">
             part of tinker.institute
           </div>
         </div>
