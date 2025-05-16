@@ -114,14 +114,17 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # For monospace text, always use Regular weight for better visibility
-        # This overrides the Light weight to ensure it's not too thin
-        ibm_plex_path = "IBMPlexMono-Regular.ttf"
+        # Use IBM Plex Mono for monospace text
+        if weight == "Light":
+            ibm_plex_path = "IBMPlexMono-Light.ttf"
+        elif weight in ["Medium", "Bold", "SemiBold"]:
+            ibm_plex_path = "IBMPlexMono-Medium.ttf"
+        else:
+            ibm_plex_path = "IBMPlexMono-Regular.ttf"
         
         # Just one path to IBM Plex Mono fonts - no duplicates
         ibm_plex_mono_path = f"assets/fonts/mono/{ibm_plex_path}"
         
-        print(f"Attempting to load IBM Plex Mono: {ibm_plex_mono_path}")
         try:
             loaded_font = ImageFont.truetype(ibm_plex_mono_path, size)
             print(f"Successfully loaded IBM Plex Mono")
