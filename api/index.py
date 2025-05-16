@@ -250,7 +250,7 @@ class ImageGenerationRequest(BaseModel):
     phoneticName: Optional[str] = "['ɒlɪv 'ælpaɪn 'sɛntɪnəl]" # Placeholder
     article: Optional[str] = "[noun]" # Placeholder
     description: Optional[str] = "A steadfast guardian of high mountain terrain, its resilience mirrored in a deep olive-brown hue. Conveys calm vigilance, endurance, and earthy warmth at altitude." # Placeholder
-    cardId: Optional[str] = "0000023 FE P" # Updated ID format
+    cardId: Optional[str] = "0000023 FE T" # Updated ID format
 
 @app.post("/api/generate-image")
 @limiter.limit("10/minute")
@@ -364,11 +364,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # --- Text Layout for Swatch Panel ---
         # This logic is now applied to the swatch panel which is either left (horizontal) or top (vertical)
         # swatch_panel_width and swatch_panel_height define the area for text.
-        text_padding_top = int(swatch_panel_height * 0.05) 
-        text_padding_left = int(swatch_panel_width * 0.06) # Further reduce left padding to move text closer to edge
-        text_padding_bottom = int(swatch_panel_height * 0.05)
-        line_spacing_major_scale = 0.015 
-        line_spacing_minor_scale = 0.008
+        text_padding_left = int(swatch_panel_width * 0.07) # Keep reduced left padding
+        text_padding_top = int(swatch_panel_height * 0.01) # Make top padding smaller
+        text_padding_bottom = int(swatch_panel_height * 0.06)
 
         if swatch_panel_width == 0: swatch_panel_width = 1 # Avoid division by zero for base_font_size_scale
         if swatch_panel_width >= 900: 
@@ -392,9 +390,9 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         
         # Make ID even bigger and more prominent with heavier weight
         font_id_main = get_font(int(36 * base_font_size_scale), weight="Bold", font_family="Mono") # ID text - larger and heavier weight
-        # Make the color definitions bigger as requested
-        font_metrics_label_main = get_font(int(24 * base_font_size_scale), weight="Bold", font_family="Mono") # Larger metrics labels
-        font_metrics_value_main = get_font(int(24 * base_font_size_scale), weight="SemiBold", font_family="Mono") # Larger metrics values
+        # Increase metrics font size by 1 as requested
+        font_metrics_label_main = get_font(int(22 * base_font_size_scale), weight="Bold", font_family="Mono") # Slightly larger metrics labels
+        font_metrics_value_main = get_font(int(22 * base_font_size_scale), weight="Regular", font_family="Mono") # Slightly larger metrics values
 
         # Pre-calculate brand position with increased spacing to prevent overlap
         brand_text = "shadefreude"
@@ -406,7 +404,7 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
             else:
                 id_text = data.cardId
         else:
-            id_text = "0000023 FE P"  # Updated to requested ID format
+            id_text = "0000023 FE T"  # Updated to requested ID format
 
         brand_w, brand_h = get_text_dimensions(brand_text, font_brand_main)
         id_h = get_text_dimensions(id_text, font_id_main)[1]
@@ -504,33 +502,31 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Position ID at the fixed position determined earlier
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
-        # Position metrics with better alignment 
-        # Move metrics further to the right
-        metrics_start_x = text_padding_left + int(swatch_panel_width * 0.85)
-        
-        # Move metrics up slightly from center of brand text
-        metrics_start_y = brand_y + (brand_h / 2) + int(swatch_panel_height * 0.001)
-
-        # Calculate horizontal layout for metrics: labels and values
-        metrics_labels = ["HEX", "CMYK", "RGB"]
-        max_label_width = max(get_text_dimensions(label, font_metrics_label_main)[0] for label in metrics_labels)
-        # Provide consistent spacing between label and value
-        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05)
-        
-        # To ensure metrics don't run off the edge, calculate max width for positioning
+                # Simplify metrics positioning - use a fixed position relative to brand text
         hex_val_str = hex_color_input.upper()
         cmyk_val_str = f"{cmyk_color_tuple[0]} {cmyk_color_tuple[1]} {cmyk_color_tuple[2]} {cmyk_color_tuple[3]}"
         rgb_val_str = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
-        metrics_values = [hex_val_str, cmyk_val_str, rgb_val_str]
         
-        # Adjust if needed to prevent overflow
-        max_val_width = max(get_text_dimensions(val, font_metrics_value_main)[0] for val in metrics_values)
-        if metrics_start_x + metrics_value_x_offset + max_val_width > swatch_panel_width - text_padding_left:
-            # If would overflow, adjust position leftward
-            metrics_start_x = swatch_panel_width - text_padding_left - max_val_width - metrics_value_x_offset
+        # Calculate available space
+        brand_text_width = get_text_dimensions(brand_text, font_brand_main)[0]
+        available_width = swatch_panel_width - text_padding_left - brand_text_width
+        
+        # Position metrics more to the left
+        metrics_x_offset = int(swatch_panel_width * 0.57)  # Reduced offset - more to the left
+        metrics_start_x = text_padding_left + metrics_x_offset
+        
+        # Move metrics down from brand text
+        metrics_start_y = brand_y + int(brand_h * 0.8)  # Positioned halfway down the brand text
+        
+        # Make the spacing between label and value consistent
+        metrics_labels = ["HEX", "CMYK", "RGB"] 
+        max_label_width = max(get_text_dimensions(label, font_metrics_label_main)[0] for label in metrics_labels)
+        metrics_value_x_offset = max_label_width + int(swatch_panel_width * 0.05)
+        
+        # No need for overflow check since we're calculating from the right edge already
 
         # Adjust spacing between metrics lines
-        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.015) # Tighter vertical spacing
+        metrics_line_spacing_adjusted = int(swatch_panel_height * 0.018) # Slightly increased vertical spacing for better readability
 
         # Start metrics at the same vertical position as ID
         current_metrics_y = metrics_start_y
