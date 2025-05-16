@@ -107,10 +107,35 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         pt_suffix = "28pt"
     
     if font_family == "Mono":
-        # Try common monospace fonts that support IPA symbols
+        # Try common monospace fonts that support IPA symbols with proper styling
         monospace_fonts = ["DejaVu Sans Mono", "Courier New", "Consolas", "Liberation Mono"]
+        
+        # For italic, try fonts explicitly with italic or oblique in the name
+        if style.lower() == "italic":
+            italic_mono_fonts = [
+                "DejaVu Sans Mono Oblique", "DejaVu Sans Mono Italic",
+                "Courier New Italic", "Consolas Italic", "Liberation Mono Italic"
+            ]
+            # Try italic versions first
+            for mono_font in italic_mono_fonts:
+                try:
+                    return ImageFont.truetype(mono_font, size)
+                except IOError:
+                    continue
+        
+        # If italic fonts failed or not requested, try regular versions
         for mono_font in monospace_fonts:
             try:
+                # If italic is requested, try to force slant angle
+                if style.lower() == "italic":
+                    font = ImageFont.truetype(mono_font, size)
+                    # Some PIL versions support this for forcing italic
+                    if hasattr(font, 'set_variation_by_name'):
+                        try:
+                            font.set_variation_by_name('Italic')
+                            return font
+                        except:
+                            pass
                 return ImageFont.truetype(mono_font, size)
             except IOError:
                 continue
@@ -154,10 +179,32 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
     # Last resort - system fonts
     print(f"Warning: Font '{font_name}' not found in any expected paths. Using system fallback.")
     try:
-        # Try common system fonts that support IPA
-        for system_font in ["Arial Unicode MS", "DejaVu Sans", "Arial", "Helvetica", "Tahoma"]:
+        # Try common system fonts that support IPA with proper styling
+        system_fonts = ["Arial Unicode MS", "DejaVu Sans", "Arial", "Helvetica", "Tahoma"]
+        
+        # For italic style, try explicitly italic fonts first
+        if style.lower() == "italic":
+            italic_system_fonts = [
+                "Arial Unicode MS Italic", "Arial Italic", "Helvetica Italic", 
+                "DejaVu Sans Italic", "Tahoma Italic", "Times New Roman Italic"
+            ]
+            for italic_font in italic_system_fonts:
+                try:
+                    print(f"Trying italic system font: {italic_font}")
+                    return ImageFont.truetype(italic_font, size)
+                except IOError:
+                    continue
+        
+        # If italic fonts failed or not requested, try regular with style parameter if supported
+        for system_font in system_fonts:
             try:
                 print(f"Trying system font: {system_font}")
+                if style.lower() == "italic":
+                    # Try with style parameter if available (works on some platforms)
+                    try:
+                        return ImageFont.truetype(system_font, size, layout_engine=ImageFont.LAYOUT_BASIC, style=style)
+                    except:
+                        pass
                 return ImageFont.truetype(system_font, size)
             except IOError:
                 continue
@@ -362,22 +409,31 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         id_h = get_text_dimensions(id_text, font_id_main)[1]
         metrics_line_spacing = int(swatch_panel_height * 0.015)
 
-        # Position brand at bottom left with more space to prevent ID overlap
-        # Ensure enough space for brand_h, id_h, and metrics_line_spacing
-        brand_y = swatch_panel_height - text_padding_bottom - id_h - (metrics_line_spacing * 1.5) - brand_h
+        # Position bottom elements first (ID and metrics)
+        bottom_margin = text_padding_bottom
+        id_y = swatch_panel_height - bottom_margin - id_h
+
+        # Position brand closer to the bottom elements but still separate
+        brand_y = id_y - brand_h - (metrics_line_spacing * 2.5)
 
         # Now handle the title formatting with better letter spacing
         current_y += int(swatch_panel_height * 0.07) # Push title down to match goal
         main_color_name_str = color_name.upper()
-
+        
         # For better text alignment, we'll use regular text without trying to add spaces
         # Instead, we'll rely on the font weight and style to create the proper appearance
         draw.text((text_padding_left, current_y), main_color_name_str, font=font_color_name, fill=text_color_on_swatch)
         current_y += get_text_dimensions(main_color_name_str, font_color_name)[1] + int(swatch_panel_height * 0.03) # Slightly more space
 
         # Format phonetic text and article - COMBINED on same line
-        phonetic_str = "[ɒlɪv ælpaɪn sɛntɪnəl]"  # IPA text
-        article_str = "[noun]"  # Article text
+        # Use data.phoneticName if provided, otherwise use a sample phonetic text
+        phonetic_str = data.phoneticName if data.phoneticName and data.phoneticName.strip() else "[ɒlɪv ælpaɪn sɛntɪnəl]"
+        # Remove surrounding brackets as we'll add them in the rendering
+        phonetic_str = phonetic_str.strip().strip('[]')
+        phonetic_str = f"[{phonetic_str}]"  # Add consistent brackets
+        
+        # Use data.article if provided, otherwise use "[noun]"
+        article_str = data.article if data.article and data.article.strip() else "[noun]"
 
         # Draw phonetic text and article on SAME line
         if orientation.lower() == "horizontal":
@@ -443,13 +499,12 @@ async def generate_image_route(data: ImageGenerationRequest, request: FastAPIReq
         # Draw the brand and metrics
         draw.text((text_padding_left, brand_y), brand_text, font=font_brand_main, fill=text_color_on_swatch)
 
-        # Position ID below brand with consistent spacing
-        id_y = brand_y + brand_h + metrics_line_spacing # Use full metrics_line_spacing for clarity
+        # Position ID at the fixed position determined earlier
         draw.text((text_padding_left, id_y), id_text, font=font_id_main, fill=text_color_on_swatch)
 
         # Position metrics with better alignment for consistent appearance
         metrics_start_x = text_padding_left + int(swatch_panel_width * 0.60) # Move slightly more right
-        metrics_start_y = brand_y # Better vertical alignment
+        metrics_start_y = id_y # Position metrics at the same height as ID
 
         # Calculate alignment for consistent right-aligned metrics
         metrics_labels = ["HEX", "CMYK", "RGB"]
