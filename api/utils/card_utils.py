@@ -105,9 +105,9 @@ async def generate_card_image_bytes(
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         log(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Card dimensions (restored to higher resolution)
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 1080, 2160
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 2160, 1080
+    # Card dimensions (reduced for better file size)
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 900, 1800
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1800, 900
     bg_color_tuple = (250, 250, 250, 255) # RGBA
 
     if orientation == "horizontal":
@@ -269,8 +269,8 @@ async def generate_card_image_bytes(
     # Convert to RGB for image saving
     final_image_rgb = Image.new("RGB", canvas.size, (255, 255, 255)) # White background
     final_image_rgb.paste(canvas, mask=canvas.split()[3] if canvas.mode == 'RGBA' else None)
-    # Save as PNG for lossless quality (no compression artifacts)
-    final_image_rgb.save(img_byte_arr, format='PNG')
+    # Save as PNG with compression to reduce file size
+    final_image_rgb.save(img_byte_arr, format='PNG', compress_level=2)
     image_bytes = img_byte_arr.getvalue()
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
