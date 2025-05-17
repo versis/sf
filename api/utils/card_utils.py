@@ -127,9 +127,17 @@ async def generate_card_image_bytes(
     draw = ImageDraw.Draw(canvas)
     draw.rectangle([(0,0), (swatch_w, swatch_h)], fill=rgb_color)
 
-    user_image_fitted = ImageOps.fit(user_image_pil, (img_panel_w, img_panel_h), Image.Resampling.LANCZOS)
-    canvas.paste(user_image_fitted, img_paste_pos, user_image_fitted if user_image_fitted.mode == 'RGBA' else None)
-    log("User image processed and pasted", request_id=request_id)
+    # Preserve original image proportions without cropping
+    user_image_sized = user_image_pil.copy()
+    user_image_sized.thumbnail((img_panel_w, img_panel_h), Image.Resampling.LANCZOS)
+
+    # Center the image in its panel
+    paste_x = img_paste_pos[0] + (img_panel_w - user_image_sized.width) // 2
+    paste_y = img_paste_pos[1] + (img_panel_h - user_image_sized.height) // 2
+    img_centered_pos = (paste_x, paste_y)
+    canvas.paste(user_image_sized, img_centered_pos, user_image_sized if user_image_sized.mode == 'RGBA' else None)
+    log(f"Image panel size: {img_panel_w}x{img_panel_h}, Image size: {user_image_sized.width}x{user_image_sized.height}", request_id=request_id)
+    log(f"Image centered at: {img_centered_pos}", request_id=request_id)
 
     # Text rendering
     text_color = (20, 20, 20) if sum(rgb_color) > 384 else (245, 245, 245) # 128*3 = 384
