@@ -66,6 +66,11 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         response_data = json.loads(response_text)
         log(f"Parsed AI response: {json.dumps(response_data, indent=2)}", request_id=request_id)
 
+        # Ensure required fields exist in the response
+        if not response_data.get("cardName"):
+            log(f"Missing required field 'cardName' in AI response", request_id=request_id)
+            raise ValueError("AI response missing required field: cardName")
+            
         phonetic_raw = str(response_data.get("phoneticName", "")).strip()
         if phonetic_raw.startswith('[') and phonetic_raw.endswith(']'):
             phonetic_final = phonetic_raw
@@ -79,29 +84,24 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
             article_final = f"[{article_raw.strip('[]')}]"
 
         final_details = {
-            "cardName": str(response_data.get("cardName", color_name.upper())).strip().upper(),
+            "cardName": str(response_data["cardName"]).strip().upper(),
             "phoneticName": phonetic_final,
             "article": article_final,
-            "description": str(response_data.get("description", f"A color named {color_name}.")).strip()
+            "description": str(response_data.get("description", "")).strip()
         }
+        
+        # Verify we have a description
+        if not final_details["description"]:
+            log(f"Missing required field 'description' in AI response", request_id=request_id)
+            raise ValueError("AI response missing required field: description")
+            
         log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
         return final_details
 
     except asyncio.TimeoutError:
         log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", request_id=request_id)
-        log(f"Falling back to default details for '{color_name}' due to asyncio.TimeoutError", request_id=request_id)
-        return {
-            "cardName": "PLACEHOLDER COLOR", 
-            "phoneticName": "['pleɪs.hoʊl.dər]", # Phonetic for "placeholder"
-            "article": "[fallback due to timeout]",
-            "description": f"This is a placeholder for {color_name}. AI generation timed out."
-        }
+        raise TimeoutError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
+    
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", request_id=request_id)
-        log(f"Falling back to default details for '{color_name}'", request_id=request_id)
-        return {
-            "cardName": "EXAMPLE COLOR", 
-            "phoneticName": "['ɛɡ.zæm.pəl]", # Phonetic for "example"
-            "article": "[placeholder]",
-            "description": f"This is a placeholder color with hex code {hex_color}. (AI generation failed)"
-        } 
+        raise ValueError(f"AI generation failed: {str(e)}") 

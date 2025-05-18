@@ -76,27 +76,29 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             final_card_details["cardId"] = default_card_id
             log(f"AI successfully generated card details", request_id=request_id)
         except Exception as e:
-            # If AI fails, use fallback but return error in the response
-            log(f"AI generation failed: {str(e)}. Using fallback details.", request_id=request_id)
-            final_card_details = {
-                "cardName": "PLACEHOLDER COLOR", 
-                "phoneticName": "['pleɪs.hoʊl.dər]",
-                "article": "[placeholder]",
-                "description": f"This is a placeholder for {data.colorName.strip()}. (AI generation failed)",
-                "cardId": default_card_id,
-                "ai_error": str(e)  # Include the error message
-            }
-            # We continue with card generation using fallback details
+            # If AI fails, return error response immediately - do not generate cards
+            log(f"AI generation failed: {str(e)}. Aborting card generation.", request_id=request_id)
+            return JSONResponse(
+                status_code=500,
+                content=GenerateCardsResponse(
+                    request_id=request_id, 
+                    ai_details_used={},
+                    generated_cards=[], 
+                    error=f"AI generation failed: {str(e)}"
+                ).model_dump()
+            )
     else:
-        # AI is disabled, use fallback text
-        log(f"AI is disabled. Using fallback text details.", request_id=request_id)
-        final_card_details = {
-            "cardName": "EXAMPLE COLOR", 
-            "phoneticName": "['ɛɡ.zæm.pəl]", # Phonetic for "example"
-            "article": "[AI disabled]",
-            "description": f"This is a placeholder color. AI-generated details are currently disabled.",
-            "cardId": default_card_id
-        }
+        # AI is disabled, return error response
+        log(f"AI is disabled. Aborting card generation.", request_id=request_id)
+        return JSONResponse(
+            status_code=400,
+            content=GenerateCardsResponse(
+                request_id=request_id, 
+                ai_details_used={},
+                generated_cards=[],
+                error="AI generation is disabled"
+            ).model_dump()
+        )
 
     log(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
@@ -176,20 +178,24 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
     Generate AI-based card details using Azure OpenAI.
     This endpoint can be called separately before image generation.
     """
+    request_id = str(uuid.uuid4())[:8]
+    
     try:
         hex_color = data.hexColor
         color_name = data.colorName
         
         if not hex_color or not color_name:
+            log(f"Missing required data: hexColor or colorName", request_id=request_id)
             raise HTTPException(status_code=400, detail="Missing required data: hexColor or colorName")
             
         # Validate hex color format
-        rgb_color = hex_to_rgb(hex_color)
+        rgb_color = hex_to_rgb(hex_color, request_id)
         if rgb_color is None:
+            log(f"Invalid HEX color format: {hex_color}", request_id=request_id)
             raise HTTPException(status_code=400, detail=f"Invalid HEX color format: {hex_color}")
             
         # Generate the card details
-        card_details = await generate_ai_card_details(color_name, hex_color)
+        card_details = await generate_ai_card_details(color_name, hex_color, request_id)
         
         return {
             "success": True,
@@ -200,7 +206,7 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
         # Re-raise HTTPException
         raise e
     except Exception as e:
-        log(f"Error generating card details: {str(e)}")
+        log(f"Error generating card details: {str(e)}", request_id=request_id)
         raise HTTPException(status_code=500, detail=f"Failed to generate card details: {str(e)}")
 
 # To run locally (ensure uvicorn is installed: pip install uvicorn)
