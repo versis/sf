@@ -3,16 +3,17 @@ import json
 import time
 import uuid
 import base64
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any, List
 
-from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
+from fastapi import FastAPI, Request as FastAPIRequest
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from api.utils.logger import log
 from api.utils.ai_utils import generate_ai_card_details
-from api.utils.card_utils import generate_card_image_bytes, hex_to_rgb, rgb_to_cmyk
+from api.utils.color_utils import hex_to_rgb
+from api.utils.card_utils import generate_card_image_bytes
 from api.models import GenerateCardsRequest, CardImageResponseItem, GenerateCardsResponse
 
 # Rate limiting with slowapi

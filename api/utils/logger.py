@@ -9,6 +9,4 @@ def log(message: str, request_id: Optional[str] = None):
     if request_id:
         prefix += f" [ReqID: {request_id}]"
     print(f"{prefix} {message}")
-    sys.stdout.flush()
-
-# Ensure __init__.py exists for the utils package 
+    sys.stdout.flush() 
