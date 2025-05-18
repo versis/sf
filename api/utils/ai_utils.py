@@ -151,9 +151,6 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 usage = completion.usage
                 log(f"Token usage - Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}", 
                     request_id=request_id)
-                # Use info level for token usage to ensure it's visible
-                info(f"TOKEN USAGE: Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}", 
-                     request_id=request_id)
             else:
                 debug(f"No token usage information available in the response", request_id=request_id)
 
@@ -167,7 +164,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             
             # Format the response
             final_details = OpenAIResponseFormatter.format_response(card_details, hex_color)
-            debug(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
+            info(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
                 
             return final_details
                 
