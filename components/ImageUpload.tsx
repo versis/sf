@@ -36,7 +36,7 @@ interface ImageUploadProps {
 }
 
 // Exact minimum dimension in pixels
-const REQUIRED_MIN_DIMENSION = 512; // Required for the AI processing
+const REQUIRED_MIN_DIMENSION = 900; // Required for the AI processing
 const MAX_DIMENSION = 1200; // Maximum for very large crops
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
