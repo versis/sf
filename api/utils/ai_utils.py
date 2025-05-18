@@ -133,6 +133,10 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 }
             ]
             
+            # Measure just the OpenAI API call time
+            openai_api_start_time = time.time()
+            log(f"Starting Azure OpenAI API request at {time.strftime('%H:%M:%S')}", request_id=request_id)
+            
             # Use the beta.chat.completions.parse method with the ColorCardDetails Pydantic model
             completion = await asyncio.wait_for(
                 azure_client.beta.chat.completions.parse(
@@ -143,6 +147,9 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 ),
                 timeout=OVERALL_TIMEOUT
             )
+            
+            openai_api_duration = time.time() - openai_api_start_time
+            log(f"Azure OpenAI API request completed in {openai_api_duration:.2f} seconds", request_id=request_id)
             
             log(f"Successfully received response from Azure OpenAI API", request_id=request_id)
 

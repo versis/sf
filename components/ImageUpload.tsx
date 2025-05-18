@@ -36,6 +36,7 @@ interface ImageUploadProps {
 }
 
 const MIN_DIMENSION = 150;
+const RECOMMENDED_MIN_DIMENSION = 512; // Recommended minimum size for better AI processing
 const TARGET_SIZE_MB = 2; // Target size in MB
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
@@ -101,22 +102,31 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
-      // Limit the maximum dimensions of the cropped image
-      const maxDimension = 1200; // Reasonable size to prevent huge images
+      // Get the original cropped dimensions
       const cropWidth = cropData.width * scaleX;
       const cropHeight = cropData.height * scaleY;
       
-      // Calculate scaled dimensions if needed
-      let canvasWidth = cropWidth;
-      let canvasHeight = cropHeight;
+      // Calculate dimensions, ensuring we meet minimum recommended size
+      // If the cropped area is small, we'll upscale it
+      let canvasWidth = Math.max(cropWidth, RECOMMENDED_MIN_DIMENSION);
+      let canvasHeight = Math.max(cropHeight, RECOMMENDED_MIN_DIMENSION);
       
-      if (cropWidth > maxDimension || cropHeight > maxDimension) {
-        const ratio = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
-        canvasWidth = cropWidth * ratio;
-        canvasHeight = cropHeight * ratio;
-        console.log(`Image cropped area rescaled from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight}`);
+      // For extremely small crops, log that we're upscaling
+      if (cropWidth < RECOMMENDED_MIN_DIMENSION || cropHeight < RECOMMENDED_MIN_DIMENSION) {
+        console.log(`Upscaling small crop from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight} for better AI processing`);
+        setProcessingMessage(`Optimizing small image (${Math.round(cropWidth)}x${Math.round(cropHeight)}) for best results...`);
       }
       
+      // Limit maximum dimensions for very large crops
+      const maxDimension = 1200;
+      if (canvasWidth > maxDimension || canvasHeight > maxDimension) {
+        const ratio = Math.min(maxDimension / canvasWidth, maxDimension / canvasHeight);
+        canvasWidth = canvasWidth * ratio;
+        canvasHeight = canvasHeight * ratio;
+        console.log(`Large image cropped area rescaled from ${cropWidth}x${cropHeight} to ${canvasWidth}x${canvasHeight}`);
+      }
+      
+      // Set the canvas dimensions to our calculated values
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
 
@@ -127,6 +137,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         return;
       }
 
+      // Enable image smoothing for better upscaling quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Draw the image, potentially upscaling small crops
       ctx.drawImage(
         image,
         cropData.x * scaleX,

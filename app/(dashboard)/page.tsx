@@ -162,12 +162,12 @@ export default function HomePage() {
     // Immediately move to step 4 (results) to show progress bar there
     setCurrentWizardStep('results');
     
-    // Start the progress bar: 60-second duration, smooth constant increment
-    const totalProgressDuration = 60000; // 60 seconds in milliseconds
+    // Start the progress bar: 30-second duration, smooth constant increment
+    const totalProgressDuration = 30000; // 30 seconds in milliseconds
     const updatesPerSecond = 10; // Update 10 times per second for smoothness
     const progressIntervalTime = 1000 / updatesPerSecond; // 100ms interval
-    const totalUpdates = totalProgressDuration / progressIntervalTime; // 60s * 10fps = 600 updates
-    const progressIncrement = 100 / totalUpdates; // Increment to reach 100% over totalUpdates (100 / 600 = 1/6)
+    const totalUpdates = totalProgressDuration / progressIntervalTime; // 30s * 10fps = 300 updates
+    const progressIncrement = 100 / totalUpdates; // Increment to reach 100% over totalUpdates
 
     let currentProgressValue = 0;
     setGenerationProgress(0);
@@ -453,7 +453,7 @@ export default function HomePage() {
         {isGenerating && (
                   <div className="w-full mb-6">
                     <p className="text-xs text-center text-blue-600 mb-2">
-                      Hang on for 30-60 seconds...
+                      Hang on for 20-30 seconds...
                     </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
