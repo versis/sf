@@ -3,6 +3,10 @@ import json
 import time
 import uuid
 import base64
+import asyncio
+import traceback
+import logging
+import sys
 from typing import Dict, Any, List
 
 from fastapi import FastAPI, Request as FastAPIRequest
@@ -10,11 +14,19 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from api.utils.logger import log
+# Only configure console printing - no additional logging setup 
+print("==== STARTUP: Direct print to console ====")
+sys.stdout.flush()
+
+from api.utils.logger import log, error, info, warning, debug
 from api.utils.ai_utils import generate_ai_card_details
 from api.utils.color_utils import hex_to_rgb
 from api.utils.card_utils import generate_card_image_bytes
 from api.models import GenerateCardsRequest, CardImageResponseItem, GenerateCardsResponse
+
+# Print directly to ensure we can see console output
+print("==== STARTUP: Loading FastAPI app ====")
+sys.stdout.flush()
 
 # Rate limiting with slowapi
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -23,6 +35,12 @@ from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 load_dotenv(".env.local")
+
+# Direct logging to verify env vars
+print(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
+print(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
+print(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
+sys.stdout.flush()
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -39,6 +57,35 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    # Direct print for startup
+    print("===== FastAPI STARTUP EVENT =====")
+    sys.stdout.flush()
+    
+    # Logger calls
+    info("Starting application...")
+    # Log environment variable configuration (excluding sensitive values)
+    debug(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
+    debug(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
+    debug(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
+    info("Application startup complete")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: FastAPIRequest, exc: Exception):
+    # Direct print for exceptions
+    print(f"EXCEPTION: {str(exc)}")
+    print(f"TRACEBACK: {traceback.format_exc()}")
+    sys.stdout.flush()
+    
+    # Logger call
+    error(f"Unhandled exception: {str(exc)}")
+    error(f"Traceback: {traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An unexpected error occurred", "detail": str(exc)}
+    )
+
 # --- Unified API Endpoint ---
 @app.post("/api/generate-cards", response_model=GenerateCardsResponse)
 @limiter.limit("5/minute")
@@ -49,6 +96,19 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
 
     final_card_details: Dict[str, Any] = {}
     default_card_id = "0000023 FE T"
+
+    # Validate that the cropped image is provided
+    if not data.croppedImageDataUrl:
+        log(f"No cropped image provided in request", request_id=request_id)
+        return JSONResponse(
+            status_code=400,
+            content=GenerateCardsResponse(
+                request_id=request_id, 
+                ai_details_used={},
+                generated_cards=[],
+                error="A cropped image is required to generate a card"
+            ).model_dump()
+        )
 
     if not hex_to_rgb(data.hexColor):
         log(f"Invalid hexColor format provided: {data.hexColor}", request_id=request_id)
@@ -68,13 +128,52 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     use_ai = enable_ai_env != "false"
 
     if use_ai:
-        log("Proceeding with AI generation based solely on hex color.", request_id=request_id)
+        log("Proceeding with AI generation based on hex color and cropped image.", request_id=request_id)
         try:
-            ai_generated_details = await generate_ai_card_details(data.hexColor, request_id)
-            final_card_details = ai_generated_details
-            final_card_details["cardId"] = data.cardId or default_card_id
+            # Log image size to help diagnose issues
+            if data.croppedImageDataUrl:
+                img_data_size = len(data.croppedImageDataUrl) / 1024
+                log(f"Cropped image data URL size: {img_data_size:.2f}KB", request_id=request_id)
+                
+                if img_data_size > 10000:  # If image is larger than ~10MB
+                    log(f"Warning: Image size is very large ({img_data_size:.2f}KB)", level="WARNING", request_id=request_id)
+            
+            try:
+                log(f"Starting AI card details generation", request_id=request_id)
+                ai_generated_details = await generate_ai_card_details(
+                    data.hexColor, 
+                    data.croppedImageDataUrl, 
+                    request_id
+                )
+                log(f"Successfully generated AI card details", request_id=request_id)
+                final_card_details = ai_generated_details
+                final_card_details["cardId"] = data.cardId or default_card_id
+            except asyncio.TimeoutError as timeout_err:
+                log(f"Timeout while calling Azure OpenAI API: {str(timeout_err)}", level="ERROR", request_id=request_id)
+                return JSONResponse(
+                    status_code=504,  # Gateway Timeout
+                    content=GenerateCardsResponse(
+                        request_id=request_id, 
+                        ai_details_used={},
+                        generated_cards=[],
+                        error="AI service timed out. Please try again with a smaller image."
+                    ).model_dump()
+                )
+            except ValueError as ve:
+                log(f"AI details generation failed with ValueError: {str(ve)}", level="ERROR", request_id=request_id)
+                return JSONResponse(
+                    status_code=400,
+                    content=GenerateCardsResponse(
+                        request_id=request_id, 
+                        ai_details_used={},
+                        generated_cards=[],
+                        error=f"Error: {str(ve)}"
+                    ).model_dump()
+                )
         except Exception as e:
-            log(f"AI details generation failed: {str(e)}. Returning error to client.", request_id=request_id)
+            log(f"AI details generation failed: {str(e)}", level="ERROR", request_id=request_id)
+            import traceback
+            log(f"Traceback: {traceback.format_exc()}", level="ERROR", request_id=request_id)
             # Don't generate fallback - return error since AI was enabled but failed
             return JSONResponse(
                 status_code=500,
@@ -159,5 +258,49 @@ if __name__ == "__main__":
     # If index.py is in /api, and assets are in /assets, card_utils.ASSETS_BASE_PATH might need to be "../assets"
     # Or, ensure the CWD is the project root when running uvicorn.
     # For uvicorn from project root: uvicorn api.index:app --reload
-    log("Starting Uvicorn server for local development...")
-    uvicorn.run("index:app", app_dir="api", host="0.0.0.0", port=8000, reload=True, reload_dirs=["api"], timeout_keep_alive=75)
+    print("===== STARTING UVICORN SERVER =====")
+    print(f"Environment: {os.environ.get('NODE_ENV', 'development')}")
+    print(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
+    print(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
+    sys.stdout.flush()
+    
+    info("Starting Uvicorn server for local development...")
+    
+    # Configure Uvicorn logging
+    log_config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "()": "uvicorn.logging.DefaultFormatter",
+                "fmt": "%(levelprefix)s %(asctime)s %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
+        },
+        "handlers": {
+            "default": {
+                "formatter": "default",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+            },
+        },
+        "loggers": {
+            "uvicorn": {"handlers": ["default"], "level": "INFO"},
+            "uvicorn.error": {"handlers": ["default"], "level": "INFO"},
+            "uvicorn.access": {"handlers": ["default"], "level": "INFO"},
+        },
+    }
+    
+    uvicorn.run(
+        "index:app", 
+        app_dir="api", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=True, 
+        reload_dirs=["api"], 
+        timeout_keep_alive=120,  # Increased from 75 seconds
+        log_level="debug",
+        log_config=log_config,
+        use_colors=True,
+        proxy_headers=True
+    )

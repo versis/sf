@@ -82,6 +82,30 @@ You can control whether the AI attempts to generate card details using the follo
 ENABLE_AI_CARD_DETAILS=true # set to false to disable AI, defaults to true if not set
 ```
 
+## AI Card Details Generation
+
+When enabled, the application uses Azure OpenAI to generate creative and poetic card details based on:
+
+1. The selected hex color value
+2. The cropped image from the user (required)
+
+The AI analyzes both inputs to create a contextually relevant:
+- Color name (max 3 words, all caps)
+- Phonetic pronunciation (IPA symbols)
+- Part of speech
+- Poetic description (25-30 words)
+
+This approach results in cards that are personalized and thematically connected to the actual image content rather than just the color. If no image is provided, the API will return an error message - a cropped image is required for the AI to generate appropriate card details.
+
+### Image Processing for AI
+
+For optimal performance with the Azure OpenAI API:
+- The user's cropped image is automatically resized to 512×512 pixels
+- The image is converted to JPG format with quality optimization
+- The "detail" parameter is set to "low" to further reduce token usage
+- The original high-resolution image is still used for the card generation
+- This optimization reduces API costs and improves response times
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:
