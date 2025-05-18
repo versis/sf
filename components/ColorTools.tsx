@@ -47,13 +47,14 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     if (previewCanvas) {
       const prevCtx = previewCanvas.getContext('2d');
       if (prevCtx) {
-        // Match the final card dimensions with a 50/50 split (1500x900 total)
-        previewCanvas.width = 500; // Scaled down version of 1500 for better display
-        previewCanvas.height = 300; // Scaled down version of 900
+        // Match the final card dimensions with a 50/50 split
+        previewCanvas.width = 500; // Scaled down version for better display
+        previewCanvas.height = 300; // Height for proper display
 
         const swatchWidth = previewCanvas.width * 0.50; // 50% for swatch (250px)
         const imagePanelXStart = swatchWidth;
         const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image (250px)
+        const imagePanelHeight = previewCanvas.height;
 
         // Draw color swatch
         prevCtx.fillStyle = hexColor;
@@ -61,8 +62,13 @@ const ColorTools: React.FC<ColorToolsProps> = ({
 
         const img = new Image();
         img.onload = () => {
-          // Draw image on the right panel of the preview canvas
-          prevCtx.drawImage(img, imagePanelXStart, 0, imagePanelWidth, previewCanvas.height);
+          // Calculate dimensions to fit the square image in the panel
+          const squareSize = Math.min(imagePanelWidth, imagePanelHeight);
+          const xOffset = imagePanelXStart + (imagePanelWidth - squareSize) / 2;
+          const yOffset = (imagePanelHeight - squareSize) / 2;
+          
+          // Draw image centered in the right panel of the preview canvas
+          prevCtx.drawImage(img, xOffset, yOffset, squareSize, squareSize);
 
           // Also draw the original image to the hidden source canvas for accurate color picking
           if (sourceCanvas) {
@@ -122,29 +128,36 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     const displayedClickX = event.clientX - rect.left;
     const displayedClickY = event.clientY - rect.top;
 
-    // Scale click coordinates to the canvas's internal drawing dimensions (500x300)
+    // Scale click coordinates to the canvas's internal drawing dimensions
     const displayToCanvasScaleX = previewCanvas.width / rect.width;
     const displayToCanvasScaleY = previewCanvas.height / rect.height;
     const canvasClickX = displayedClickX * displayToCanvasScaleX;
     const canvasClickY = displayedClickY * displayToCanvasScaleY;
 
     // Define the image panel dimensions within the internal canvas drawing
-    const imagePanelXStartDrawn = previewCanvas.width * 0.50;
-    const imagePanelWidthDrawn = previewCanvas.width * 0.50;
-    const imagePanelHeightDrawn = previewCanvas.height;
-
-    // Check if the (scaled) click is within the image panel on the internal canvas
-    if (canvasClickX >= imagePanelXStartDrawn && canvasClickX < previewCanvas.width) {
-      // Calculate click coordinates relative to the image panel on the internal canvas
-      const localXDrawn = canvasClickX - imagePanelXStartDrawn;
-      const localYDrawn = canvasClickY;
+    const imagePanelXStart = previewCanvas.width * 0.50;
+    const imagePanelWidth = previewCanvas.width - imagePanelXStart;
+    const imagePanelHeight = previewCanvas.height;
+    
+    // Calculate the square size and offsets (must match the drawing logic)
+    const squareSize = Math.min(imagePanelWidth, imagePanelHeight);
+    const xOffset = imagePanelXStart + (imagePanelWidth - squareSize) / 2;
+    const yOffset = (imagePanelHeight - squareSize) / 2;
+    
+    // Check if the click is within the image panel's actual image area (square)
+    if (canvasClickX >= xOffset && canvasClickX < xOffset + squareSize &&
+        canvasClickY >= yOffset && canvasClickY < yOffset + squareSize) {
+      
+      // Calculate click coordinates relative to the square image on the canvas
+      const localX = canvasClickX - xOffset;
+      const localY = canvasClickY - yOffset;
 
       // Scale these coordinates to the original source image dimensions
       const sourceImgWidth = sourceCanvas.width;
       const sourceImgHeight = sourceCanvas.height;
 
-      const pickX = Math.floor((localXDrawn / (previewCanvas.width * 0.50)) * sourceImgWidth);
-      const pickY = Math.floor((localYDrawn / imagePanelHeightDrawn) * sourceImgHeight);
+      const pickX = Math.floor((localX / squareSize) * sourceImgWidth);
+      const pickY = Math.floor((localY / squareSize) * sourceImgHeight);
 
       const sourceCtx = sourceCanvas.getContext('2d');
       if (sourceCtx) {
@@ -152,9 +165,9 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         const finalPickY = Math.min(Math.max(pickY, 0), sourceImgHeight - 1);
         const pixel = sourceCtx.getImageData(finalPickX, finalPickY, 1, 1).data;
         const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
-        setHexColor(hex); 
-        onHexChange(hex); 
-        setHexError(''); 
+        setHexColor(hex);
+        onHexChange(hex);
+        setHexError('');
         if (onColorPickedFromCanvas) {
           onColorPickedFromCanvas(); // Call the callback
         }
@@ -170,7 +183,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
             className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto border border-foreground"
-            style={{ aspectRatio: '5 / 3' }} // Matches 1500x900 aspect ratio (5:3)
+            style={{ aspectRatio: '5 / 3' }} // Keep 5/3 ratio for the preview canvas (still shows half color/half image)
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />

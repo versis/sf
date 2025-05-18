@@ -132,8 +132,8 @@ export default function HomePage() {
     reader.readAsDataURL(file);
   };
 
-  // Make sure this matches the same ratio as in the backend (750x900 for image panel)
-  const aspectRatio = 5/6; // 5:6 ratio (width:height) for the 750x900 image panel
+  // Make sure this matches the same ratio as in the backend (square for better card display)
+  const aspectRatio = 1/1; // 1:1 ratio (square) for better alignment with the card layout
 
   const handleCroppedImage = (dataUrl: string | null) => {
     setCroppedImageDataUrl(dataUrl);
