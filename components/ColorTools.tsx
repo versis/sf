@@ -226,8 +226,8 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto border border-foreground"
-            style={{ aspectRatio: '5 / 3' }} // Keep 5/3 ratio for the preview canvas (still shows half color/half image)
+            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto"
+            style={{ aspectRatio: '5 / 3', border: 'none' }} // Explicitly remove border
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />
