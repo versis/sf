@@ -88,17 +88,15 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 ).model_dump()
             )
     else:
-        # AI is disabled, return error response
-        log(f"AI is disabled. Aborting card generation.", request_id=request_id)
-        return JSONResponse(
-            status_code=400,
-            content=GenerateCardsResponse(
-                request_id=request_id, 
-                ai_details_used={},
-                generated_cards=[],
-                error="AI generation is disabled"
-            ).model_dump()
-        )
+        # AI is disabled, use fallback values
+        log(f"AI is disabled. Using fallback color details.", request_id=request_id)
+        final_card_details = {
+            "colorName": data.colorName.upper(),
+            "phoneticName": "[no pronunciation]",
+            "article": "[color]",
+            "description": f"A color with hex code {data.hexColor}. AI generation is disabled.",
+            "cardId": default_card_id
+        }
 
     log(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
