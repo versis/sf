@@ -47,13 +47,14 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     if (previewCanvas) {
       const prevCtx = previewCanvas.getContext('2d');
       if (prevCtx) {
-        // Match the final card dimensions with a 50/50 split
-        previewCanvas.width = 500; // Scaled down version for better display
-        previewCanvas.height = 300; // Height for proper display
-
-        const swatchWidth = previewCanvas.width * 0.50; // 50% for swatch (250px)
+        // Set dimensions to match card proportions (horizontal orientation)
+        previewCanvas.width = 600; 
+        previewCanvas.height = 300; // 2:1 aspect ratio to match card
+        
+        // Split the canvas 50/50 for color and image
+        const swatchWidth = previewCanvas.width * 0.5; // 50% for color swatch
         const imagePanelXStart = swatchWidth;
-        const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image (250px)
+        const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image
         const imagePanelHeight = previewCanvas.height;
 
         // Draw color swatch
@@ -66,25 +67,23 @@ const ColorTools: React.FC<ColorToolsProps> = ({
 
         const img = new Image();
         img.onload = () => {
-          // Calculate dimensions to cover the panel while maintaining aspect ratio
+          // We know the image is a square (1:1 ratio) from the cropping step
+          // For a square image in a rectangular panel, we need to fit it properly
+          
+          // Calculate dimensions to fit the panel fully while maintaining aspect ratio
           const imgAspectRatio = img.width / img.height;
           const panelAspectRatio = imagePanelWidth / imagePanelHeight;
           
           let drawWidth, drawHeight, offsetX, offsetY;
           
-          if (imgAspectRatio > panelAspectRatio) {
-            // Image is wider than panel (relative to height)
-            drawHeight = imagePanelHeight;
-            drawWidth = drawHeight * imgAspectRatio;
-            offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
-            offsetY = 0;
-          } else {
-            // Image is taller than panel (relative to width)
-            drawWidth = imagePanelWidth;
-            drawHeight = drawWidth / imgAspectRatio;
-            offsetX = imagePanelXStart;
-            offsetY = (imagePanelHeight - drawHeight) / 2;
-          }
+          // Since we're using a square cropped image (1:1) in a rectangular panel:
+          // The panel is likely wider than tall, so we'll fit to height and center horizontally
+          drawHeight = imagePanelHeight;
+          drawWidth = drawHeight; // Keep square aspect ratio (1:1)
+          
+          // Center the image in the panel
+          offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
+          offsetY = 0;
           
           // Draw image centered in the right panel of the preview canvas
           prevCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
@@ -154,9 +153,9 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     const canvasClickY = displayedClickY * displayToCanvasScaleY;
 
     // Define the image panel dimensions within the internal canvas drawing
-    const swatchWidth = previewCanvas.width * 0.50;
+    const swatchWidth = previewCanvas.width * 0.5; // 50% for color swatch
     const imagePanelXStart = swatchWidth;
-    const imagePanelWidth = previewCanvas.width - swatchWidth;
+    const imagePanelWidth = previewCanvas.width - swatchWidth; // 50% for image
     const imagePanelHeight = previewCanvas.height;
 
     // Check if the click is within the image panel
@@ -169,24 +168,17 @@ const ColorTools: React.FC<ColorToolsProps> = ({
       // We need to convert from click on display to click on source image
       const sourceImgWidth = sourceCanvas.width;
       const sourceImgHeight = sourceCanvas.height;
-      const imgAspectRatio = sourceImgWidth / sourceImgHeight;
-      const panelAspectRatio = imagePanelWidth / imagePanelHeight;
       
+      // Since we know the image is a square (1:1) from cropping
       let drawWidth, drawHeight, offsetX, offsetY;
       
-      if (imgAspectRatio > panelAspectRatio) {
-        // Image is wider than panel (relative to height)
-        drawHeight = imagePanelHeight;
-        drawWidth = drawHeight * imgAspectRatio;
-        offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
-        offsetY = 0;
-      } else {
-        // Image is taller than panel (relative to width)
-        drawWidth = imagePanelWidth;
-        drawHeight = drawWidth / imgAspectRatio;
-        offsetX = imagePanelXStart;
-        offsetY = (imagePanelHeight - drawHeight) / 2;
-      }
+      // Use the same layout logic as in the rendering code
+      drawHeight = imagePanelHeight;
+      drawWidth = drawHeight; // Keep square aspect ratio (1:1)
+      
+      // Center the image in the panel
+      offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
+      offsetY = 0;
       
       // Check if click is within the actual image area
       if (
@@ -227,7 +219,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
             className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto"
-            style={{ aspectRatio: '5 / 3' }} // Keep 5/3 ratio for the preview canvas (still shows half color/half image)
+            style={{ aspectRatio: '2 / 1' }} // 2:1 ratio to match horizontal card layout
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />
