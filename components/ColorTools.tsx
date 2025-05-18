@@ -47,9 +47,14 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     if (previewCanvas) {
       const prevCtx = previewCanvas.getContext('2d');
       if (prevCtx) {
+        // Enable high-quality image rendering
+        prevCtx.imageSmoothingEnabled = true;
+        prevCtx.imageSmoothingQuality = 'high';
+        
         // Set dimensions to match card proportions (horizontal orientation)
-        previewCanvas.width = 600; 
-        previewCanvas.height = 300; // 2:1 aspect ratio to match card
+        // Use higher resolution for better image quality 
+        previewCanvas.width = 1000; 
+        previewCanvas.height = 500; // 2:1 aspect ratio to match card
         
         // Split the canvas 50/50 for color and image
         const swatchWidth = previewCanvas.width * 0.5; // 50% for color swatch
@@ -66,13 +71,16 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         prevCtx.fillRect(imagePanelXStart, 0, imagePanelWidth, imagePanelHeight);
 
         const img = new Image();
+        
+        // Set image to load at highest quality
+        img.setAttribute('decoding', 'sync'); // Decode synchronously for immediate rendering
+        
         img.onload = () => {
           // We know the image is a square (1:1 ratio) from the cropping step
           // For a square image in a rectangular panel, we need to fit it properly
           
           // Calculate dimensions to fit the panel fully while maintaining aspect ratio
           const imgAspectRatio = img.width / img.height;
-          const panelAspectRatio = imagePanelWidth / imagePanelHeight;
           
           let drawWidth, drawHeight, offsetX, offsetY;
           
@@ -85,16 +93,24 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
           offsetY = 0;
           
-          // Draw image centered in the right panel of the preview canvas
+          // Clear the area before drawing for better quality
+          prevCtx.clearRect(imagePanelXStart, 0, imagePanelWidth, imagePanelHeight);
+          
+          // Draw image centered in the right panel of the preview canvas with high quality
           prevCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
           // Also draw the original image to the hidden source canvas for accurate color picking
           if (sourceCanvas) {
             const sourceCtx = sourceCanvas.getContext('2d');
             if (sourceCtx) {
+              // Enable high-quality image rendering for source canvas too
+              sourceCtx.imageSmoothingEnabled = true;
+              sourceCtx.imageSmoothingQuality = 'high';
+              
+              // Preserve original image dimensions for accurate color picking
               sourceCanvas.width = img.naturalWidth;
               sourceCanvas.height = img.naturalHeight;
-              sourceCtx.drawImage(img, 0, 0);
+              sourceCtx.drawImage(img, 0, 0, sourceCanvas.width, sourceCanvas.height);
             }
           }
         };
@@ -218,8 +234,12 @@ const ColorTools: React.FC<ColorToolsProps> = ({
           <canvas 
             ref={imageCanvasRef} 
             onClick={handleCanvasClick} 
-            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto"
-            style={{ aspectRatio: '2 / 1' }} // 2:1 ratio to match horizontal card layout
+            className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto shadow-sm"
+            style={{ 
+              aspectRatio: '2 / 1', // 2:1 ratio to match horizontal card layout
+              imageRendering: 'auto', // CSS hint for high-quality rendering
+              backgroundColor: '#000' // Dark background to avoid transparency issues
+            }}
           />
           {/* Hidden canvas for source image data */}
           <canvas ref={sourceImageCanvasRef} style={{ display: 'none' }} />
