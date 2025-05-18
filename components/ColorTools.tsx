@@ -60,15 +60,34 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         prevCtx.fillStyle = hexColor;
         prevCtx.fillRect(0, 0, swatchWidth, previewCanvas.height);
 
+        // Fill the image panel with black to avoid any transparency issues
+        prevCtx.fillStyle = '#000000';
+        prevCtx.fillRect(imagePanelXStart, 0, imagePanelWidth, imagePanelHeight);
+
         const img = new Image();
         img.onload = () => {
-          // Calculate dimensions to fit the square image in the panel
-          const squareSize = Math.min(imagePanelWidth, imagePanelHeight);
-          const xOffset = imagePanelXStart + (imagePanelWidth - squareSize) / 2;
-          const yOffset = (imagePanelHeight - squareSize) / 2;
+          // Calculate dimensions to cover the panel while maintaining aspect ratio
+          const imgAspectRatio = img.width / img.height;
+          const panelAspectRatio = imagePanelWidth / imagePanelHeight;
+          
+          let drawWidth, drawHeight, offsetX, offsetY;
+          
+          if (imgAspectRatio > panelAspectRatio) {
+            // Image is wider than panel (relative to height)
+            drawHeight = imagePanelHeight;
+            drawWidth = drawHeight * imgAspectRatio;
+            offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
+            offsetY = 0;
+          } else {
+            // Image is taller than panel (relative to width)
+            drawWidth = imagePanelWidth;
+            drawHeight = drawWidth / imgAspectRatio;
+            offsetX = imagePanelXStart;
+            offsetY = (imagePanelHeight - drawHeight) / 2;
+          }
           
           // Draw image centered in the right panel of the preview canvas
-          prevCtx.drawImage(img, xOffset, yOffset, squareSize, squareSize);
+          prevCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
           // Also draw the original image to the hidden source canvas for accurate color picking
           if (sourceCanvas) {
@@ -135,41 +154,66 @@ const ColorTools: React.FC<ColorToolsProps> = ({
     const canvasClickY = displayedClickY * displayToCanvasScaleY;
 
     // Define the image panel dimensions within the internal canvas drawing
-    const imagePanelXStart = previewCanvas.width * 0.50;
-    const imagePanelWidth = previewCanvas.width - imagePanelXStart;
+    const swatchWidth = previewCanvas.width * 0.50;
+    const imagePanelXStart = swatchWidth;
+    const imagePanelWidth = previewCanvas.width - swatchWidth;
     const imagePanelHeight = previewCanvas.height;
-    
-    // Calculate the square size and offsets (must match the drawing logic)
-    const squareSize = Math.min(imagePanelWidth, imagePanelHeight);
-    const xOffset = imagePanelXStart + (imagePanelWidth - squareSize) / 2;
-    const yOffset = (imagePanelHeight - squareSize) / 2;
-    
-    // Check if the click is within the image panel's actual image area (square)
-    if (canvasClickX >= xOffset && canvasClickX < xOffset + squareSize &&
-        canvasClickY >= yOffset && canvasClickY < yOffset + squareSize) {
-      
-      // Calculate click coordinates relative to the square image on the canvas
-      const localX = canvasClickX - xOffset;
-      const localY = canvasClickY - yOffset;
 
-      // Scale these coordinates to the original source image dimensions
+    // Check if the click is within the image panel
+    if (canvasClickX >= imagePanelXStart && canvasClickX < previewCanvas.width) {
+      // Need to recalculate the image dimensions to know where the actual image is drawn
+      // This must match the exact logic in the useEffect draw function
+      const img = new Image();
+      img.src = croppedImageDataUrl;
+      
+      // We need to convert from click on display to click on source image
       const sourceImgWidth = sourceCanvas.width;
       const sourceImgHeight = sourceCanvas.height;
-
-      const pickX = Math.floor((localX / squareSize) * sourceImgWidth);
-      const pickY = Math.floor((localY / squareSize) * sourceImgHeight);
-
-      const sourceCtx = sourceCanvas.getContext('2d');
-      if (sourceCtx) {
-        const finalPickX = Math.min(Math.max(pickX, 0), sourceImgWidth - 1);
-        const finalPickY = Math.min(Math.max(pickY, 0), sourceImgHeight - 1);
-        const pixel = sourceCtx.getImageData(finalPickX, finalPickY, 1, 1).data;
-        const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
-        setHexColor(hex);
-        onHexChange(hex);
-        setHexError('');
-        if (onColorPickedFromCanvas) {
-          onColorPickedFromCanvas(); // Call the callback
+      const imgAspectRatio = sourceImgWidth / sourceImgHeight;
+      const panelAspectRatio = imagePanelWidth / imagePanelHeight;
+      
+      let drawWidth, drawHeight, offsetX, offsetY;
+      
+      if (imgAspectRatio > panelAspectRatio) {
+        // Image is wider than panel (relative to height)
+        drawHeight = imagePanelHeight;
+        drawWidth = drawHeight * imgAspectRatio;
+        offsetX = imagePanelXStart + (imagePanelWidth - drawWidth) / 2;
+        offsetY = 0;
+      } else {
+        // Image is taller than panel (relative to width)
+        drawWidth = imagePanelWidth;
+        drawHeight = drawWidth / imgAspectRatio;
+        offsetX = imagePanelXStart;
+        offsetY = (imagePanelHeight - drawHeight) / 2;
+      }
+      
+      // Check if click is within the actual image area
+      if (
+        canvasClickX >= offsetX && 
+        canvasClickX < offsetX + drawWidth && 
+        canvasClickY >= offsetY && 
+        canvasClickY < offsetY + drawHeight
+      ) {
+        // Convert canvas click position to source image coordinates
+        const relativeX = (canvasClickX - offsetX) / drawWidth;
+        const relativeY = (canvasClickY - offsetY) / drawHeight;
+        
+        const pickX = Math.floor(relativeX * sourceImgWidth);
+        const pickY = Math.floor(relativeY * sourceImgHeight);
+        
+        const sourceCtx = sourceCanvas.getContext('2d');
+        if (sourceCtx) {
+          const finalPickX = Math.min(Math.max(pickX, 0), sourceImgWidth - 1);
+          const finalPickY = Math.min(Math.max(pickY, 0), sourceImgHeight - 1);
+          const pixel = sourceCtx.getImageData(finalPickX, finalPickY, 1, 1).data;
+          const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
+          setHexColor(hex);
+          onHexChange(hex);
+          setHexError('');
+          if (onColorPickedFromCanvas) {
+            onColorPickedFromCanvas(); // Call the callback
+          }
         }
       }
     }
