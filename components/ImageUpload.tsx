@@ -447,13 +447,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             </div>
           </div>
           
-          {pixelCrop && (
-            <div className="text-xs text-muted-foreground">
-              Selected area: {getCurrentCropDimensions()?.width || '?'}×{getCurrentCropDimensions()?.height || '?'}px
-              <span className="ml-1 text-blue-600 font-medium">(Minimum: {REQUIRED_MIN_DIMENSION}×{REQUIRED_MIN_DIMENSION}px)</span>
-            </div>
-          )}
-          
           {errorMessage && (
             <div className="text-sm mt-2 p-2 border border-red-400 rounded bg-red-50 text-red-700">
               <svg xmlns="http://www.w3.org/2000/svg" className="inline-block mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
