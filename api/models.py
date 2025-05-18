@@ -4,7 +4,8 @@ from pydantic import BaseModel
 class GenerateCardsRequest(BaseModel):
     croppedImageDataUrl: str
     hexColor: str
-    colorName: str
+    # Only for manual API calls if needed
+    cardId: Optional[str] = "0000023 FE T"
 
 class CardImageResponseItem(BaseModel):
     orientation: str
@@ -18,5 +19,4 @@ class GenerateCardsResponse(BaseModel):
     error: Optional[str] = None
 
 class CardDetailsRequest(BaseModel):
-    hexColor: str
-    colorName: str 
+    hexColor: str 

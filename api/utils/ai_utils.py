@@ -17,16 +17,18 @@ azure_client = AsyncAzureOpenAI(
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
 )
 
-async def generate_ai_card_details(color_name: str, hex_color: str, request_id: str = None) -> Dict[str, Any]:
+async def generate_ai_card_details(hex_color: str, request_id: str = None) -> Dict[str, Any]:
     """
     Generates AI-based card details using Azure OpenAI.
+    Only the hex_color is used - the AI will generate a creative color name and details.
     Returns a dictionary with color name, phonetic, part of speech, and description.
     Overall operation timeout is 59s enforced by asyncio.wait_for.
+    If AI generation fails, the error is propagated to the caller.
     """
     
     OVERALL_TIMEOUT = 59.0 # Slightly less than Vercel's 60s Hobby limit
 
-    log(f"Starting Azure OpenAI API call for color '{color_name}' (hex: {hex_color}). Overall timeout {OVERALL_TIMEOUT}s.", request_id=request_id)
+    log(f"Starting Azure OpenAI API call for hex color '{hex_color}'. Overall timeout {OVERALL_TIMEOUT}s.", request_id=request_id)
     api_call_start_time = time.time()
 
     try:
@@ -36,16 +38,16 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a creative assistant. For the given color, generate poetic and evocative card details."
+                        "content": "You are a creative assistant. For the given hex color, generate poetic and evocative card details."
                     },
                     {
                         "role": "user",
                         "content": (
-                            f"Generate details for a color card named '{color_name}' with hex value '{hex_color}'. I need these fields:\n"
-                            f"1. colorName: A creative and evocative alternative name for the color (max 3 words, ALL CAPS).\n"
-                            f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your new creative colorName.\n"
+                            f"Generate details for a color card with hex value '{hex_color}'. I need these fields:\n"
+                            f"1. colorName: A creative and evocative name for the color (max 3 words, ALL CAPS).\n"
+                            f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your creative colorName.\n"
                             f"3. article: The part of speech for the colorName (e.g., noun, adjective phrase).\n"
-                            f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by its name and hex value.\n\n"
+                            f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by its hex value.\n\n"
                             f"Format your response strictly as a JSON object with these exact keys: colorName, phoneticName, article, description."
                         )
                     }
@@ -66,11 +68,10 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         response_data = json.loads(response_text)
         log(f"Parsed AI response: {json.dumps(response_data, indent=2)}", request_id=request_id)
 
-        # Ensure required fields exist in the response
-        if not response_data.get("colorName"):
-            log(f"Missing required field 'colorName' in AI response", request_id=request_id)
-            raise ValueError("AI response missing required field: colorName")
-            
+        # Get default color name from hex if needed for fallbacks
+        hex_clean = hex_color.lstrip('#').upper()
+        default_color_name = f"HEX {hex_clean[:3]}"
+
         phonetic_raw = str(response_data.get("phoneticName", "")).strip()
         if phonetic_raw.startswith('[') and phonetic_raw.endswith(']'):
             phonetic_final = phonetic_raw
@@ -84,24 +85,20 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
             article_final = f"[{article_raw.strip('[]')}]"
 
         final_details = {
-            "colorName": str(response_data["colorName"]).strip().upper(),
+            "colorName": str(response_data.get("colorName", default_color_name.upper())).strip().upper(),
             "phoneticName": phonetic_final,
             "article": article_final,
-            "description": str(response_data.get("description", "")).strip()
+            "description": str(response_data.get("description", f"A color with hex value {hex_color}.")).strip()
         }
-        
-        # Verify we have a description
-        if not final_details["description"]:
-            log(f"Missing required field 'description' in AI response", request_id=request_id)
-            raise ValueError("AI response missing required field: description")
-            
         log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
         return final_details
 
     except asyncio.TimeoutError:
         log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", request_id=request_id)
-        raise TimeoutError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
-    
+        # Don't handle this error, propagate it to the caller
+        raise ValueError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
+        
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", request_id=request_id)
-        raise ValueError(f"AI generation failed: {str(e)}") 
+        # Propagate the error to the caller
+        raise 
