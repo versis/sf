@@ -130,7 +130,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 CardImageResponseItem(
                     orientation=orientation,
                     image_base64=image_base64,
-                    filename=f"card_{final_card_details['cardName'].replace(' ', '_')}_{orientation}_{request_id}.png"
+                    filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.png"
                 )
             )
             log(f"Successfully generated {orientation} card image.", request_id=request_id)

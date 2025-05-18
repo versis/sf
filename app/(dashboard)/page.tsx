@@ -251,8 +251,8 @@ export default function HomePage() {
       }
       
       // Set the color name to what was potentially modified by the AI
-      if (resultData.ai_details_used && resultData.ai_details_used.cardName) {
-        setColorNameInput(resultData.ai_details_used.cardName);
+      if (resultData.ai_details_used && resultData.ai_details_used.colorName) {
+        setColorNameInput(resultData.ai_details_used.colorName);
       }
 
       for (const card of resultData.generated_cards) {
