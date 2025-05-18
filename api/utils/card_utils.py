@@ -242,9 +242,16 @@ async def generate_card_image_bytes(
 
     # Align metrics to the left (pad_l)
     metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
-    hex_val = hex_color_input.upper()
-    cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
-    rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+    
+    # Check if metrics are provided in card_details, otherwise calculate them
+    if "metrics" in card_details:
+        hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
+        rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
+        cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
+    else:
+        hex_val = hex_color_input.upper()
+        cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
+        rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
     
     metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)]
     # Calculate where the metric values start, to the right of the labels

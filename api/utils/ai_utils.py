@@ -91,17 +91,17 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", request_id=request_id)
         log(f"Falling back to default details for '{color_name}' due to asyncio.TimeoutError", request_id=request_id)
         return {
-            "cardName": color_name.upper(), 
-            "phoneticName": "['tɑɪm.aʊt]", # IPA for timeout
+            "cardName": "PLACEHOLDER COLOR", 
+            "phoneticName": "['pleɪs.hoʊl.dər]", # Phonetic for "placeholder"
             "article": "[fallback due to timeout]",
-            "description": f"AI-generated details for {color_name} took too long."
+            "description": f"This is a placeholder for {color_name}. AI generation timed out."
         }
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", request_id=request_id)
         log(f"Falling back to default details for '{color_name}'", request_id=request_id)
         return {
-            "cardName": color_name.upper(),
-            "phoneticName": "['kʌlər 'neɪm]",
-            "article": "[noun]",
-            "description": f"A beautiful color named {color_name} with hex code {hex_color}. (Error during AI fetch)"
+            "cardName": "EXAMPLE COLOR", 
+            "phoneticName": "['ɛɡ.zæm.pəl]", # Phonetic for "example"
+            "article": "[placeholder]",
+            "description": f"This is a placeholder color with hex code {hex_color}. (AI generation failed)"
         } 
