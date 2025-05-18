@@ -3,7 +3,7 @@ import base64
 from typing import Tuple, Dict, Any, Optional
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from api.utils.logger import log # Corrected import path
+from api.utils.logger import log, debug # Added debug import
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk
 
 # --- Font Loading --- (Assuming assets path is relative to where api/index.py runs)
@@ -24,14 +24,14 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
 
     try:
         loaded_font = ImageFont.truetype(font_path, size)
-        log(f"Successfully loaded font: {font_path}", request_id=request_id)
+        debug(f"Successfully loaded font: {font_path}", request_id=request_id)
         return loaded_font
     except IOError as e:
-        log(f"Failed to load font {font_path}: {e}. Falling back to default.", request_id=request_id)
+        log(f"Failed to load font {font_path}: {e}. Falling back to default.", level="WARNING", request_id=request_id)
         try: # Fallback to Inter Regular if specified font fails, then to default
             if font_family != "Inter" or weight != "Regular" or style != "Normal":
                 fallback_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", f"Inter_{pt_suffix}-Regular.ttf")
-                log(f"Attempting fallback font: {fallback_path}", request_id=request_id)
+                debug(f"Attempting fallback font: {fallback_path}", request_id=request_id)
                 return ImageFont.truetype(fallback_path, size)
         except IOError:
             pass # If fallback also fails, load_default() is next
@@ -58,28 +58,28 @@ async def generate_card_image_bytes(
     
     rgb_color = hex_to_rgb(hex_color_input, request_id)
     if rgb_color is None:
-        log(f"Invalid hex color for card generation: {hex_color_input}", request_id=request_id)
+        log(f"Invalid hex color for card generation: {hex_color_input}", level="ERROR", request_id=request_id)
         raise ValueError(f"Invalid hex color format: {hex_color_input}")
 
     # Decode image
     if ';base64,' not in cropped_image_data_url:
-        log(f"Invalid image data URL format - missing base64 delimiter.", request_id=request_id)
+        log(f"Invalid image data URL format - missing base64 delimiter.", level="ERROR", request_id=request_id)
         raise ValueError("Invalid image data URL format")
     try:
         header, encoded = cropped_image_data_url.split(';base64,', 1)
         image_data = base64.b64decode(encoded)
         img_buffer = io.BytesIO(image_data)
         user_image_pil = Image.open(img_buffer).convert("RGBA")
-        log(f"User image decoded. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}", request_id=request_id)
+        debug(f"User image decoded. Mode: {user_image_pil.mode}, Size: {user_image_pil.size}", request_id=request_id)
     except Exception as e:
-        log(f"Error decoding/opening base64 image: {e}", request_id=request_id)
+        log(f"Error decoding/opening base64 image: {e}", level="ERROR", request_id=request_id)
         raise ValueError(f"Failed to process image data: {str(e)}")
 
     # Resize large images
     if user_image_pil.width > 2000 or user_image_pil.height > 2000:
-        log(f"Resizing image from {user_image_pil.size} to max 2000px side", request_id=request_id)
+        debug(f"Resizing image from {user_image_pil.size} to max 2000px side", request_id=request_id)
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
-        log(f"Resized image to: {user_image_pil.size}", request_id=request_id)
+        debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
     # Card dimensions (reduced for better file size)
     VERTICAL_CARD_W, VERTICAL_CARD_H = 900, 1800
@@ -112,8 +112,8 @@ async def generate_card_image_bytes(
     paste_y = img_paste_pos[1] + (img_panel_h - user_image_sized.height) // 2
     img_centered_pos = (paste_x, paste_y)
     canvas.paste(user_image_sized, img_centered_pos, user_image_sized if user_image_sized.mode == 'RGBA' else None)
-    log(f"Image panel size: {img_panel_w}x{img_panel_h}, Image size: {user_image_sized.width}x{user_image_sized.height}", request_id=request_id)
-    log(f"Image centered at: {img_centered_pos}", request_id=request_id)
+    debug(f"Image panel size: {img_panel_w}x{img_panel_h}, Image size: {user_image_sized.width}x{user_image_sized.height}", request_id=request_id)
+    debug(f"Image centered at: {img_centered_pos}", request_id=request_id)
 
     # Text rendering
     text_color = (20, 20, 20) if sum(rgb_color) > 384 else (245, 245, 245) # 128*3 = 384
@@ -246,7 +246,7 @@ async def generate_card_image_bytes(
         _, h_current_metric_label = get_text_dimensions(label, f_metrics_label)
         current_metrics_y += h_current_metric_label + line_spacing_metrics
     
-    log("Text rendering complete", request_id=request_id)
+    debug("Text rendering complete", request_id=request_id)
 
     # Rounded corners and save
     radius = 40
@@ -254,7 +254,7 @@ async def generate_card_image_bytes(
     ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
     mask = mask.resize((card_w, card_h), Image.Resampling.LANCZOS)
     canvas.putalpha(mask)
-    log("Applied rounded corners", request_id=request_id)
+    debug("Applied rounded corners", request_id=request_id)
 
     img_byte_arr = io.BytesIO()
     # Convert to RGB for image saving

@@ -6,7 +6,7 @@ import io
 from typing import Optional, Tuple
 from PIL import Image
 
-from api.utils.logger import log
+from api.utils.logger import log, debug
 
 # Constants
 IMAGE_SIZE = (512, 512)
@@ -35,19 +35,19 @@ class ImageProcessor:
         ValueError:
             If the image data URL is invalid or cannot be decoded
         """
-        log(f"Decoding image data URL", request_id=request_id)
+        debug(f"Decoding image data URL", request_id=request_id)
         
         # Validate image data URL
         if ';base64,' not in image_data_url:
-            log(f"Invalid image data URL format - missing base64 delimiter.", request_id=request_id)
+            log(f"Invalid image data URL format - missing base64 delimiter.", level="ERROR", request_id=request_id)
             raise ValueError("Invalid image data URL format")
         
         try:
             header, encoded = image_data_url.split(';base64,', 1)
-            log(f"Image format from header: {header}", request_id=request_id)
+            debug(f"Image format from header: {header}", request_id=request_id)
             
             image_data = base64.b64decode(encoded)
-            log(f"Successfully decoded base64 data, size: {len(image_data) / 1024:.2f} KB", request_id=request_id)
+            debug(f"Successfully decoded base64 data, size: {len(image_data) / 1024:.2f} KB", request_id=request_id)
             
             return header, image_data
         except Exception as e:
@@ -77,7 +77,7 @@ class ImageProcessor:
             If the image cannot be cropped
         """
         try:
-            log(f"Converting image to perfect square", request_id=request_id)
+            debug(f"Converting image to perfect square", request_id=request_id)
             
             # Get dimensions
             width, height = img.size
@@ -94,7 +94,7 @@ class ImageProcessor:
             # Crop to square
             square_img = img.crop((left, top, right, bottom))
             
-            log(f"Cropped to square: {square_img.size}", request_id=request_id)
+            debug(f"Cropped to square: {square_img.size}", request_id=request_id)
             return square_img
         except Exception as e:
             log(f"Error cropping image to square: {str(e)}", level="ERROR", request_id=request_id)
@@ -123,10 +123,10 @@ class ImageProcessor:
             If the image cannot be converted to RGB
         """
         try:
-            log(f"Converting image to RGB if needed", request_id=request_id)
+            debug(f"Converting image to RGB if needed", request_id=request_id)
             if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
                 rgb_img = img.convert('RGB')
-                log(f"Converted image to RGB mode", request_id=request_id)
+                debug(f"Converted image to RGB mode", request_id=request_id)
                 return rgb_img
             return img
         except Exception as e:
@@ -164,7 +164,7 @@ def resize_and_convert_image_for_openai(image_data_url: str, request_id: Optiona
         try:
             img_buffer = io.BytesIO(image_data)
             img = Image.open(img_buffer)
-            log(f"Successfully opened image. Format: {img.format}, Mode: {img.mode}, Size: {img.size}", request_id=request_id)
+            debug(f"Successfully opened image. Format: {img.format}, Mode: {img.mode}, Size: {img.size}", request_id=request_id)
         except Exception as e:
             log(f"Error opening image data: {str(e)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Failed to open image data: {str(e)}")
@@ -177,9 +177,9 @@ def resize_and_convert_image_for_openai(image_data_url: str, request_id: Optiona
         
         # Resize to target size
         try:
-            log(f"Resizing image from {img.size} to {IMAGE_SIZE} for OpenAI", request_id=request_id)
+            debug(f"Resizing image from {img.size} to {IMAGE_SIZE} for OpenAI", request_id=request_id)
             img = img.resize(IMAGE_SIZE, Image.Resampling.LANCZOS)
-            log(f"Successfully resized image to {img.size}", request_id=request_id)
+            debug(f"Successfully resized image to {img.size}", request_id=request_id)
         except Exception as e:
             log(f"Error resizing image: {str(e)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Failed to resize image: {str(e)}")
@@ -189,7 +189,7 @@ def resize_and_convert_image_for_openai(image_data_url: str, request_id: Optiona
             output_buffer = io.BytesIO()
             img.save(output_buffer, format="JPEG", quality=JPG_QUALITY)
             output_buffer.seek(0)
-            log(f"Successfully saved image as JPEG", request_id=request_id)
+            debug(f"Successfully saved image as JPEG", request_id=request_id)
         except Exception as e:
             log(f"Error saving image as JPEG: {str(e)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Failed to save image as JPEG: {str(e)}")
@@ -197,7 +197,7 @@ def resize_and_convert_image_for_openai(image_data_url: str, request_id: Optiona
         # Encode as base64
         try:
             jpg_base64 = base64.b64encode(output_buffer.read()).decode('utf-8')
-            log(f"Successfully encoded image as base64, length: {len(jpg_base64) // 1024} KB", request_id=request_id)
+            debug(f"Successfully encoded image as base64, length: {len(jpg_base64) // 1024} KB", request_id=request_id)
         except Exception as e:
             log(f"Error encoding image to base64: {str(e)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Failed to encode image as base64: {str(e)}")

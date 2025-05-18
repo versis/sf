@@ -28,5 +28,5 @@ class ColorCardDetails(BaseModel):
         description="The part of speech for the colorName (e.g., noun, adjective phrase)"
     )
     description: str = Field(
-        description="A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by the image"
+        description="A poetic description (max 30-40 words) that evokes the feeling/mood of this color, inspired by the image"
     ) 

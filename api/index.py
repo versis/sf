@@ -93,7 +93,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
 
     # Validate that the cropped image is provided
     if not data.croppedImageDataUrl:
-        log(f"No cropped image provided in request", request_id=request_id)
+        log(f"No cropped image provided in request", level="ERROR", request_id=request_id)
         return JSONResponse(
             status_code=400,
             content=GenerateCardsResponse(
@@ -105,7 +105,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
         )
 
     if not hex_to_rgb(data.hexColor):
-        log(f"Invalid hexColor format provided: {data.hexColor}", request_id=request_id)
+        log(f"Invalid hexColor format provided: {data.hexColor}", level="ERROR", request_id=request_id)
         return JSONResponse(
             status_code=400,
             content=GenerateCardsResponse(
@@ -127,7 +127,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             # Log image size to help diagnose issues
             if data.croppedImageDataUrl:
                 img_data_size = len(data.croppedImageDataUrl) / 1024
-                log(f"Cropped image data URL size: {img_data_size:.2f}KB", request_id=request_id)
+                debug(f"Cropped image data URL size: {img_data_size:.2f}KB", request_id=request_id)
                 
                 if img_data_size > 10000:  # If image is larger than ~10MB
                     log(f"Warning: Image size is very large ({img_data_size:.2f}KB)", level="WARNING", request_id=request_id)
@@ -189,14 +189,14 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             "cardId": data.cardId or default_card_id
         }
 
-    log(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
+    debug(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
     generated_cards_response_items: List[CardImageResponseItem] = []
     orientations_to_generate = ["horizontal", "vertical"]
 
     try:
         for orientation in orientations_to_generate:
-            log(f"Generating {orientation} card image...", request_id=request_id)
+            debug(f"Generating {orientation} card image...", request_id=request_id)
             image_bytes = await generate_card_image_bytes(
                 cropped_image_data_url=data.croppedImageDataUrl,
                 card_details=final_card_details,

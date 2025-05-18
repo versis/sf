@@ -8,7 +8,7 @@ import os
 from typing import Dict, Any, Optional
 
 from api.models.card import ColorCardDetails
-from api.utils.logger import log, info
+from api.utils.logger import log, info, debug
 from api.utils.image_processor import resize_and_convert_image_for_openai
 from api.utils.response_formatter import OpenAIResponseFormatter
 from api.utils.openai_client import azure_client, OVERALL_TIMEOUT
@@ -70,9 +70,9 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
     try:
         # Resize and convert the image to 512x512 JPG for OpenAI
         try:
-            log(f"Starting image optimization", request_id=request_id)
+            debug(f"Starting image optimization", request_id=request_id)
             optimized_image_data_url = resize_and_convert_image_for_openai(cropped_image_data_url, request_id)
-            log(f"Image optimization complete", request_id=request_id)
+            debug(f"Image optimization complete", request_id=request_id)
         except ValueError as resize_error:
             log(f"Error resizing image for OpenAI API: {str(resize_error)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Image processing failed: {str(resize_error)}")
@@ -84,10 +84,10 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             "image_included": True,
             "image_size": len(optimized_image_data_url) // 1024,
         }
-        log(f"Azure OpenAI API request parameters: {json.dumps(log_request)}", request_id=request_id)
+        debug(f"Azure OpenAI API request parameters: {json.dumps(log_request)}", request_id=request_id)
 
         try:
-            log(f"Sending request to Azure OpenAI API", request_id=request_id)
+            debug(f"Sending request to Azure OpenAI API", request_id=request_id)
             
             # Ensure the Azure client is properly initialized
             if not azure_client:
@@ -106,8 +106,23 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                         {
                             "type": "text", 
                             "text": (
-                                f"Generate details for a color card with hex value '{hex_color}'. "
-                                f"Analyze the image and create a creative name and description inspired by both the color and the image content."
+                                f"""
+                                # Main goal
+                                Generate details based for a color card, based on:
+                                1. hex value '{hex_color}',
+                                2. analysis of attached image.
+                                
+                                # Detailed description
+                                Create a creative name and description inspired by both the color and the image content.
+                                It's a pantone like swatch card with a twist.
+                                
+                                The image and color is coming from the user.
+                                It should give the user his unique color name and description that will take into consideration not only the hex value (chosen by the user), but also the image.
+                                When you try to figure the name and description out , remember - it's not only about the elements of image, but also the emotions one can feel when looks at the image. You should always find something positive. To make the user's day better, inspired. It will be poetic for sure. And unique. Each card is unique.
+                                
+                                The description should fit the name.
+                                Make your ideas wander. Good luck.
+                                """
                             )
                         },
                         {
@@ -140,7 +155,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 info(f"TOKEN USAGE: Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}", 
                      request_id=request_id)
             else:
-                log(f"No token usage information available in the response", request_id=request_id)
+                debug(f"No token usage information available in the response", request_id=request_id)
 
             if not completion.choices or not completion.choices[0].message or not completion.choices[0].message.parsed:
                 log(f"Azure OpenAI response was empty or malformed", level="ERROR", request_id=request_id)
@@ -148,11 +163,11 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             
             # Get the parsed output directly from the response
             card_details = completion.choices[0].message.parsed
-            log(f"Parsed structured output: {card_details}", request_id=request_id)
+            debug(f"Parsed structured output: {card_details}", request_id=request_id)
             
             # Format the response
             final_details = OpenAIResponseFormatter.format_response(card_details, hex_color)
-            log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
+            debug(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
                 
             return final_details
                 
