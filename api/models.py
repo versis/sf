@@ -16,7 +16,4 @@ class GenerateCardsResponse(BaseModel):
     request_id: str
     ai_details_used: Dict[str, Any]
     generated_cards: List[CardImageResponseItem]
-    error: Optional[str] = None
-
-class CardDetailsRequest(BaseModel):
-    hexColor: str 
+    error: Optional[str] = None 

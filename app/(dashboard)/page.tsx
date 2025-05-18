@@ -228,8 +228,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           croppedImageDataUrl,
-          hexColor: selectedHexColor,
-          colorName: colorNameInput
+          hexColor: selectedHexColor
           // No other fields needed - the backend will handle everything else
         }),
       });
