@@ -3,18 +3,17 @@ import json
 import time
 import uuid
 import base64
-import re
-from typing import Optional, Dict, Any, List
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from api.utils.logger import log
 from api.utils.ai_utils import generate_ai_card_details
-from api.utils.card_utils import generate_card_image_bytes, hex_to_rgb
+from api.utils.card_utils import generate_card_image_bytes, hex_to_rgb, rgb_to_cmyk
+from api.models import GenerateCardsRequest, CardImageResponseItem, GenerateCardsResponse, CardDetailsRequest
 
 # Rate limiting with slowapi
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -39,63 +38,6 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# --- Color Conversion Utilities (from shadefreude) ---
-def hex_to_rgb(hex_color: str) -> tuple[int, int, int] | None:
-    """Converts a HEX color string to an RGB tuple."""
-    hex_color = hex_color.lstrip('#')
-    if not re.match(r"^[0-9a-fA-F]{6}$", hex_color) and not re.match(r"^[0-9a-fA-F]{3}$", hex_color):
-        print(f"Invalid HEX format: {hex_color}")
-        return None 
-    
-    if len(hex_color) == 3:
-        r = int(hex_color[0]*2, 16)
-        g = int(hex_color[1]*2, 16)
-        b = int(hex_color[2]*2, 16)
-    else: # len == 6
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-    return (r, g, b)
-
-def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[int, int, int, int]:
-    """Converts an RGB color (0-255) to CMYK (0-100)."""
-    if (r, g, b) == (0, 0, 0):
-        return 0, 0, 0, 100
-
-    c = 1 - (r / 255.0)
-    m = 1 - (g / 255.0)
-    y = 1 - (b / 255.0)
-
-    min_cmy = min(c, m, y)
-    # Handle case for white to avoid division by zero if 1 - min_cmy is 0
-    if min_cmy == 1.0: # This means c, m, y were all 0 (white)
-        return 0, 0, 0, 0
-
-    c = (c - min_cmy) / (1 - min_cmy)
-    m = (m - min_cmy) / (1 - min_cmy)
-    y = (y - min_cmy) / (1 - min_cmy)
-    k = min_cmy
-
-    return round(c * 100), round(m * 100), round(y * 100), round(k * 100)
-# --- End Color Conversion Utilities ---
-
-# --- Pydantic Models ---
-class GenerateCardsRequest(BaseModel):
-    croppedImageDataUrl: str
-    hexColor: str
-    colorName: str
-
-class CardImageResponseItem(BaseModel):
-    orientation: str
-    image_base64: str
-    filename: str
-
-class GenerateCardsResponse(BaseModel):
-    request_id: str
-    ai_details_used: Dict[str, Any]
-    generated_cards: List[CardImageResponseItem]
-    error: Optional[str] = None
-
 # --- Unified API Endpoint ---
 @app.post("/api/generate-cards", response_model=GenerateCardsResponse)
 @limiter.limit("5/minute")
@@ -105,7 +47,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     request_start_time = time.time()
 
     # Validate hex color format
-    rgb_color = hex_to_rgb(data.hexColor)
+    rgb_color = hex_to_rgb(data.hexColor, request_id)
     if not rgb_color:
         log(f"Invalid hexColor format provided: {data.hexColor}", request_id=request_id)
         return JSONResponse(
@@ -168,7 +110,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     }
 
     # Generate cards for both orientations
-    generated_cards_response_items: List[CardImageResponseItem] = []
+    generated_cards_response_items = []
     orientations_to_generate = ["horizontal", "vertical"]
 
     try:
@@ -227,10 +169,6 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             ).model_dump()
         )
 
-class CardDetailsRequest(BaseModel):
-    hexColor: str
-    colorName: str
-
 @app.post("/api/generate-card-details")
 @limiter.limit("10/minute")
 async def generate_card_details_route(data: CardDetailsRequest, request: FastAPIRequest):
@@ -262,7 +200,7 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
         # Re-raise HTTPException
         raise e
     except Exception as e:
-        print(f"Error generating card details: {str(e)}")
+        log(f"Error generating card details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate card details: {str(e)}")
 
 # To run locally (ensure uvicorn is installed: pip install uvicorn)
