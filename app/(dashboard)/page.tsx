@@ -15,7 +15,6 @@ export default function HomePage() {
   const [generatedVerticalImageUrl, setGeneratedVerticalImageUrl] = useState<string | null>(null);
   const [generatedHorizontalImageUrl, setGeneratedHorizontalImageUrl] = useState<string | null>(null);
   const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
-  const [confirmedOrientation, setConfirmedOrientation] = useState<'horizontal' | 'vertical' | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [colorNameInput, setColorNameInput] = useState<string>('EXAMPLE COLOR NAME');
@@ -55,33 +54,6 @@ export default function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
-    let urlsToRevoke: string[] = [];
-    // We only want to revoke the URLs that are currently *not* being displayed
-    // or if we are resetting everything.
-    // This effect should primarily run when generatedVerticalImageUrl or generatedHorizontalImageUrl change.
-
-    // This logic might be too aggressive if it runs every time generatedImageUrl changes due to toggling.
-    // Let's refine it to only revoke when a *new* set of images is generated (i.e., when isGenerating becomes false)
-    // OR when the component unmounts.
-
-    // For now, the existing dependency array [generatedImageUrl, generatedVerticalImageUrl, generatedHorizontalImageUrl]
-    // means it will try to revoke whenever *any* of these change. This could be an issue if toggling re-triggers it.
-    // A better approach would be to revoke old URLs inside resetGeneration or when new images are fetched.
-
-    // For simplicity, let's stick to revoking only when the component unmounts for now.
-    // The resetGeneration function already handles revoking.
-    // return () => {
-    //   if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
-    //   if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
-    //   if (generatedImageUrl?.startsWith('blob:') && 
-    //       generatedImageUrl !== generatedVerticalImageUrl && 
-    //       generatedImageUrl !== generatedHorizontalImageUrl) {
-    //     URL.revokeObjectURL(generatedImageUrl);
-    //   }
-    // };
-  }, []); // Empty dependency array means this cleanup runs only on unmount
-
   const resetWizard = () => {
     setUploadStepPreviewUrl(null);
     setCroppedImageDataUrl(null);
@@ -89,7 +61,6 @@ export default function HomePage() {
     setGeneratedVerticalImageUrl(null);
     setGeneratedHorizontalImageUrl(null);
     setCurrentDisplayOrientation('horizontal');
-    setConfirmedOrientation(null);
     setIsGenerating(false);
     setGenerationError(null);
     setColorNameInput('EXAMPLE COLOR NAME');
@@ -140,7 +111,6 @@ export default function HomePage() {
     // When image is cropped, reset subsequent steps' progress
     setIsColorStepCompleted(false);
     setIsResultsStepCompleted(false);
-    setConfirmedOrientation(null);
     setUserHasInteractedWithColor(false); 
     setSelectedHexColor('#000000');
     setGeneratedVerticalImageUrl(null); 
@@ -164,7 +134,6 @@ export default function HomePage() {
         setGeneratedHorizontalImageUrl(null);
         setIsColorStepCompleted(false); // Require re-generation
         setIsResultsStepCompleted(false);
-        setConfirmedOrientation(null);
         setCurrentWizardStep('color'); // Stay to regenerate
     }
   };
@@ -193,22 +162,21 @@ export default function HomePage() {
     // Immediately move to step 4 (results) to show progress bar there
     setCurrentWizardStep('results');
     
-    // Start the smooth progress animation
-    const progressInterval = 100; // Update every 100ms for smoother feel over longer duration
+    // Start the smooth progress animation using requestAnimationFrame
+    const startTime = performance.now();
     const totalDuration = 58000; // 58 seconds to align with backend timeout
-    const totalSteps = totalDuration / progressInterval;
-    const progressIncrement = 100 / totalSteps;
     
-    let currentStep = 0;
-    const progressTimer = setInterval(() => {
-      currentStep++;
-      const newProgress = Math.min(99, progressIncrement * currentStep); // Cap at 99% until completion
+    const updateProgress = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime;
+      const newProgress = Math.min(99, (elapsedTime / totalDuration) * 100); // Cap at 99% until completion
       setGenerationProgress(newProgress);
       
-      if (currentStep >= totalSteps) {
-        clearInterval(progressTimer);
+      if (elapsedTime < totalDuration && !generatedVerticalImageUrl && !generatedHorizontalImageUrl) {
+        requestAnimationFrame(updateProgress);
       }
-    }, progressInterval);
+    };
+    
+    requestAnimationFrame(updateProgress);
     
     // Clear previous images before new generation
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
@@ -295,9 +263,6 @@ export default function HomePage() {
       }
       
       setGenerationProgress(100);
-      
-      // Clear the progress timer if it's still running
-      clearInterval(progressTimer);
 
     } catch (error) {
       console.error('Error during image generation:', error);
@@ -307,9 +272,6 @@ export default function HomePage() {
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
       setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
-      
-      // Clear the progress timer if it's still running
-      clearInterval(progressTimer);
     } finally {
       setIsGenerating(false);
       setGenerationProgress(100); // Ensure progress is complete
@@ -344,7 +306,7 @@ export default function HomePage() {
     
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = `shadefreude-${orientation}-${colorNameInput.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
+    link.download = `shadefreude-${orientation}-${selectedHexColor.substring(1)}-${new Date().getTime()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

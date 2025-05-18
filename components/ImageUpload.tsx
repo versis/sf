@@ -25,65 +25,6 @@ function centerAspectCrop(
   );
 }
 
-// Adaptively compress an image to target size
-const compressImageToTargetSize = async (
-  dataUrl: string, 
-  targetSizeMB: number = 2, 
-  initialQuality: number = 0.9,
-  maxAttempts: number = 5
-): Promise<string> => {
-  // Function to get size in MB from a data URL
-  const getSizeInMB = (dataUrl: string): number => {
-    // base64 string is ~4/3 the size of the actual bytes
-    return (dataUrl.length * 0.75) / (1024 * 1024);
-  };
-
-  let currentDataUrl = dataUrl;
-  let currentSize = getSizeInMB(currentDataUrl);
-  let attempt = 0;
-  let quality = initialQuality;
-
-  // Log initial size
-  console.log(`Initial image size: ${currentSize.toFixed(2)}MB`);
-
-  // If image is already under target size, return it
-  if (currentSize <= targetSizeMB) {
-    console.log(`Image already under ${targetSizeMB}MB (${currentSize.toFixed(2)}MB), no compression needed`);
-    return currentDataUrl;
-  }
-
-  // Try compressing with increasingly lower quality until we hit target size
-  while (currentSize > targetSizeMB && attempt < maxAttempts) {
-    attempt++;
-    
-    // Lower quality based on how far we are from target and how many attempts we've made
-    const sizeRatio = currentSize / targetSizeMB;
-    quality = Math.max(0.5, quality * (1 / Math.min(sizeRatio, 1.5)));
-    
-    // Apply compression
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = currentDataUrl;
-    });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Failed to get canvas context');
-    
-    ctx.drawImage(img, 0, 0);
-    currentDataUrl = canvas.toDataURL('image/jpeg', quality);
-    currentSize = getSizeInMB(currentDataUrl);
-    
-    console.log(`Attempt ${attempt}: Compressed to quality ${quality.toFixed(2)}, new size: ${currentSize.toFixed(2)}MB`);
-  }
-
-  return currentDataUrl;
-};
-
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
   onImageCropped: (croppedImageDataUrl: string | null) => void;
