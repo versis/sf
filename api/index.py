@@ -22,7 +22,8 @@ from api.utils.logger import log, error, info, warning, debug
 from api.utils.ai_utils import generate_ai_card_details
 from api.utils.color_utils import hex_to_rgb
 from api.utils.card_utils import generate_card_image_bytes
-from api.models import GenerateCardsRequest, CardImageResponseItem, GenerateCardsResponse
+from api.models.request import GenerateCardsRequest
+from api.models.response import CardImageResponseItem, GenerateCardsResponse
 
 # Print directly to ensure we can see console output
 print("==== STARTUP: Loading FastAPI app ====")
@@ -215,7 +216,8 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 CardImageResponseItem(
                     orientation=orientation,
                     image_base64=image_base64,
-                    filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.jpg"
+                    filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.jpg",
+                    cardId=final_card_details.get('cardId', "0000000 XX X")
                 )
             )
             log(f"Successfully generated {orientation} card image.", request_id=request_id)

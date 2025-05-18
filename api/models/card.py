@@ -1,5 +1,5 @@
 """
-Pydantic models for structured outputs from OpenAI API.
+Pydantic models for card data structures.
 """
 from pydantic import BaseModel, Field
 
