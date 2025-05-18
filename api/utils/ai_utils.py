@@ -8,7 +8,7 @@ import os
 from typing import Dict, Any, Optional
 
 from api.models.card import ColorCardDetails
-from api.utils.logger import log
+from api.utils.logger import log, info
 from api.utils.image_processor import resize_and_convert_image_for_openai
 from api.utils.response_formatter import OpenAIResponseFormatter
 from api.utils.openai_client import azure_client, OVERALL_TIMEOUT
@@ -136,7 +136,9 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 usage = completion.usage
                 log(f"Token usage - Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}", 
                     request_id=request_id)
-                print(f"TOKEN USAGE [request_id={request_id}]: Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}")
+                # Use info level for token usage to ensure it's visible
+                info(f"TOKEN USAGE: Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}", 
+                     request_id=request_id)
             else:
                 log(f"No token usage information available in the response", request_id=request_id)
 

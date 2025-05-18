@@ -29,13 +29,22 @@ class RequestIdFilter(logging.Filter):
         self.request_id = request_id
     
     def filter(self, record):
-        record.request_id = self.request_id if hasattr(self, 'request_id') else 'None'
+        record.request_id = self.request_id if hasattr(self, 'request_id') and self.request_id else None
         return True
+
+# Custom formatter that only displays request_id when it exists
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        if hasattr(record, 'request_id') and record.request_id:
+            self._style._fmt = '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
+        else:
+            self._style._fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        return super().format(record)
 
 # Add a console handler to ensure logs appear in the terminal
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(numeric_level)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s')
+formatter = CustomFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logger.addFilter(RequestIdFilter())

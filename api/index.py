@@ -14,20 +14,20 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-# Only configure console printing - no additional logging setup 
-print("==== STARTUP: Direct print to console ====")
-sys.stdout.flush()
+# Import logger early to ensure it's configured before use
+from api.utils.logger import log, error, info, warning, debug, critical
 
-from api.utils.logger import log, error, info, warning, debug
+# Only log startup messages using the logger
+info("==== STARTUP: Direct from FastAPI entry point ====")
+
 from api.utils.ai_utils import generate_ai_card_details
 from api.utils.color_utils import hex_to_rgb
 from api.utils.card_utils import generate_card_image_bytes
 from api.models.request import GenerateCardsRequest
 from api.models.response import CardImageResponseItem, GenerateCardsResponse
 
-# Print directly to ensure we can see console output
-print("==== STARTUP: Loading FastAPI app ====")
-sys.stdout.flush()
+# Log app loading
+info("==== Loading FastAPI app ====")
 
 # Rate limiting with slowapi
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -37,11 +37,10 @@ import uvicorn
 
 load_dotenv(".env.local")
 
-# Direct logging to verify env vars
-print(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
-print(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
-print(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
-sys.stdout.flush()
+# Log environment variables
+info(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
+info(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
+info(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -60,12 +59,9 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    # Direct print for startup
-    print("===== FastAPI STARTUP EVENT =====")
-    sys.stdout.flush()
+    # Use logger for startup
+    info("===== FastAPI STARTUP EVENT =====")
     
-    # Logger calls
-    info("Starting application...")
     # Log environment variable configuration (excluding sensitive values)
     debug(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
     debug(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
@@ -74,14 +70,11 @@ async def startup_event():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: FastAPIRequest, exc: Exception):
-    # Direct print for exceptions
-    print(f"EXCEPTION: {str(exc)}")
-    print(f"TRACEBACK: {traceback.format_exc()}")
-    sys.stdout.flush()
-    
-    # Logger call
-    error(f"Unhandled exception: {str(exc)}")
+    # Log exceptions properly
+    error_msg = f"Unhandled exception: {str(exc)}"
+    error(error_msg)
     error(f"Traceback: {traceback.format_exc()}")
+    
     return JSONResponse(
         status_code=500,
         content={"error": "An unexpected error occurred", "detail": str(exc)}
@@ -260,11 +253,10 @@ if __name__ == "__main__":
     # If index.py is in /api, and assets are in /assets, card_utils.ASSETS_BASE_PATH might need to be "../assets"
     # Or, ensure the CWD is the project root when running uvicorn.
     # For uvicorn from project root: uvicorn api.index:app --reload
-    print("===== STARTING UVICORN SERVER =====")
-    print(f"Environment: {os.environ.get('NODE_ENV', 'development')}")
-    print(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
-    print(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
-    sys.stdout.flush()
+    info("===== STARTING UVICORN SERVER =====")
+    info(f"Environment: {os.environ.get('NODE_ENV', 'development')}")
+    info(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
+    info(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
     
     info("Starting Uvicorn server for local development...")
     
