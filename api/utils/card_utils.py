@@ -158,15 +158,15 @@ async def generate_card_image_bytes(
     f_metrics_label = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_val = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
-    # Card Name (from AI or default)
-    card_name_display = card_details.get("cardName", "MISSING NAME").upper()
+    # Color Name (from AI or default)
+    color_name_display = card_details.get("colorName", "MISSING NAME").upper()
     current_y += int(swatch_h * 0.07)
     x_pos = pad_l
-    for char_cn in card_name_display:
+    for char_cn in color_name_display:
         draw.text((x_pos, current_y), char_cn, font=f_title, fill=text_color)
         char_w_cn, _ = get_text_dimensions(char_cn, f_title)
         x_pos += char_w_cn + int(swatch_w * 0.002)
-    _, h_title = get_text_dimensions(card_name_display, f_title)
+    _, h_title = get_text_dimensions(color_name_display, f_title)
     current_y += h_title + int(swatch_h * 0.03)
 
     # Phonetic & Article
@@ -242,9 +242,16 @@ async def generate_card_image_bytes(
 
     # Align metrics to the left (pad_l)
     metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
-    hex_val = hex_color_input.upper()
-    cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
-    rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+    
+    # Check if metrics are provided in card_details, otherwise calculate them
+    if "metrics" in card_details:
+        hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
+        rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
+        cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
+    else:
+        hex_val = hex_color_input.upper()
+        cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
+        rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
     
     metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)]
     # Calculate where the metric values start, to the right of the labels

@@ -20,7 +20,7 @@ azure_client = AsyncAzureOpenAI(
 async def generate_ai_card_details(color_name: str, hex_color: str, request_id: str = None) -> Dict[str, Any]:
     """
     Generates AI-based card details using Azure OpenAI.
-    Returns a dictionary with card name, phonetic, part of speech, and description.
+    Returns a dictionary with color name, phonetic, part of speech, and description.
     Overall operation timeout is 59s enforced by asyncio.wait_for.
     """
     
@@ -42,11 +42,11 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
                         "role": "user",
                         "content": (
                             f"Generate details for a color card named '{color_name}' with hex value '{hex_color}'. I need these fields:\n"
-                            f"1. cardName: A creative and evocative alternative name for the color (max 3 words, ALL CAPS).\n"
-                            f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your new creative cardName.\n"
-                            f"3. article: The part of speech for the cardName (e.g., noun, adjective phrase).\n"
+                            f"1. colorName: A creative and evocative alternative name for the color (max 3 words, ALL CAPS).\n"
+                            f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your new creative colorName.\n"
+                            f"3. article: The part of speech for the colorName (e.g., noun, adjective phrase).\n"
                             f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of this color, inspired by its name and hex value.\n\n"
-                            f"Format your response strictly as a JSON object with these exact keys: cardName, phoneticName, article, description."
+                            f"Format your response strictly as a JSON object with these exact keys: colorName, phoneticName, article, description."
                         )
                     }
                 ],
@@ -66,6 +66,11 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
         response_data = json.loads(response_text)
         log(f"Parsed AI response: {json.dumps(response_data, indent=2)}", request_id=request_id)
 
+        # Ensure required fields exist in the response
+        if not response_data.get("colorName"):
+            log(f"Missing required field 'colorName' in AI response", request_id=request_id)
+            raise ValueError("AI response missing required field: colorName")
+            
         phonetic_raw = str(response_data.get("phoneticName", "")).strip()
         if phonetic_raw.startswith('[') and phonetic_raw.endswith(']'):
             phonetic_final = phonetic_raw
@@ -79,29 +84,24 @@ async def generate_ai_card_details(color_name: str, hex_color: str, request_id: 
             article_final = f"[{article_raw.strip('[]')}]"
 
         final_details = {
-            "cardName": str(response_data.get("cardName", color_name.upper())).strip().upper(),
+            "colorName": str(response_data["colorName"]).strip().upper(),
             "phoneticName": phonetic_final,
             "article": article_final,
-            "description": str(response_data.get("description", f"A color named {color_name}.")).strip()
+            "description": str(response_data.get("description", "")).strip()
         }
+        
+        # Verify we have a description
+        if not final_details["description"]:
+            log(f"Missing required field 'description' in AI response", request_id=request_id)
+            raise ValueError("AI response missing required field: description")
+            
         log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
         return final_details
 
     except asyncio.TimeoutError:
         log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", request_id=request_id)
-        log(f"Falling back to default details for '{color_name}' due to asyncio.TimeoutError", request_id=request_id)
-        return {
-            "cardName": color_name.upper(), 
-            "phoneticName": "['tɑɪm.aʊt]", # IPA for timeout
-            "article": "[fallback due to timeout]",
-            "description": f"AI-generated details for {color_name} took too long."
-        }
+        raise TimeoutError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
+    
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", request_id=request_id)
-        log(f"Falling back to default details for '{color_name}'", request_id=request_id)
-        return {
-            "cardName": color_name.upper(),
-            "phoneticName": "['kʌlər 'neɪm]",
-            "article": "[noun]",
-            "description": f"A beautiful color named {color_name} with hex code {hex_color}. (Error during AI fetch)"
-        } 
+        raise ValueError(f"AI generation failed: {str(e)}") 
