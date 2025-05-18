@@ -162,21 +162,25 @@ export default function HomePage() {
     // Immediately move to step 4 (results) to show progress bar there
     setCurrentWizardStep('results');
     
-    // Start the smooth progress animation using requestAnimationFrame
-    const startTime = performance.now();
-    const totalDuration = 58000; // 58 seconds to align with backend timeout
-    
-    const updateProgress = (currentTime: number) => {
-      const elapsedTime = currentTime - startTime;
-      const newProgress = Math.min(99, (elapsedTime / totalDuration) * 100); // Cap at 99% until completion
+    // Start the progress bar: 60-second duration, smooth constant increment
+    const totalProgressDuration = 60000; // 60 seconds in milliseconds
+    const updatesPerSecond = 10; // Update 10 times per second for smoothness
+    const progressIntervalTime = 1000 / updatesPerSecond; // 100ms interval
+    const totalUpdates = totalProgressDuration / progressIntervalTime; // 60s * 10fps = 600 updates
+    const progressIncrement = 100 / totalUpdates; // Increment to reach 100% over totalUpdates (100 / 600 = 1/6)
+
+    let currentProgressValue = 0;
+    setGenerationProgress(0);
+
+    const progressInterval = setInterval(() => {
+      currentProgressValue += progressIncrement;
+      const newProgress = Math.min(100, currentProgressValue); // Cap at 100
       setGenerationProgress(newProgress);
-      
-      if (elapsedTime < totalDuration && !generatedVerticalImageUrl && !generatedHorizontalImageUrl) {
-        requestAnimationFrame(updateProgress);
+
+      if (newProgress >= 100) {
+        clearInterval(progressInterval);
       }
-    };
-    
-    requestAnimationFrame(updateProgress);
+    }, progressIntervalTime);
     
     // Clear previous images before new generation
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
@@ -262,6 +266,7 @@ export default function HomePage() {
         throw new Error('Both card generations failed.');
       }
       
+      clearInterval(progressInterval); // Stop interval if API finishes early
       setGenerationProgress(100);
 
     } catch (error) {
@@ -272,9 +277,15 @@ export default function HomePage() {
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
       setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
+      clearInterval(progressInterval); // Stop interval on error
     } finally {
       setIsGenerating(false);
-      setGenerationProgress(100); // Ensure progress is complete
+      // Ensure progress is 100 if it wasn't already (e.g. error or early finish)
+      // but don't clear interval here if it's already cleared above
+      if (generationProgress < 100) {
+         clearInterval(progressInterval);
+         setGenerationProgress(100); 
+      }
     }
   };
 
@@ -446,7 +457,7 @@ export default function HomePage() {
                     </p>
             <div className="h-2 w-full bg-muted overflow-hidden rounded">
               <div 
-                className="h-full bg-blue-700 transition-all duration-500 ease-in-out" 
+                className="h-full bg-blue-700 transition-all duration-150 ease-in-out" 
                 style={{ width: `${generationProgress}%` }}
               ></div>
             </div>
