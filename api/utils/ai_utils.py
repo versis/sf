@@ -5,13 +5,13 @@ import base64
 import io
 import asyncio
 import sys
-import traceback
-from typing import Dict, Any, Optional, Tuple
-from openai import AsyncAzureOpenAI
+from typing import Dict, Any, Optional, Tuple, List, Literal
+from openai import AzureOpenAI, AsyncAzureOpenAI
 from dotenv import load_dotenv
 from PIL import Image
 
 from api.utils.logger import log
+from api.utils.models import ColorCardDetails
 
 # Load environment variables only once at module level
 load_dotenv(".env.local")
@@ -24,7 +24,7 @@ JPG_QUALITY = 90
 # Client for Azure OpenAI - initialize once at module level
 azure_client = AsyncAzureOpenAI(
     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
 )
 
@@ -233,65 +233,16 @@ def resize_and_convert_image_for_openai(image_data_url: str, request_id: Optiona
         # Re-raise with clear message
         raise ValueError(f"Failed to resize image for OpenAI: {str(e)}")
 
-class OpenAIPromptBuilder:
-    @staticmethod
-    def build_messages(hex_color: str, image_data_url: str) -> list:
-        """
-        Builds the message array for OpenAI API with system and user messages.
-        
-        Parameters:
-        -----------
-        hex_color : str
-            The hex color code to use in the prompt
-        image_data_url : str
-            The image data URL to include in the prompt
-            
-        Returns:
-        --------
-        list
-            A list of message objects for the OpenAI API
-        """
-        system_message = {
-            "role": "system",
-            "content": "You are a creative assistant. For the given hex color and image, generate poetic and evocative card details."
-        }
-        
-        user_message = {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        f"Generate details for a color card with hex value '{hex_color}'. I need these fields:\n"
-                        f"1. colorName: A creative and evocative name for the color (max 3 words, ALL CAPS), inspired by both the hex color and the image.\n"
-                        f"2. phoneticName: Phonetic pronunciation (IPA symbols) for your creative colorName.\n"
-                        f"3. article: The part of speech for the colorName (e.g., noun, adjective phrase).\n"
-                        f"4. description: A poetic description (max 25-30 words) that evokes the feeling/mood of the image, describe the main chaacter. Explain what is the person wearing."
-                        f"Format your response strictly as a JSON object with these exact keys: colorName, phoneticName, article, description."
-                    )
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": image_data_url,
-                        "detail": "low"
-                    }
-                }
-            ]
-        }
-        
-        return [system_message, user_message]
-
 class OpenAIResponseFormatter:
     @staticmethod
-    def format_response(response_data: Dict[str, Any], hex_color: str) -> Dict[str, Any]:
+    def format_response(card_details: ColorCardDetails, hex_color: str) -> Dict[str, Any]:
         """
         Formats the OpenAI API response into the desired format.
         
         Parameters:
         -----------
-        response_data : Dict[str, Any]
-            The parsed JSON response from OpenAI
+        card_details : ColorCardDetails
+            The structured output from OpenAI
         hex_color : str
             The original hex color for fallback
             
@@ -304,23 +255,25 @@ class OpenAIResponseFormatter:
         hex_clean = hex_color.lstrip('#').upper()
         default_color_name = f"HEX {hex_clean[:3]}"
         
-        phonetic_raw = str(response_data.get("phoneticName", "")).strip()
+        # Process phonetic name
+        phonetic_raw = str(card_details.phoneticName).strip()
         if phonetic_raw.startswith('[') and phonetic_raw.endswith(']'):
             phonetic_final = phonetic_raw
         else:
             phonetic_final = f"[{phonetic_raw.strip('[]')}]"
         
-        article_raw = str(response_data.get("article", "noun")).strip()
+        # Process article
+        article_raw = str(card_details.article).strip()
         if article_raw.startswith('[') and article_raw.endswith(']'):
             article_final = article_raw
         else:
             article_final = f"[{article_raw.strip('[]')}]"
         
         return {
-            "colorName": str(response_data.get("colorName", default_color_name.upper())).strip().upper(),
+            "colorName": str(card_details.colorName).strip().upper(),
             "phoneticName": phonetic_final,
             "article": article_final,
-            "description": str(response_data.get("description", f"A color with hex value {hex_color}.")).strip()
+            "description": str(card_details.description).strip()
         }
 
 async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str = None, request_id: str = None) -> Dict[str, Any]:
@@ -387,16 +340,12 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             log(f"Error resizing image for OpenAI API: {str(resize_error)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Image processing failed: {str(resize_error)}")
         
-        # Prepare messages
-        log(f"Building OpenAI API request with optimized 512x512 image", request_id=request_id)
-        messages = OpenAIPromptBuilder.build_messages(hex_color, optimized_image_data_url)
-        
         # Log request parameters
+        model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
         log_request = {
-            "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
-            "message_count": len(messages),
+            "model": model_name,
             "image_included": True,
-            "detail_level": "low"
+            "image_size": len(optimized_image_data_url) // 1024,
         }
         log(f"Azure OpenAI API request parameters: {json.dumps(log_request)}", request_id=request_id)
 
@@ -407,16 +356,58 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             if not azure_client:
                 log(f"Azure OpenAI client is not initialized", level="ERROR", request_id=request_id)
                 raise ValueError("Azure OpenAI client is not initialized")
+
+            # Create the messages array with image
+            messages = [
+                {
+                    "role": "system", 
+                    "content": "You are a creative assistant. For the given hex color and image, generate poetic and evocative card details."
+                },
+                {
+                    "role": "user", 
+                    "content": [
+                        {
+                            "type": "text", 
+                            "text": (
+                                f"Generate details for a color card with hex value '{hex_color}'. "
+                                f"Analyze the image and create a creative name and description inspired by both the color and the image content."
+                            )
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": optimized_image_data_url, "detail": "low"}
+                        }
+                    ]
+                }
+            ]
             
+            # Use the beta.chat.completions.parse method with the ColorCardDetails Pydantic model
             completion = await asyncio.wait_for(
-                azure_client.chat.completions.create(
-                    model=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
+                azure_client.beta.chat.completions.parse(
+                    model=model_name,
                     messages=messages,
-                    response_format={"type": "json_object"}
+                    max_completion_tokens=1000,
+                    response_format=ColorCardDetails,
                 ),
                 timeout=OVERALL_TIMEOUT
             )
+            
             log(f"Successfully received response from Azure OpenAI API", request_id=request_id)
+
+            if not completion.choices or not completion.choices[0].message or not completion.choices[0].message.parsed:
+                log(f"Azure OpenAI response was empty or malformed", level="ERROR", request_id=request_id)
+                raise ValueError("Empty or malformed response from AI")
+            
+            # Get the parsed output directly from the response
+            card_details = completion.choices[0].message.parsed
+            log(f"Parsed structured output: {card_details}", request_id=request_id)
+            
+            # Format the response
+            final_details = OpenAIResponseFormatter.format_response(card_details, hex_color)
+            log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
+                
+            return final_details
+                
         except asyncio.TimeoutError:
             log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", level="ERROR", request_id=request_id)
             raise ValueError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
@@ -426,26 +417,6 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
         
         api_call_duration = time.time() - api_call_start_time
         log(f"Azure OpenAI API call completed in {api_call_duration:.2f} seconds", request_id=request_id)
-
-        if not completion.choices or not completion.choices[0].message or not completion.choices[0].message.content:
-            log(f"Azure OpenAI response was empty or malformed.", level="ERROR", request_id=request_id)
-            raise ValueError("Empty or malformed response from AI")
-
-        response_text = completion.choices[0].message.content
-        log(f"Raw response from OpenAI: {response_text}", request_id=request_id)
-        
-        try:
-            response_data = json.loads(response_text)
-            log(f"Parsed AI response: {json.dumps(response_data, indent=2)}", request_id=request_id)
-        except json.JSONDecodeError as json_error:
-            log(f"Failed to parse JSON response: {str(json_error)}", level="ERROR", request_id=request_id)
-            raise ValueError(f"Failed to parse AI response as JSON: {str(json_error)}")
-
-        # Format the response
-        final_details = OpenAIResponseFormatter.format_response(response_data, hex_color)
-        log(f"Successfully formatted AI details: {json.dumps(final_details, indent=2)}", request_id=request_id)
-        
-        return final_details
 
     except asyncio.TimeoutError:
         log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", level="ERROR", request_id=request_id)
