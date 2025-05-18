@@ -186,26 +186,26 @@ async def generate_card_image_bytes(
     _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
 
     # Define vertical spacing (increased spacing between bottom elements)
-    space_between_brand_id = int(swatch_h * 0.035) # Reduced from 0.045
-    space_between_id_metrics = int(swatch_h * 0.065) # Increased from 0.045
-    line_spacing_metrics = int(swatch_h * 0.025) # Increased from 0.018
+    space_between_brand_id = int(swatch_h * 0.03) # Reduced from 0.035
+    space_between_id_metrics = int(swatch_h * 0.05) # Reduced from 0.065
+    line_spacing_metrics = int(swatch_h * 0.02) # Reduced from 0.025
 
-    # --- New Y-Positioning Logic for Bottom Elements ---
+    # --- Y-Positioning Logic for Bottom Elements ---
 
-    # 1. Position Brand ("shadefreude") higher up - moved from 70% to 63% for better bottom padding
-    brand_y_pos = int(swatch_h * 0.63) # Moved up from 0.70 to add more padding at bottom
+    # 1. Position Brand ("shadefreude") higher up - moved from 63% to 58% to move text higher
+    brand_y_pos = int(swatch_h * 0.62) # Moved up from 0.63 to add more padding at bottom
 
     # 2. Position Card ID below the brand
-    id_y_pos = brand_y_pos + brand_h + space_between_brand_id # space_between_brand_id was already increased
+    id_y_pos = brand_y_pos + brand_h + space_between_brand_id
 
     # 3. Position Metrics block below the Card ID
     metrics_start_y = id_y_pos + id_h + space_between_id_metrics
 
-    # --- End New Y-Positioning Logic ---
+    # --- End Y-Positioning Logic ---
 
     for i, line_d in enumerate(wrapped_desc):
         # Ensure description does not overlap with the new, higher brand position
-        if i < 4 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.05)):
+        if i < 4 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.06)):
             draw.text((pad_l, current_y), line_d, font=f_desc, fill=text_color)
             current_y += desc_line_h + int(swatch_h * 0.004)
         else: break
