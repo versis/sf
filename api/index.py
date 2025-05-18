@@ -424,6 +424,7 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
     """
     Generate AI-based card details using Azure OpenAI.
     This endpoint can be called separately before image generation.
+    If AI generation fails, this will return an error.
     """
     try:
         hex_color = data.hexColor
@@ -435,8 +436,27 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
         rgb_color = hex_to_rgb(hex_color)
         if rgb_color is None:
             raise HTTPException(status_code=400, detail=f"Invalid HEX color format: {hex_color}")
+        
+        # Check if AI is enabled
+        enable_ai_env = os.environ.get("ENABLE_AI_CARD_DETAILS", "true").lower()
+        use_ai = enable_ai_env != "false"
+        
+        if not use_ai:
+            # Generate fallback color name if AI is disabled
+            hex_clean = hex_color.lstrip('#').upper()
+            fallback_name = f"HEX {hex_clean[:3]}"
+            card_details = {
+                "colorName": fallback_name.upper(),
+                "phoneticName": "['fɔːl.bæk də.ˈfɔːlt]",
+                "article": "[AI disabled]",
+                "description": f"A color with hex value {hex_color}. AI-generated details are disabled."
+            }
+            return {
+                "success": True,
+                "cardDetails": card_details
+            }
             
-        # Generate the card details directly from hex color
+        # Generate the card details directly from hex color using AI
         card_details = await generate_ai_card_details(hex_color, request_id=None)
         
         return {
@@ -448,8 +468,8 @@ async def generate_card_details_route(data: CardDetailsRequest, request: FastAPI
         # Re-raise HTTPException
         raise e
     except Exception as e:
-        print(f"Error generating card details: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate card details: {str(e)}")
+        # Forward the error to the client
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
 # To run locally (ensure uvicorn is installed: pip install uvicorn)
 if __name__ == "__main__":
