@@ -685,7 +685,7 @@ export default function HomePage() {
 
           {/* New Section for Card Display - Outside/Below Wizard */}
           {isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
-            <section ref={resultRef} className="w-full px-1 py-2 md:px-2 md:py-8 mt-2 md:order-2 flex flex-col items-center">
+            <section ref={resultRef} className="w-full px-1 md:px-2 md:order-2 flex flex-col items-center">
               <div className="space-y-6 flex flex-col items-center w-full max-w-2xl">
                 <div className="flex justify-center gap-6 mb-4">
                   <button 
