@@ -509,7 +509,7 @@ export default function HomePage() {
 
             {isUploadStepCompleted && (
             <WizardStep 
-              title="We need to cut a square"
+              title="Cut a square"
               stepNumber={2} 
               isActive={currentWizardStep === 'crop'} 
               isCompleted={isCropStepCompleted}
