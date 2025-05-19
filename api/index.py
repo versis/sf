@@ -305,8 +305,8 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                     orientation=orientation,
                     image_base64=image_base64,
                     filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.jpg",
-                    # cardId=final_card_details.get('extendedId', "0000000 XX X") # Old field name in model
-                    extendedId=final_card_details.get('extendedId', "0000000 XX X") # New field name
+                    # extendedId=final_card_details.get('extendedId', "0000000 XX X") # Old way with fallback
+                    extendedId=final_card_details['extendedId'] # New, stricter way
                 )
             )
             log(f"Successfully generated {orientation} card image.", request_id=request_id)
