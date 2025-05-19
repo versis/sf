@@ -13,8 +13,9 @@ const DUMMY_MESSAGES = [
   "Querying neural network for inspiration...",
   "Synthesizing color harmonies...",
   "Finalizing your unique design...",
+  "Still waiting for AI. As usuall..."
 ];
-const CHAR_TYPING_SPEED_MS = 40;
+const CHAR_TYPING_SPEED_MS = 30;
 const NEW_LINE_DELAY_TICKS = Math.floor(2000 / CHAR_TYPING_SPEED_MS);
 
 export default function HomePage() {
@@ -489,7 +490,7 @@ export default function HomePage() {
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
-              title="Select Image" 
+              title="Pick some nice photo you like"
               stepNumber={1} 
               isActive={currentWizardStep === 'upload'} 
               isCompleted={isUploadStepCompleted}
@@ -508,7 +509,7 @@ export default function HomePage() {
 
             {isUploadStepCompleted && (
             <WizardStep 
-              title="Crop Image" 
+              title="We need to cut some square"
               stepNumber={2} 
               isActive={currentWizardStep === 'crop'} 
               isCompleted={isCropStepCompleted}
@@ -531,7 +532,7 @@ export default function HomePage() {
 
             {isCropStepCompleted && (
             <WizardStep 
-              title="Pick Color"
+              title="Choose your color"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
@@ -565,7 +566,7 @@ export default function HomePage() {
                       }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                    {isGenerating ? 'Generating Card...' : 'Generate Card'}
+                    {isGenerating ? 'Generating Card...' : 'I want this color - show me the card'}
                   </button>
                 </div>
               </WizardStep>
@@ -573,7 +574,7 @@ export default function HomePage() {
 
             {(isCropStepCompleted && (currentWizardStep === 'results' || isGenerating)) && (
               <WizardStep
-                title="Claim Your Card"
+                title="Your shadefreude color card"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
@@ -581,15 +582,32 @@ export default function HomePage() {
               >
         {isGenerating && (
                   <div className="w-full mb-6">
-                    <div className="text-sm text-left text-blue-600 mb-2 pl-2 min-h-[5em]">
-                      {typedLines.map((line, index) => (
-                        <p key={index} className="whitespace-pre-wrap m-0 p-0 leading-tight">
-                          {line}
-                          {index === typingLogicRef.current.lineIdx && typingLogicRef.current.lineIdx < DUMMY_MESSAGES.length && (
-                            <span className="blinking-cursor">_</span>
-                          )}
-                        </p>
-                      ))}
+                    <div className="text-base text-left text-blue-600 mb-2 pl-2">
+                      {typedLines.map((line, index) => {
+                        const currentLogicLine = typingLogicRef.current.lineIdx;
+                        const isWaitingForNextLine = typingLogicRef.current.isWaitingForNewLineDelay;
+                        let showCursorOnThisLine = false;
+
+                        if (currentLogicLine < DUMMY_MESSAGES.length) { 
+                            if (index === currentLogicLine && !isWaitingForNextLine) {
+                                showCursorOnThisLine = true;
+                            } else if (index === currentLogicLine - 1 && isWaitingForNextLine) {
+                                showCursorOnThisLine = true;
+                            }
+                        } else if (currentLogicLine === DUMMY_MESSAGES.length && index === DUMMY_MESSAGES.length - 1) {
+                            // Show cursor on the very last character of the last line if interval is still active
+                            if (typedLines[index] && DUMMY_MESSAGES[index] && typedLines[index].length === DUMMY_MESSAGES[index].length && typingLogicRef.current.intervalId) {
+                                showCursorOnThisLine = true;
+                            }
+                        }
+
+                        return (
+                          <p key={index} className="whitespace-pre-wrap m-0 p-0 leading-tight">
+                            {line}
+                            {showCursorOnThisLine && (<span className="blinking-cursor">_</span>)}
+                          </p>
+                        );
+                      })}
                       {typedLines.length === 0 && isGenerating && typingLogicRef.current.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && (
                         <p className="whitespace-pre-wrap m-0 p-0 leading-tight"><span className="blinking-cursor">_</span></p>
                       )}
