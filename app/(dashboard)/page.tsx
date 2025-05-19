@@ -574,7 +574,7 @@ export default function HomePage() {
 
             {(isCropStepCompleted && (currentWizardStep === 'results' || isGenerating)) && (
               <WizardStep
-                title="4: Your shadefreude color card"
+                title="4: Your color card"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
