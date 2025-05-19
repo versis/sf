@@ -170,7 +170,7 @@ export default function HomePage() {
 
     // ---- START: Restore smooth progress bar ----
     setGenerationProgress(0); // Reset progress before starting
-    const totalProgressDuration = 30000; // 30 seconds in milliseconds (adjust as needed)
+    const totalProgressDuration = 60000; // 30 seconds in milliseconds (adjust as needed)
     const updatesPerSecond = 10;
     const progressIntervalTime = 1000 / updatesPerSecond;
     const totalUpdates = totalProgressDuration / progressIntervalTime;
