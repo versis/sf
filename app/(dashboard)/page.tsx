@@ -685,8 +685,8 @@ export default function HomePage() {
 
           {/* New Section for Card Display - Outside/Below Wizard */}
           {isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
-            <section ref={resultRef} className="w-full px-1 md:px-2 md:order-2 flex flex-col items-center">
-              <div className="space-y-6 flex flex-col items-center w-full max-w-2xl">
+            <section ref={resultRef} className="w-full px-1 py-2 md:px-2 md:py-8 mt-2 md:order-2 flex flex-col items-center">
+              <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
                 <div className="flex justify-center gap-6 mb-4">
                   <button 
                     onClick={() => setCurrentDisplayOrientation('horizontal')}
@@ -710,7 +710,7 @@ export default function HomePage() {
 
                 <div className="flex justify-center w-full">
                   {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
-                    <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl h-auto`} />
+                    <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl lg:max-w-4xl h-auto`} />
                   ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
                     <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-2xl max-h-[80vh] h-auto`} />
                   ) : (
