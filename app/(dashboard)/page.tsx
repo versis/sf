@@ -229,38 +229,29 @@ export default function HomePage() {
       
       setGenerationProgress(70); // Progress after sending finalize request
 
+      console.log('Frontend: Finalization call successful.');
       const finalizeResult = await finalizeResponse.json();
-      if (!finalizeResponse.ok) {
-        throw new Error(finalizeResult.detail || `Failed to finalize card generation: ${finalizeResponse.status}`);
-      }
+      console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DETAILED LOG
 
-      console.log('Frontend: Finalization successful. Result:', finalizeResult);
-
-      // Correctly access direct image URLs from the finalizeResult (CardGenerationRecord)
       const horizontalUrl = finalizeResult.horizontal_image_url;
       const verticalUrl = finalizeResult.vertical_image_url;
-
-      // The metadata also contains more detailed blob info if needed:
-      // const horizontalBlobInfo = finalizeResult.metadata?.uploaded_blob_info?.horizontal;
-      // const verticalBlobInfo = finalizeResult.metadata?.uploaded_blob_info?.vertical;
-      // console.log('Horizontal Blob Info from metadata:', horizontalBlobInfo);
-      // console.log('Vertical Blob Info from metadata:', verticalBlobInfo);
+      console.log('Frontend: Extracted horizontalUrl:', horizontalUrl);
+      console.log('Frontend: Extracted verticalUrl:', verticalUrl);
 
       if (!horizontalUrl && !verticalUrl) {
+        console.error('Frontend: Error - No image URLs found in finalizeResult.'); // ERROR LOG
         throw new Error('API returned success but no image URLs were found in the response.');
       }
       
-      // Set the color name to what was potentially modified (if that logic is added back to backend)
-      // if (finalizeResult.metadata?.ai_details_used?.colorName) {
-      //   setColorNameInput(finalizeResult.metadata.ai_details_used.colorName);
-      // }
+      console.log('Frontend: Image URLs found. Proceeding to set state for results step.'); // TRACE LOG
 
       setGeneratedHorizontalImageUrl(horizontalUrl || null);
       setGeneratedVerticalImageUrl(verticalUrl || null);
       
-      setIsColorStepCompleted(true); // Mark step 3 complete
-      setCurrentWizardStep('results'); // Move to step 4
-      setIsResultsStepCompleted(true); // Automatically mark results step as complete
+      setIsColorStepCompleted(true);
+      setCurrentWizardStep('results'); 
+      setIsResultsStepCompleted(true);
+      console.log('Frontend: State updated for results step. currentWizardStep:', 'results'); // TRACE LOG
       
       // Set the display orientation based on availability and preference
       if (isMobile && verticalUrl) {
@@ -274,7 +265,7 @@ export default function HomePage() {
       setGenerationProgress(100);
 
     } catch (error) {
-      console.error('Error during image generation process:', error);
+      console.error('Frontend: Error during image generation process:', error); // DETAILED ERROR LOG
       setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
