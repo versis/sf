@@ -17,6 +17,25 @@ from dotenv import load_dotenv
 # Import logger early to ensure it's configured before use
 from api.utils.logger import log, error, info, warning, debug, critical
 
+# Define CARD_ID_SUFFIX global constant
+CARD_ID_SUFFIX = "FE F"
+
+# Supabase Client Initialization
+from supabase import create_client, Client as SupabaseClient
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") # This must be your Service Role Key
+
+supabase_client: SupabaseClient | None = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        info("Successfully initialized Supabase client.")
+    except Exception as e:
+        error(f"Failed to initialize Supabase client: {e}")
+        supabase_client = None # Ensure it's None if initialization fails
+else:
+    warning("Supabase URL or Service Key not found in environment variables. Supabase client not initialized. API will likely fail DB operations.")
+
 # Only log startup messages using the logger
 info("==== STARTUP: Direct from FastAPI entry point ====")
 
@@ -53,8 +72,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://sf.tinker.institute", "https://sf-livid.vercel.app", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["POST"], # Keep this tight for now, will add PUT/GET later if other endpoints need it
+    allow_headers=["Content-Type"], # Will add X-Internal-API-Key later
 )
 
 @app.on_event("startup")
@@ -88,9 +107,6 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     log(f"Unified /api/generate-cards request received", request_id=request_id)
     request_start_time = time.time()
 
-    final_card_details: Dict[str, Any] = {}
-    default_card_id = "0000023 FE T"
-
     # Validate that the cropped image is provided
     if not data.croppedImageDataUrl:
         log(f"No cropped image provided in request", level="ERROR", request_id=request_id)
@@ -121,6 +137,11 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     enable_ai_env = os.environ.get("ENABLE_AI_CARD_DETAILS", "true").lower()
     use_ai = enable_ai_env != "false"
 
+    # Construct cardId for the image using a temporary prefix and the suffix
+    # This will be replaced with dynamic db_id in later steps.
+    temporary_db_id_placeholder = "0000023" 
+    extended_id = f"{temporary_db_id_placeholder} {CARD_ID_SUFFIX}"
+
     if use_ai:
         log("Proceeding with AI generation based on hex color and cropped image.", request_id=request_id)
         try:
@@ -141,7 +162,9 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 )
                 log(f"Successfully generated AI card details", request_id=request_id)
                 final_card_details = ai_generated_details
-                final_card_details["cardId"] = data.cardId or default_card_id
+                # final_card_details["cardId"] = data.cardId or default_card_id # Old logic to be replaced
+                # For now, if data.cardId is passed, use it. Otherwise, it might be None until Step 2/3 are done.
+                final_card_details["cardId"] = extended_id
             except asyncio.TimeoutError as timeout_err:
                 log(f"Timeout while calling Azure OpenAI API: {str(timeout_err)}", level="ERROR", request_id=request_id)
                 return JSONResponse(
@@ -186,10 +209,11 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             "phoneticName": "['dʌmi 'kʌlər neɪm]", # Phonetic for "dummy color name"
             "article": "[AI disabled]",
             "description": f"A color with hex value {data.hexColor}. AI-generated details are disabled.",
-            "cardId": data.cardId or default_card_id
+            # "cardId": data.cardId or default_card_id # Old logic to be replaced
+            "cardId": extended_id
         }
 
-    debug(f"Final card details for rendering: {json.dumps(final_card_details, indent=2)}", request_id=request_id)
+    debug(f"Final card details for rendering (using temp prefix for ID): {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
     generated_cards_response_items: List[CardImageResponseItem] = []
     orientations_to_generate = ["horizontal", "vertical"]
