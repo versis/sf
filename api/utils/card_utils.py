@@ -133,8 +133,8 @@ async def generate_card_image_bytes(
     f_desc = get_font(int(27 * base_font_scale), "Regular", request_id=request_id)
     f_brand = get_font(int(64 * base_font_scale), "Bold", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_label = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_val = get_font(int(24 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Color Name (from AI or default)
     color_name_display = card_details.get("colorName", "MISSING NAME").upper()
@@ -207,7 +207,7 @@ async def generate_card_image_bytes(
 
     for i, line_d in enumerate(wrapped_desc):
         # Ensure description does not overlap with the new, higher brand position
-        if i < 4 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.06)):
+        if i < 5 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.06)):
             draw.text((pad_l, current_y), line_d, font=f_desc, fill=text_color)
             current_y += desc_line_h + int(swatch_h * 0.004)
         else: break
