@@ -277,6 +277,7 @@ export default function HomePage() {
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
       setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
+      setCurrentWizardStep('color'); // Explicitly navigate back to the color selection step on error
       clearInterval(progressInterval); // Stop interval on error
     } finally {
       setIsGenerating(false);
