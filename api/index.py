@@ -57,12 +57,6 @@ from api.models.card_generation_models import CardGenerationCreateRequest, CardG
 # Log app loading
 info("==== Loading FastAPI app ====")
 
-# Rate limiting with slowapi
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-import uvicorn
-
 # load_dotenv(".env.local") # Removed, as it's handled in api.core.config.py
 
 # Log environment variables
@@ -70,11 +64,7 @@ info(f"AZURE_OPENAI_API_VERSION: {AZURE_OPENAI_API_VERSION if AZURE_OPENAI_API_V
 info(f"AZURE_OPENAI_DEPLOYMENT: {AZURE_OPENAI_DEPLOYMENT if AZURE_OPENAI_DEPLOYMENT else '(not set)'}")
 info(f"ENABLE_AI_CARD_DETAILS: {ENABLE_AI_CARD_DETAILS}")
 
-limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
-
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Import the new card generation router
 from api.routers import card_generation as card_generation_router # Added
