@@ -621,7 +621,7 @@ export default function HomePage() {
               </WizardStep>
             )}
 
-            {(isCropStepCompleted && (currentWizardStep === 'results' || isGenerating)) && (
+            {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
               <WizardStep
                 title="4: Creating card..."
                 stepNumber={4}
