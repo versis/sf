@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    proxyTimeout: 60000, // 60 seconds, to give buffer for 60s API calls
+    proxyTimeout: 120000, // 120 seconds, to give buffer for 120s API calls
   },
   rewrites: async () => {
     return [

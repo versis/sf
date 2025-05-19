@@ -16,7 +16,7 @@ from ..config import (
 # load_dotenv(".env.local") # Removed
 
 # Constants
-OVERALL_TIMEOUT = 59.0  # Slightly less than Vercel's 60s Hobby limit
+OVERALL_TIMEOUT = 119.0  # Slightly less than Vercel's 60s Hobby limit
 
 # Client for Azure OpenAI - initialize once at module level
 azure_client = AsyncAzureOpenAI(

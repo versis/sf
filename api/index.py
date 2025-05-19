@@ -188,7 +188,7 @@ if __name__ == "__main__":
         port=8000, 
         reload=True, 
         reload_dirs=["api"], 
-        timeout_keep_alive=120,  # Increased from 75 seconds
+        timeout_keep_alive=120,
         log_level="debug",
         log_config=log_config,
         use_colors=True,
