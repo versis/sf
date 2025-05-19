@@ -14,6 +14,6 @@ OVERALL_TIMEOUT = 59.0  # Slightly less than Vercel's 60s Hobby limit
 # Client for Azure OpenAI - initialize once at module level
 azure_client = AsyncAzureOpenAI(
     api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
 ) 
