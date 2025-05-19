@@ -62,7 +62,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 
-load_dotenv(".env.local")
+# load_dotenv(".env.local") # Removed, as it's handled in api.core.config.py
 
 # Log environment variables
 info(f"AZURE_OPENAI_API_VERSION: {AZURE_OPENAI_API_VERSION if AZURE_OPENAI_API_VERSION else '(not set)'}")
@@ -350,9 +350,11 @@ if __name__ == "__main__":
     # Or, ensure the CWD is the project root when running uvicorn.
     # For uvicorn from project root: uvicorn api.index:app --reload
     info("===== STARTING UVICORN SERVER =====")
-    info(f"Environment: {os.environ.get('NODE_ENV', 'development')}")
-    info(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
-    info(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
+    # Use imported config values for logging here as well
+    info(f"Environment: {os.environ.get('NODE_ENV', 'development')}") # NODE_ENV is not in our python config, so os.environ.get is fine here
+    info(f"AZURE_OPENAI_API_VERSION: {AZURE_OPENAI_API_VERSION if AZURE_OPENAI_API_VERSION else '(not set)'}")
+    info(f"AZURE_OPENAI_DEPLOYMENT: {AZURE_OPENAI_DEPLOYMENT if AZURE_OPENAI_DEPLOYMENT else '(not set)'}")
+    info(f"ENABLE_AI_CARD_DETAILS: {ENABLE_AI_CARD_DETAILS}")
     
     info("Starting Uvicorn server for local development...")
     
