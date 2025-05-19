@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "fastapi-dev": ".venv/bin/python -m uvicorn api.index:app --reload",
+    "fastapi-debug": "cross-env LOG_LEVEL=DEBUG .venv/bin/python -m uvicorn api.index:app --reload --log-level debug",
     "next-dev": "next dev",
     "dev": "concurrently \"npm run next-dev\" \"npm run fastapi-dev\"",
+    "debug": "concurrently \"npm run next-dev\" \"npm run fastapi-debug\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -23,6 +25,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "concurrently": "^8.0.1",
+    "cross-env": "^7.0.3",
     "date-fns": "^4.1.0",
     "eslint": "8.41.0",
     "eslint-config-next": "13.4.4",
