@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 
 const Footer = () => {
   const [tooltipText, setTooltipText] = useState("click to copy");
@@ -55,9 +55,10 @@ const Footer = () => {
             href="http://tinker.institute/privacy-policy.txt" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="underline underline-offset-4"
+            className="underline underline-offset-4 inline-flex items-center"
           >
             privacy-policy.txt
+            <ExternalLink className="ml-1 h-3 w-3 text-gray-500" />
           </a>
         </span>
       </div>

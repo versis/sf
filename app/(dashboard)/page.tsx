@@ -490,7 +490,7 @@ export default function HomePage() {
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
-              title="Pick a nice photo you like"
+              title="1: Pick a nice photo you like"
               stepNumber={1} 
               isActive={currentWizardStep === 'upload'} 
               isCompleted={isUploadStepCompleted}
@@ -509,7 +509,7 @@ export default function HomePage() {
 
             {isUploadStepCompleted && (
             <WizardStep 
-              title="Cut a square"
+              title="2: Cut a square"
               stepNumber={2} 
               isActive={currentWizardStep === 'crop'} 
               isCompleted={isCropStepCompleted}
@@ -532,7 +532,7 @@ export default function HomePage() {
 
             {isCropStepCompleted && (
             <WizardStep 
-              title="Choose your color"
+              title="3: Choose your color"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
@@ -574,7 +574,7 @@ export default function HomePage() {
 
             {(isCropStepCompleted && (currentWizardStep === 'results' || isGenerating)) && (
               <WizardStep
-                title="Your shadefreude color card"
+                title="4: Your shadefreude color card"
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
