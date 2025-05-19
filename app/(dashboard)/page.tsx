@@ -712,7 +712,7 @@ export default function HomePage() {
                   {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
                     <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className={`max-w-full rounded-md md:max-w-2xl h-auto`} />
                   ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                    <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-sm max-h-[70vh] h-auto`} />
+                    <img src={generatedVerticalImageUrl} alt="Generated vertical card" className={`max-w-full rounded-md md:max-w-2xl max-h-[80vh] h-auto`} />
                   ) : (
                     <p className="text-muted-foreground py-10">Select an orientation to view your card.</p>
                   )}
