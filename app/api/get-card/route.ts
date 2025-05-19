@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic'; // Ensures the route is treated as dynamic
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // Use request.nextUrl for robust access to URL parts
+    const searchParams = request.nextUrl.searchParams;
     const orientation = searchParams.get('orientation') || 'horizontal';
     const color = searchParams.get('color') || '#000000';
     
@@ -13,26 +16,36 @@ export async function GET(request: NextRequest) {
     //    a. Return a 404 or an error
     //    b. Generate the card on-the-fly if you have all needed resources
     
-    // For demo purposes, let's redirect to a placeholder image:
-    // In production, this would be replaced with actual card retrieval logic
+    // For demo purposes, this route redirects to the main page with query parameters.
+    // This allows the main page (client component) to attempt to load card details
+    // from sessionStorage or make further API calls if needed.
+
+    // Construct the redirect URL safely using request.nextUrl.origin
+    const redirectUrl = new URL(request.nextUrl.origin);
+    redirectUrl.pathname = '/'; // Assuming the redirect is to the root of the application
+    redirectUrl.searchParams.set('orientation', orientation);
+    redirectUrl.searchParams.set('color', color);
+
+    return NextResponse.redirect(redirectUrl);
     
-    // Since we don't have the actual image in storage yet, we'll need to 
-    // redirect back to the main app with these parameters so it can display
-    // the right card from the user's session
-    
-    return NextResponse.redirect(new URL(`/?orientation=${orientation}&color=${color}`, request.url));
-    
-    // Alternative: In a real implementation with actual storage
-    // const cardPath = `path/to/stored/cards/${orientation}/${color.replace('#', '')}.png`;
-    // const imageBuffer = await fs.readFile(cardPath);
-    // return new NextResponse(imageBuffer, {
-    //   headers: {
-    //     'Content-Type': 'image/png',
-    //     'Cache-Control': 'public, max-age=31536000, immutable',
-    //   },
-    // });
+    // Alternative: In a real implementation with actual storage and image retrieval:
+    // const cardExists = false; // Replace with actual check
+    // if (cardExists) {
+    //   // const imageBuffer = await fs.readFile(pathToImage);
+    //   // return new NextResponse(imageBuffer, {
+    //   //   headers: {
+    //   //     'Content-Type': 'image/png',
+    //   //     'Cache-Control': 'public, max-age=31536000, immutable',
+    //   //   },
+    //   // });
+    // } else {
+    //   // return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+    // }
+
   } catch (error) {
-    console.error('Error retrieving card:', error);
-    return NextResponse.json({ error: 'Failed to retrieve card' }, { status: 500 });
+    console.error('Error in /api/get-card:', error);
+    // Check if the error is a known type or has a digest for specific handling
+    const errorMessage = error instanceof Error ? error.message : 'Failed to retrieve card';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 
