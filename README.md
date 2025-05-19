@@ -106,6 +106,30 @@ For optimal performance with the Azure OpenAI API:
 - The original high-resolution image is still used for the card generation
 - This optimization reduces API costs and improves response times
 
+## Debugging
+
+To run the application with debug logging enabled, use:
+
+```bash
+pnpm debug
+```
+
+This will start both the Next.js frontend and the FastAPI backend with debug logs enabled, showing:
+
+- Detailed API request/response information
+- Image processing steps and sizes
+- OpenAI token usage
+- Exact timing for API calls
+- Prompt and completion details
+
+Debug logs are essential for troubleshooting issues with OpenAI API integration or image processing. They provide detailed information about what's happening behind the scenes.
+
+You can also selectively enable debug logs by setting the `LOG_LEVEL` environment variable:
+
+```env
+LOG_LEVEL=DEBUG
+```
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:
