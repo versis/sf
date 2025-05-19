@@ -16,13 +16,13 @@ class CardImageResponseItem(BaseModel):
         The base64-encoded image data.
     filename : str
         The filename of the generated card image.
-    cardId : str
+    extendedId : str
         The unique identifier for the card.
     """
     orientation: str
     image_base64: str
     filename: str
-    cardId: str
+    extendedId: str
 
 class GenerateCardsResponse(BaseModel):
     """

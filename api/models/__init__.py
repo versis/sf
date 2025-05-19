@@ -11,4 +11,6 @@ __all__ = [
     'GenerateCardsRequest',
     'CardImageResponseItem',
     'GenerateCardsResponse'
-] 
+]
+
+# This file makes Python treat the directory api/models as a package. 

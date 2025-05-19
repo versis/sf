@@ -17,13 +17,19 @@ from dotenv import load_dotenv
 # Import logger early to ensure it's configured before use
 from api.utils.logger import log, error, info, warning, debug, critical
 
-# Define CARD_ID_SUFFIX global constant
-CARD_ID_SUFFIX = "FE F"
+# Import configuration, including CARD_ID_SUFFIX
+from api.core.config import (
+    CARD_ID_SUFFIX, 
+    SUPABASE_URL, 
+    SUPABASE_SERVICE_KEY, 
+    AZURE_OPENAI_API_VERSION, 
+    AZURE_OPENAI_DEPLOYMENT, 
+    ENABLE_AI_CARD_DETAILS,
+    ALLOWED_ORIGINS
+)
 
 # Supabase Client Initialization
 from supabase import create_client, Client as SupabaseClient
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") # This must be your Service Role Key
 
 supabase_client: SupabaseClient | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
@@ -44,6 +50,8 @@ from api.utils.color_utils import hex_to_rgb
 from api.utils.card_utils import generate_card_image_bytes
 from api.models.request import GenerateCardsRequest
 from api.models.response import CardImageResponseItem, GenerateCardsResponse
+from api.services.supabase_service import create_card_generation_record, update_card_generation_status
+from api.models.card_generation_models import CardGenerationCreateRequest, CardGenerationUpdateRequest
 
 # Log app loading
 info("==== Loading FastAPI app ====")
@@ -57,9 +65,9 @@ import uvicorn
 load_dotenv(".env.local")
 
 # Log environment variables
-info(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
-info(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
-info(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
+info(f"AZURE_OPENAI_API_VERSION: {AZURE_OPENAI_API_VERSION if AZURE_OPENAI_API_VERSION else '(not set)'}")
+info(f"AZURE_OPENAI_DEPLOYMENT: {AZURE_OPENAI_DEPLOYMENT if AZURE_OPENAI_DEPLOYMENT else '(not set)'}")
+info(f"ENABLE_AI_CARD_DETAILS: {ENABLE_AI_CARD_DETAILS}")
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -70,7 +78,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://sf.tinker.institute", "https://sf-livid.vercel.app", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS, # Use from config
     allow_credentials=True,
     allow_methods=["POST"], # Keep this tight for now, will add PUT/GET later if other endpoints need it
     allow_headers=["Content-Type"], # Will add X-Internal-API-Key later
@@ -82,9 +90,9 @@ async def startup_event():
     info("===== FastAPI STARTUP EVENT =====")
     
     # Log environment variable configuration (excluding sensitive values)
-    debug(f"AZURE_OPENAI_API_VERSION: {os.environ.get('AZURE_OPENAI_API_VERSION', '(not set)')}")
-    debug(f"AZURE_OPENAI_DEPLOYMENT: {os.environ.get('AZURE_OPENAI_DEPLOYMENT', '(not set)')}")
-    debug(f"ENABLE_AI_CARD_DETAILS: {os.environ.get('ENABLE_AI_CARD_DETAILS', '(not set)')}")
+    debug(f"AZURE_OPENAI_API_VERSION: {AZURE_OPENAI_API_VERSION if AZURE_OPENAI_API_VERSION else '(not set)'}")
+    debug(f"AZURE_OPENAI_DEPLOYMENT: {AZURE_OPENAI_DEPLOYMENT if AZURE_OPENAI_DEPLOYMENT else '(not set)'}")
+    debug(f"ENABLE_AI_CARD_DETAILS: {ENABLE_AI_CARD_DETAILS}")
     info("Application startup complete")
 
 @app.exception_handler(Exception)
@@ -107,7 +115,69 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     log(f"Unified /api/generate-cards request received", request_id=request_id)
     request_start_time = time.time()
 
-    # Validate that the cropped image is provided
+    # --- Step 1: Create initial record in Supabase and get ID ---
+    db_id: int | None = None
+    extended_id_from_db: str | None = None
+    # final_card_details will be populated after AI/fallback
+    final_card_details: Dict[str, Any] = {}
+
+    if supabase_client:
+        try:
+            log(f"Initiating card generation record for hex: {data.hexColor}", request_id=request_id)
+            card_create_payload = CardGenerationCreateRequest(hex_color=data.hexColor)
+            
+            generation_record = await create_card_generation_record(
+                db=supabase_client, 
+                payload=card_create_payload
+                # CARD_ID_SUFFIX is now handled within create_card_generation_record via config
+            )
+            db_id = generation_record.id
+            extended_id_from_db = generation_record.extended_id
+            log(f"Successfully created card generation record. DB ID: {db_id}, Extended ID: {extended_id_from_db}", request_id=request_id)
+
+        except Exception as e_supabase:
+            log(f"Error creating card generation record in Supabase: {str(e_supabase)}", level="ERROR", request_id=request_id)
+            error(f"Supabase client available: {supabase_client is not None}")
+            # Return an error response if Supabase operation fails
+            return JSONResponse(
+                status_code=500,
+                content=GenerateCardsResponse(
+                    request_id=request_id,
+                    ai_details_used={},
+                    generated_cards=[],
+                    error=f"Failed to initiate card generation in database: {str(e_supabase)}"
+                ).model_dump()
+            )
+    else:
+        log("Supabase client not initialized. Cannot create card generation record.", level="ERROR", request_id=request_id)
+        # Fallback or error if Supabase is not available (critical for ID generation)
+        # For now, let's return an error as the ID is crucial
+        return JSONResponse(
+            status_code=500,
+            content=GenerateCardsResponse(
+                request_id=request_id,
+                ai_details_used={},
+                generated_cards=[],
+                error="Database client not available. Cannot generate card ID."
+            ).model_dump()
+        )
+
+    # Ensure extended_id_from_db is not None before proceeding
+    if not extended_id_from_db:
+        log("Failed to obtain extended_id from database. Aborting.", level="CRITICAL", request_id=request_id)
+        return JSONResponse(
+            status_code=500,
+            content=GenerateCardsResponse(
+                request_id=request_id,
+                ai_details_used={},
+                generated_cards=[],
+                error="Failed to retrieve a valid card ID from the database."
+            ).model_dump()
+        )
+    # --- End Step 1 ---
+
+    # Validate that the cropped image is provided AFTER initial DB record creation
+    # This allows us to potentially store a "failed" status if pre-checks fail
     if not data.croppedImageDataUrl:
         log(f"No cropped image provided in request", level="ERROR", request_id=request_id)
         return JSONResponse(
@@ -132,15 +202,15 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             ).model_dump()
         )
 
-    # Check environment variable to decide on AI generation first
     # Defaults to True (use AI) if variable is not set or not explicitly "false"
-    enable_ai_env = os.environ.get("ENABLE_AI_CARD_DETAILS", "true").lower()
-    use_ai = enable_ai_env != "false"
+    use_ai = ENABLE_AI_CARD_DETAILS # Use directly from config
 
-    # Construct cardId for the image using a temporary prefix and the suffix
-    # This will be replaced with dynamic db_id in later steps.
-    temporary_db_id_placeholder = "0000023" 
-    extended_id = f"{temporary_db_id_placeholder} {CARD_ID_SUFFIX}"
+    # Use the extended_id obtained from Supabase
+    active_extended_id = extended_id_from_db
+    if not active_extended_id: # Should not happen due to earlier check
+        # This case is already handled, but as a safeguard:
+        log("CRITICAL: extended_id_from_db is None after initial check passed. Aborting.", level="ERROR", request_id=request_id)
+        return JSONResponse(status_code=500, content={"error": "Internal ID generation consistency error."})
 
     if use_ai:
         log("Proceeding with AI generation based on hex color and cropped image.", request_id=request_id)
@@ -162,9 +232,8 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 )
                 log(f"Successfully generated AI card details", request_id=request_id)
                 final_card_details = ai_generated_details
-                # final_card_details["cardId"] = data.cardId or default_card_id # Old logic to be replaced
-                # For now, if data.cardId is passed, use it. Otherwise, it might be None until Step 2/3 are done.
-                final_card_details["cardId"] = extended_id
+                # final_card_details["cardId"] = active_extended_id # Old key
+                final_card_details["extendedId"] = active_extended_id # New key
             except asyncio.TimeoutError as timeout_err:
                 log(f"Timeout while calling Azure OpenAI API: {str(timeout_err)}", level="ERROR", request_id=request_id)
                 return JSONResponse(
@@ -202,18 +271,20 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 ).model_dump()
             )
     else:
-        log(f"ENABLE_AI_CARD_DETAILS is '{enable_ai_env}'. Using fallback text details.", request_id=request_id)
+        log(f"ENABLE_AI_CARD_DETAILS is '{ENABLE_AI_CARD_DETAILS}'. Using fallback text details.", request_id=request_id)
         # Use fixed "DUMMY COLOR NAME" when AI is disabled
         final_card_details = {
             "colorName": "DUMMY COLOR NAME",
             "phoneticName": "['dʌmi 'kʌlər neɪm]", # Phonetic for "dummy color name"
             "article": "[AI disabled]",
             "description": f"A color with hex value {data.hexColor}. AI-generated details are disabled.",
-            # "cardId": data.cardId or default_card_id # Old logic to be replaced
-            "cardId": extended_id
+            # "cardId": active_extended_id # Old key
+            "extendedId": active_extended_id # New key
         }
 
-    debug(f"Final card details for rendering (using temp prefix for ID): {json.dumps(final_card_details, indent=2)}", request_id=request_id)
+    # debug(f"Final card details for rendering (using DB generated ID): {json.dumps(final_card_details, indent=2)}", request_id=request_id)
+    # Update log message to reflect new key name if desired, or keep general
+    log(f"Final card details prepared (ID: {active_extended_id}): {json.dumps(final_card_details, indent=2)}", request_id=request_id)
 
     generated_cards_response_items: List[CardImageResponseItem] = []
     orientations_to_generate = ["horizontal", "vertical"]
@@ -234,7 +305,8 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                     orientation=orientation,
                     image_base64=image_base64,
                     filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.jpg",
-                    cardId=final_card_details.get('cardId', "0000000 XX X")
+                    # cardId=final_card_details.get('extendedId', "0000000 XX X") # Old field name in model
+                    extendedId=final_card_details.get('extendedId', "0000000 XX X") # New field name
                 )
             )
             log(f"Successfully generated {orientation} card image.", request_id=request_id)
