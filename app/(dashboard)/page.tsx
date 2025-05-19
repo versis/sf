@@ -157,7 +157,7 @@ export default function HomePage() {
     setIsResultsStepCompleted(false);
     setIsGenerating(true);
     setGenerationError(null);
-    setGenerationProgress(0); // Initial progress for the first API call
+    // setGenerationProgress(0); // Initial progress for the first API call - REMOVE for timer
     
     // Immediately move to step 4 (results) to show progress bar there
     setCurrentWizardStep('results');
@@ -168,6 +168,26 @@ export default function HomePage() {
     setGeneratedVerticalImageUrl(null);
     setGeneratedHorizontalImageUrl(null);
 
+    // ---- START: Restore smooth progress bar ----
+    setGenerationProgress(0); // Reset progress before starting
+    const totalProgressDuration = 30000; // 30 seconds in milliseconds (adjust as needed)
+    const updatesPerSecond = 10;
+    const progressIntervalTime = 1000 / updatesPerSecond;
+    const totalUpdates = totalProgressDuration / progressIntervalTime;
+    const progressIncrement = 100 / totalUpdates;
+    let currentProgressValue = 0;
+
+    const progressInterval = setInterval(() => {
+      currentProgressValue += progressIncrement;
+      const newProgress = Math.min(100, currentProgressValue);
+      setGenerationProgress(newProgress);
+
+      if (newProgress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, progressIntervalTime);
+    // ---- END: Restore smooth progress bar ----
+    
     const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
     if (!internalApiKey) {
       console.error('Internal API Key is not defined in frontend environment variables.');
@@ -181,7 +201,7 @@ export default function HomePage() {
 
     try {
       // STEP 1: Initiate Card Generation
-      setGenerationProgress(10); // Progress for initiating call
+      // setGenerationProgress(10); // REMOVE discrete progress update
       console.log('Frontend: Initiating card generation with hex:', selectedHexColor);
 
       const initiateResponse = await fetch('/api/initiate-card-generation', {
@@ -203,7 +223,7 @@ export default function HomePage() {
       dbId = initiateResult.db_id;
       const extendedId = initiateResult.extended_id;
       console.log(`Frontend: Initiation successful. DB ID: ${dbId}, Extended ID: ${extendedId}`);
-      setGenerationProgress(30); // Progress after successful initiation
+      // setGenerationProgress(30); // REMOVE discrete progress update
 
       // Convert base64 Data URL to Blob for multipart/form-data upload
       const fetchRes = await fetch(croppedImageDataUrl!);
@@ -227,23 +247,23 @@ export default function HomePage() {
         body: formData,
       });
       
-      setGenerationProgress(70); // Progress after sending finalize request
+      // setGenerationProgress(70); // REMOVE discrete progress update
 
-      console.log('Frontend: Finalization call successful.');
+      // console.log('Frontend: Finalization call successful.'); // DEBUG REMOVED
       const finalizeResult = await finalizeResponse.json();
-      console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DETAILED LOG
+      // console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DEBUG REMOVED
 
       const horizontalUrl = finalizeResult.horizontal_image_url;
       const verticalUrl = finalizeResult.vertical_image_url;
-      console.log('Frontend: Extracted horizontalUrl:', horizontalUrl);
-      console.log('Frontend: Extracted verticalUrl:', verticalUrl);
+      // console.log('Frontend: Extracted horizontalUrl:', horizontalUrl); // DEBUG REMOVED
+      // console.log('Frontend: Extracted verticalUrl:', verticalUrl); // DEBUG REMOVED
 
       if (!horizontalUrl && !verticalUrl) {
-        console.error('Frontend: Error - No image URLs found in finalizeResult.'); // ERROR LOG
+        // console.error('Frontend: Error - No image URLs found in finalizeResult.'); // DEBUG REMOVED (error is thrown)
         throw new Error('API returned success but no image URLs were found in the response.');
       }
       
-      console.log('Frontend: Image URLs found. Proceeding to set state for results step.'); // TRACE LOG
+      // console.log('Frontend: Image URLs found. Proceeding to set state for results step.'); // DEBUG REMOVED
 
       setGeneratedHorizontalImageUrl(horizontalUrl || null);
       setGeneratedVerticalImageUrl(verticalUrl || null);
@@ -251,7 +271,7 @@ export default function HomePage() {
       setIsColorStepCompleted(true);
       setCurrentWizardStep('results'); 
       setIsResultsStepCompleted(true);
-      console.log('Frontend: State updated for results step. currentWizardStep:', 'results'); // TRACE LOG
+      // console.log('Frontend: State updated for results step. currentWizardStep:', 'results'); // DEBUG REMOVED
       
       // Set the display orientation based on availability and preference
       if (isMobile && verticalUrl) {
@@ -262,22 +282,28 @@ export default function HomePage() {
         setCurrentDisplayOrientation('vertical');
       }
 
-      setGenerationProgress(100);
+      // setGenerationProgress(100); // REMOVE discrete progress update, handled by interval or finally block
+      clearInterval(progressInterval); // Ensure interval is cleared on successful completion
+      setGenerationProgress(100); // Explicitly set to 100 on success
 
     } catch (error) {
-      console.error('Frontend: Error during image generation process:', error); // DETAILED ERROR LOG
+      console.error('Frontend: Error during image generation process:', error); // KEEP this generic error log
       setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
-      setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
-      setCurrentWizardStep('color'); // Explicitly navigate back to the color selection step on error
-      // If dbId was obtained, it might be useful to log or inform the user about potential cleanup needed or partial state
+      setIsColorStepCompleted(false); 
+      setCurrentWizardStep('color'); 
       if (dbId) {
         console.warn(`Generation failed after initiating with DB ID: ${dbId}. Status on server might be pending/failed.`);
       }
+      clearInterval(progressInterval); // Clear interval on error
     } finally {
       setIsGenerating(false);
-      setGenerationProgress(100); // Ensure progress is 100 regardless of outcome
+      // Ensure progress is 100 and interval is cleared, regardless of outcome
+      if (currentProgressValue < 100) { // Check if interval might still be running
+        clearInterval(progressInterval);
+      }
+      setGenerationProgress(100); 
     }
   };
 
