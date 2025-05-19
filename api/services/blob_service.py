@@ -1,7 +1,6 @@
 import traceback
-# import asyncio # Not currently used
 from typing import Dict, List, Union, Optional
-from vercel_blob import put as vercel_blob_put, delete as vercel_blob_delete # Renamed for clarity
+from vercel_blob import put as vercel_blob_put # Removed unused delete import
 from ..utils.logger import log, error
 
 class BlobService:
@@ -88,14 +87,11 @@ class BlobService:
                     continue
                 
                 try:
-                    # Call synchronous upload_image directly
                     upload_result = self.upload_image(data, filename, content_type)
                     results_by_orientation[orientation] = upload_result
                     log(f"Successfully uploaded image for orientation '{orientation}': {upload_result['url']}")
                 except Exception as upload_err:
                     error(f"Failed to upload image for orientation '{orientation}' (filename: {filename}): {str(upload_err)}")
-                    # Optionally, decide if one failure should stop all, or collect errors
-                    # For now, it continues and logs, result won't include this failed one.
             
             if not results_by_orientation and images: 
                 raise Exception("Failed to upload any images from the batch.")

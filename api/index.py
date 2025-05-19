@@ -53,8 +53,6 @@ info("==== STARTUP: Direct from FastAPI entry point ====")
 from api.utils.ai_utils import generate_ai_card_details
 from api.utils.color_utils import hex_to_rgb
 from api.utils.card_utils import generate_card_image_bytes
-from api.models.request import GenerateCardsRequest
-from api.models.response import CardImageResponseItem, GenerateCardsResponse
 from api.services.supabase_service import create_card_generation_record, update_card_generation_status
 from api.models.card_generation_models import CardGenerationCreateRequest, CardGenerationUpdateRequest
 
