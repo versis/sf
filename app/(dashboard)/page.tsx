@@ -8,6 +8,15 @@ import { useState, useRef, useEffect } from 'react';
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
 
+const DUMMY_MESSAGES = [
+  "Initializing generation sequence...",
+  "Querying neural network for inspiration...",
+  "Synthesizing color harmonies...",
+  "Finalizing your unique design...",
+];
+const CHAR_TYPING_SPEED_MS = 40;
+const NEW_LINE_DELAY_TICKS = Math.floor(2000 / CHAR_TYPING_SPEED_MS);
+
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
@@ -33,6 +42,21 @@ export default function HomePage() {
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
   const [isResultsStepCompleted, setIsResultsStepCompleted] = useState(false);
   
+  const [typedLines, setTypedLines] = useState<string[]>([]);
+  const typingLogicRef = useRef<{
+    intervalId: NodeJS.Timeout | null;
+    lineIdx: number;
+    charIdx: number;
+    delayCounter: number;
+    isWaitingForNewLineDelay: boolean;
+  }>({
+    intervalId: null,
+    lineIdx: 0,
+    charIdx: 0,
+    delayCounter: 0,
+    isWaitingForNewLineDelay: false,
+  });
+  
   // Scroll to the active step or results
   useEffect(() => {
     if (currentWizardStep === 'results') {
@@ -53,6 +77,82 @@ export default function HomePage() {
       window.removeEventListener('resize', checkIfMobile);
     };
   }, []);
+
+  useEffect(() => {
+    const logic = typingLogicRef.current;
+
+    if (isGenerating) {
+      setTypedLines(DUMMY_MESSAGES.length > 0 ? [""] : []); // Start with an empty string for the first line
+      logic.lineIdx = 0;
+      logic.charIdx = 0;
+      logic.delayCounter = 0;
+      logic.isWaitingForNewLineDelay = false; // First line starts immediately
+
+      if (DUMMY_MESSAGES.length === 0) return;
+
+      logic.intervalId = setInterval(() => {
+        if (logic.lineIdx >= DUMMY_MESSAGES.length) {
+          if (logic.intervalId) clearInterval(logic.intervalId);
+          return;
+        }
+
+        if (logic.isWaitingForNewLineDelay) {
+          logic.delayCounter++;
+          if (logic.delayCounter >= NEW_LINE_DELAY_TICKS) {
+            logic.isWaitingForNewLineDelay = false;
+            logic.delayCounter = 0;
+            setTypedLines(prev => { // Ensure new line container exists
+              const next = [...prev];
+              if (next.length <= logic.lineIdx) next.push("");
+              return next;
+            });
+          } else {
+            setTypedLines(prev => { // Ensure new line container exists for cursor
+              const next = [...prev];
+              if (next.length <= logic.lineIdx && logic.lineIdx < DUMMY_MESSAGES.length) {
+                  next.push("");
+              }
+              return next;
+            });
+            return; 
+          }
+        }
+
+        const currentTargetLine = DUMMY_MESSAGES[logic.lineIdx];
+        if (logic.charIdx < currentTargetLine.length) {
+          setTypedLines(prevLines => {
+            const newLines = [...prevLines];
+            newLines[logic.lineIdx] = currentTargetLine.substring(0, logic.charIdx + 1);
+            return newLines;
+          });
+          logic.charIdx++;
+        } else {
+          logic.lineIdx++; 
+          logic.charIdx = 0; 
+
+          if (logic.lineIdx < DUMMY_MESSAGES.length) {
+            logic.isWaitingForNewLineDelay = true; 
+            logic.delayCounter = 0;
+            setTypedLines(prevLines => [...prevLines, ""]); // Add container for next line
+          } else {
+            if (logic.intervalId) clearInterval(logic.intervalId);
+          }
+        }
+      }, CHAR_TYPING_SPEED_MS);
+
+    } else { 
+      if (logic.intervalId) {
+        clearInterval(logic.intervalId);
+        logic.intervalId = null;
+      }
+    }
+
+    return () => { 
+      if (logic.intervalId) {
+        clearInterval(logic.intervalId);
+      }
+    };
+  }, [isGenerating]);
 
   const resetWizard = () => {
     setUploadStepPreviewUrl(null);
@@ -357,6 +457,14 @@ export default function HomePage() {
         .shake-animation {
           animation: shakeAnimation 0.5s ease-in-out;
         }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .blinking-cursor {
+          display: inline-block;
+          animation: blink 1s step-end infinite;
+        }
       `}</style>
       
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
@@ -472,10 +580,20 @@ export default function HomePage() {
               >
         {isGenerating && (
                   <div className="w-full mb-6">
-                    <p className="text-xs text-center text-blue-600 mb-2">
-                      Hang on for 20-30 seconds...
-                    </p>
-            <div className="h-2 w-full bg-muted overflow-hidden rounded">
+                    <div className="text-sm text-left text-blue-600 mb-2 pl-2 min-h-[5em]">
+                      {typedLines.map((line, index) => (
+                        <p key={index} className="whitespace-pre-wrap m-0 p-0 leading-tight">
+                          {line}
+                          {index === typingLogicRef.current.lineIdx && typingLogicRef.current.lineIdx < DUMMY_MESSAGES.length && (
+                            <span className="blinking-cursor">_</span>
+                          )}
+                        </p>
+                      ))}
+                      {typedLines.length === 0 && isGenerating && typingLogicRef.current.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && (
+                        <p className="whitespace-pre-wrap m-0 p-0 leading-tight"><span className="blinking-cursor">_</span></p>
+                      )}
+                    </div>
+            <div className="h-2 w-full bg-muted overflow-hidden rounded mt-1">
               <div 
                 className="h-full bg-blue-700 transition-all duration-150 ease-in-out" 
                 style={{ width: `${generationProgress}%` }}
