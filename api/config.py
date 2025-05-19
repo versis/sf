@@ -11,7 +11,7 @@ APP_NAME = "shadefreude API"
 API_PREFIX = "/api"
 
 # Card Generation Specifics
-CARD_ID_SUFFIX = os.environ.get("CARD_ID_SUFFIX", "FE T")
+CARD_ID_SUFFIX = os.environ.get("CARD_ID_SUFFIX", "FE F")
 DB_ID_PADDING_LENGTH = 9  # e.g., to format 1 as "000000001"
 DEFAULT_STATUS_PENDING = "pending_details"
 DEFAULT_STATUS_PROCESSING = "processing_image"
