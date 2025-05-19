@@ -26,7 +26,8 @@ from api.core.config import (
     AZURE_OPENAI_DEPLOYMENT, 
     ENABLE_AI_CARD_DETAILS,
     ALLOWED_ORIGINS,
-    BLOB_READ_WRITE_TOKEN
+    BLOB_READ_WRITE_TOKEN,
+    DEFAULT_STATUS_COMPLETED
 )
 
 # Supabase Client Initialization
@@ -262,8 +263,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 )
         except Exception as e:
             log(f"AI details generation failed: {str(e)}", level="ERROR", request_id=request_id)
-            import traceback
-            log(f"Traceback: {traceback.format_exc()}", level="ERROR", request_id=request_id)
+            error(f"Traceback: {traceback.format_exc()}")
             # Don't generate fallback - return error since AI was enabled but failed
             return JSONResponse(
                 status_code=500,
@@ -333,7 +333,6 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 log(f"Successfully uploaded {orientation} card. URL: {blob_url}", request_id=request_id)
             except Exception as e_blob:
                 log(f"Error uploading {orientation} image to Vercel Blob: {str(e_blob)}", level="ERROR", request_id=request_id)
-                # Include traceback for blob errors
                 error(f"Vercel Blob upload traceback: {traceback.format_exc()}")
                 raise ConnectionError(f"Failed to upload {orientation} image to blob storage: {str(e_blob)}")
             # --- End Vercel Blob Upload ---
@@ -352,6 +351,60 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
         total_duration = time.time() - request_start_time
         log(f"All cards generated successfully in {total_duration:.2f} seconds.", request_id=request_id)
         
+        # --- Step 5: Update Supabase record with Blob URLs and metadata ---
+        if supabase_client and db_id:
+            try:
+                log(f"Attempting to finalize Supabase record ID: {db_id}", request_id=request_id)
+                
+                # Prepare the update payload
+                # For now, primary image_url will be horizontal. Both can be in metadata.
+                # primary_image_url = blob_urls.get("horizontal") # Old logic
+                # if not primary_image_url:
+                #     primary_image_url = blob_urls.get("vertical") # Old logic
+                
+                # Add all blob_urls to metadata for completeness and set specific columns
+                metadata_to_store = final_card_details.copy() 
+                metadata_to_store["image_urls"] = blob_urls 
+                metadata_to_store["hex_color"] = data.hexColor # Added hexColor
+
+                update_payload_dict = {
+                    "status": DEFAULT_STATUS_COMPLETED,
+                    "metadata": metadata_to_store,
+                }
+                # if primary_image_url: # Old logic
+                #     update_payload_dict["image_url"] = primary_image_url # Old logic
+
+                # Use the correct column names from your table schema
+                if "horizontal" in blob_urls:
+                    update_payload_dict["horizontal_image_url"] = blob_urls["horizontal"]
+                if "vertical" in blob_urls:
+                    update_payload_dict["vertical_image_url"] = blob_urls["vertical"]
+                
+                # CardGenerationUpdateRequest might need to be updated if it strictly validates keys
+                # For now, assuming supabase_service.update_card_generation_status handles the dict flexibly.
+                # If CardGenerationUpdateRequest is used for validation before this point, ensure it has these fields.
+                # Since we pass `details=update_payload_dict` directly to the service,
+                # and the service uses `update_data.update(details)`, it should be flexible.
+                
+                # update_request = CardGenerationUpdateRequest(**update_payload_dict) # This might fail if model is strict
+                # We will let the supabase_service handle the dictionary directly.
+
+                updated_record = await update_card_generation_status(
+                    db=supabase_client,
+                    record_id=db_id,
+                    status=DEFAULT_STATUS_COMPLETED, # Status is also part of details dict, but explicit here
+                    details=update_payload_dict # Pass the full dict, status will be set from here
+                )
+                log(f"Successfully finalized Supabase record ID: {db_id}. Status: {updated_record.status}", request_id=request_id)
+            except Exception as e_supabase_update:
+                log(f"Error finalizing Supabase record ID {db_id}: {str(e_supabase_update)}", level="ERROR", request_id=request_id)
+                error(f"Supabase update traceback: {traceback.format_exc()}")
+                # Decide if this error should fail the request or just be logged
+                # For now, we log it but still return the generated cards to the user
+        else:
+            log(f"Supabase client not available or db_id missing. Cannot finalize record.", level="WARNING", request_id=request_id)
+        # --- End Step 5 ---
+
         return GenerateCardsResponse(
             request_id=request_id,
             ai_details_used=final_card_details,
@@ -371,6 +424,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
         )
     except Exception as e:
         log(f"General error during card generation processing: {str(e)}", request_id=request_id)
+        error(f"Traceback: {traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
             content=GenerateCardsResponse(
