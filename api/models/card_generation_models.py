@@ -22,5 +22,6 @@ class FinalizeCardResponse(BaseModel):
     message: str
     db_id: int
     extended_id: str
-    image_url: str
+    horizontal_image_url: str | None = None # Make optional if one might fail
+    vertical_image_url: str | None = None   # Make optional if one might fail
     ai_details_used: Dict[str, Any] 

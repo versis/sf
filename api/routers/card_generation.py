@@ -119,54 +119,71 @@ async def finalize_card_generation_route(data: FinalizeCardRequest = Body(...), 
 
         final_card_details_for_image_render["cardId"] = extended_id
 
-        # Generate final image
-        log(f"Generating final card image for DB ID: {data.db_id}, extended_id: {extended_id}", request_id=request_id)
-        image_orientation = "horizontal" # Defaulting, or make it a param in FinalizeCardRequest
+        # Generate final images (horizontal and vertical)
+        log(f"Generating final card images for DB ID: {data.db_id}, extended_id: {extended_id}", request_id=request_id)
         
+        generated_image_urls: Dict[str, str | None] = {
+            "horizontal": None,
+            "vertical": None
+        }
+        orientations_to_generate = ["horizontal", "vertical"]
+
         # Decode base64 data URL to bytes for image generation and blob upload
+        # This is done once as the base image is the same for both orientations.
         try:
             if ';base64,' not in data.cropped_image_data_url:
                 raise ValueError("Invalid Data URL format: missing ';base64,' part")
             header, base64_data = data.cropped_image_data_url.split(';base64,', 1)
-            # TODO: Potentially parse 'header' for mime-type if needed by generate_card_image_bytes or blob storage for content-type
-            image_bytes_for_processing = base64.b64decode(base64_data)
+            # image_bytes_for_processing = base64.b64decode(base64_data) # Not directly used if generate_card_image_bytes takes data_url
+            # TODO: parse 'header' for mime-type to determine image_extension if needed.
+            # For now, assuming jpg or png based on generate_card_image_bytes output.
         except Exception as decode_err:
             log(f"Invalid base64 data URL for DB ID {data.db_id}: {str(decode_err)}", level="ERROR", request_id=request_id)
             raise HTTPException(status_code=400, detail="Invalid image data format.")
 
-        final_image_bytes = await generate_card_image_bytes(
-            # Pass decoded bytes or keep as data_url if card_utils handles data_urls directly
-            # Assuming generate_card_image_bytes expects a data URL as per original code for now:
-            cropped_image_data_url=data.cropped_image_data_url, 
-            card_details=final_card_details_for_image_render,
-            hex_color_input=data.hex_color,
-            orientation=image_orientation,
-            request_id=request_id
+        for orientation in orientations_to_generate:
+            log(f"Generating {orientation} image...", request_id=request_id)
+            try:
+                final_image_bytes = await generate_card_image_bytes(
+                    cropped_image_data_url=data.cropped_image_data_url, 
+                    card_details=final_card_details_for_image_render,
+                    hex_color_input=data.hex_color,
+                    orientation=orientation,
+                    request_id=request_id
+                )
+
+                random_suffix = str(uuid.uuid4())[:4]
+                safe_extended_id_part = extended_id.replace(" ", "_").replace("/", "_")
+                # Assuming generate_card_image_bytes produces JPG, adjust if it's PNG or other.
+                image_extension = ".jpg" 
+                image_filename_for_blob = f"cards/{safe_extended_id_part}_{orientation}-{random_suffix}{image_extension}"
+
+                log(f"Uploading {orientation} image to Vercel Blob as: {image_filename_for_blob}", request_id=request_id)
+                uploaded_url = await blob_service.upload_image_to_blob(image_filename_for_blob, final_image_bytes)
+                generated_image_urls[orientation] = uploaded_url
+                log(f"{orientation.capitalize()} image uploaded to: {uploaded_url}", request_id=request_id)
+            except Exception as img_gen_upload_err:
+                error(f"Error generating or uploading {orientation} image for DB ID {data.db_id}: {img_gen_upload_err}", request_id=request_id)
+                # Decide if you want to continue if one orientation fails, or fail the whole request.
+                # For now, it will store None for the failed orientation URL.
+
+        # Update Supabase record with both URLs
+        await supabase_service.finalize_card_record_update(
+            data.db_id, 
+            horizontal_image_url=generated_image_urls["horizontal"],
+            vertical_image_url=generated_image_urls["vertical"],
+            metadata=ai_details_to_store
         )
-        # If generate_card_image_bytes now returns bytes, and you need bytes for blob:
-        # The `final_image_bytes` from `generate_card_image_bytes` are used directly for blob upload.
-
-        # Upload image to Vercel Blob
-        random_suffix = str(uuid.uuid4())[:4] # Shorter random suffix
-        safe_extended_id_part = extended_id.replace(" ", "_").replace("/", "_")
-        image_extension = ".jpg" # Determine from header or assume based on generate_card_image_bytes output
-        image_filename_for_blob = f"cards/{safe_extended_id_part}-{random_suffix}{image_extension}"
-
-        log(f"Uploading final image to Vercel Blob as: {image_filename_for_blob}", request_id=request_id)
-        uploaded_image_url = await blob_service.upload_image_to_blob(image_filename_for_blob, final_image_bytes)
-        log(f"Image uploaded successfully to Vercel Blob: {uploaded_image_url}", request_id=request_id)
-
-        # Update Supabase record
-        await supabase_service.finalize_card_record_update(data.db_id, uploaded_image_url, ai_details_to_store)
 
         total_duration = time.time() - request_start_time
-        log(f"Card generation finalized successfully for DB ID {data.db_id} in {total_duration:.2f}s. Image URL: {uploaded_image_url}", request_id=request_id)
+        log(f"Card generation finalized for DB ID {data.db_id} in {total_duration:.2f}s. Horizontal: {generated_image_urls['horizontal']}, Vertical: {generated_image_urls['vertical']}", request_id=request_id)
         
         return FinalizeCardResponse(
             message="Card finalized successfully",
             db_id=data.db_id,
             extended_id=extended_id,
-            image_url=uploaded_image_url,
+            horizontal_image_url=generated_image_urls["horizontal"],
+            vertical_image_url=generated_image_urls["vertical"],
             ai_details_used=ai_details_to_store
         )
 

@@ -52,14 +52,18 @@ async def get_card_for_finalization(db_id: int) -> Optional[Dict[str, Any]]:
     response = await client.table("card_generations").select("id, extended_id, hex_color, status").eq("id", db_id).maybe_single().execute()
     return response.data
 
-async def finalize_card_record_update(db_id: int, image_url: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+async def finalize_card_record_update(db_id: int, horizontal_image_url: str | None, vertical_image_url: str | None, metadata: Dict[str, Any]) -> Dict[str, Any]:
     client = get_supabase_client()
     update_payload = {
-        "image_url": image_url,
+        "horizontal_image_url": horizontal_image_url,
+        "vertical_image_url": vertical_image_url,
         "metadata": metadata,
         "status": "completed"
     }
-    response = await client.table("card_generations").update(update_payload).eq("id", db_id).execute()
+    # Filter out None values to avoid setting columns to NULL if an image URL is missing
+    update_payload_filtered = {k: v for k, v in update_payload.items() if v is not None}
+
+    response = await client.table("card_generations").update(update_payload_filtered).eq("id", db_id).execute()
     if not response.data:
         raise Exception(f"Failed to finalize Supabase record for DB ID: {db_id}")
     return response.data[0] 
