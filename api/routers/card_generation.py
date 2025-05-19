@@ -35,11 +35,7 @@ else:
     blob_service = None
     log("BlobService not initialized due to missing token.")
 
-# ImageProcessor is no longer initialized here as we use generate_card_image_bytes directly
-# # Initialize ImageProcessor
-# # Consider making font paths configurable or discovered
-# font_path = DEFAULT_FONT_PATH # Or determine dynamically
-# image_processor = ImageProcessor(font_path=font_path)
+# ImageProcessor initialization was here, now fully removed.
 
 @router.post("/initiate-card-generation", 
              response_model=InitiateCardGenerationResponse, 
@@ -98,15 +94,13 @@ async def finalize_card_generation(
         
         record_data = fetch_response.data
         hex_color = record_data.get("hex_color")
-        extended_id = record_data.get("extended_id", f"{str(db_id).zfill(9)} ???") # Fallback for extended_id
+        extended_id = record_data.get("extended_id", f"{str(db_id).zfill(9)} ???") 
 
         if not hex_color:
-            await update_card_generation_status(supabase_client, db_id, DEFAULT_STATUS_FAILED, {"error_message": "Hex color missing from record"})
             raise HTTPException(status_code=400, detail="Hex color is missing from the specified record.")
 
         rgb_tuple = hex_to_rgb(hex_color)
         if not rgb_tuple:
-            await update_card_generation_status(supabase_client, db_id, DEFAULT_STATUS_FAILED, {"error_message": f"Invalid hex color: {hex_color}"})
             raise HTTPException(status_code=400, detail=f"Invalid hex color format in record: {hex_color}")
         cmyk_tuple = rgb_to_cmyk(rgb_tuple[0], rgb_tuple[1], rgb_tuple[2])
 
@@ -204,8 +198,4 @@ async def finalize_card_generation(
             error(f"Additionally, failed to update status to 'failed' for DB ID {db_id}: {str(update_err)}")
         raise HTTPException(status_code=500, detail=error_msg)
 
-
-# Example of how to include this router in your main FastAPI app (e.g., in api/index.py or main.py)
-# from fastapi import FastAPI
-# app = FastAPI()
-# app.include_router(router, prefix="/api/cards", tags=["Card Generation"]) 
+# Example router inclusion comment was here, now fully removed. 

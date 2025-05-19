@@ -259,11 +259,10 @@ export default function HomePage() {
       // console.log('Frontend: Extracted verticalUrl:', verticalUrl); // DEBUG REMOVED
 
       if (!horizontalUrl && !verticalUrl) {
-        // console.error('Frontend: Error - No image URLs found in finalizeResult.'); // DEBUG REMOVED (error is thrown)
         throw new Error('API returned success but no image URLs were found in the response.');
       }
       
-      // console.log('Frontend: Image URLs found. Proceeding to set state for results step.'); // DEBUG REMOVED
+      // AI color name update logic was here, now fully removed.
 
       setGeneratedHorizontalImageUrl(horizontalUrl || null);
       setGeneratedVerticalImageUrl(verticalUrl || null);
@@ -524,54 +523,6 @@ export default function HomePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Download
                       </button>
-                      {/* Temporarily commented out Share button
-                      <button
-                        onClick={() => {
-                          // Get the current URL for sharing
-                          const shareUrl = `${window.location.origin}/card?orientation=${currentDisplayOrientation}&color=${encodeURIComponent(selectedHexColor)}&colorName=${encodeURIComponent(colorNameInput)}`;
-                          
-                          // Save images to sessionStorage for the share page to access
-                          if (generatedHorizontalImageUrl) {
-                            sessionStorage.setItem('horizontalCardUrl', generatedHorizontalImageUrl);
-                          }
-                          if (generatedVerticalImageUrl) {
-                            sessionStorage.setItem('verticalCardUrl', generatedVerticalImageUrl);
-                          }
-                          
-                          // Try using the Web Share API if available (mobile devices)
-                          if (navigator.share) {
-                            navigator.share({
-                              title: `${colorNameInput} - Shadefreude Color Card`,
-                              text: 'Check out this color card I created with shadefreude!',
-                              url: shareUrl
-                            })
-                            .catch(err => {
-                              console.error('Error sharing:', err);
-                              // Fallback if sharing fails
-                              window.location.href = shareUrl;
-                            });
-                          } else {
-                            // Copy to clipboard on desktop
-                            navigator.clipboard.writeText(shareUrl)
-                              .then(() => {
-                                alert('Share link copied to clipboard!');
-                                // Still navigate to the share page
-                                window.location.href = shareUrl;
-                              })
-                              .catch(err => {
-                                console.error('Failed to copy:', err);
-                                // Fallback - just navigate
-                                window.location.href = shareUrl;
-                              });
-                          }
-                        }}
-                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
-                        className="px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center gap-2"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                        Share
-                      </button>
-                      */}
                     </div>
                     
                     <button

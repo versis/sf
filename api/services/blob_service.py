@@ -1,5 +1,5 @@
 import traceback
-import asyncio # Keep for potential future use with run_in_executor, though not used for now
+# import asyncio # Not currently used
 from typing import Dict, List, Union, Optional
 from vercel_blob import put as vercel_blob_put, delete as vercel_blob_delete # Renamed for clarity
 from ..utils.logger import log, error
@@ -109,24 +109,17 @@ class BlobService:
             error(traceback.format_exc())
             raise Exception(error_detail)
 
-    def delete_image(self, url: str) -> bool:
-        """
-        Delete an image from Vercel Blob storage by its URL.
-        
-        Args:
-            url: The URL of the blob to delete
-            
-        Returns:
-            True if deletion was successful, False otherwise
-        """
-        try:
-            log(f"Attempting to delete image from Vercel Blob at URL: {url}")
-            # Removed await, vercel_blob_delete is synchronous
-            vercel_blob_delete([url], options={'token': self.token})
-            log(f"Successfully deleted image at URL: {url}")
-            return True
-        except Exception as e:
-            error_detail = f"Failed to delete image at URL {url} from Vercel Blob: {str(e)}"
-            error(error_detail)
-            error(traceback.format_exc())
-            return False 
+    # _upload_single_image_with_orientation was removed previously.
+    
+    # Unused delete_image method removed for cleanup.
+    # def delete_image(self, url: str) -> bool:
+    #     try:
+    #         log(f"Attempting to delete image from Vercel Blob at URL: {url}")
+    #         vercel_blob_delete([url], options={'token': self.token})
+    #         log(f"Successfully deleted image at URL: {url}")
+    #         return True
+    #     except Exception as e:
+    #         error_detail = f"Failed to delete image at URL {url} from Vercel Blob: {str(e)}"
+    #         error(error_detail)
+    #         error(traceback.format_exc())
+    #         return False 
