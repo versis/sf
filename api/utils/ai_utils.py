@@ -11,8 +11,8 @@ from api.models.card import ColorCardDetails
 from api.utils.logger import log, info, debug
 from api.utils.image_processor import resize_and_convert_image_for_openai
 from api.utils.response_formatter import OpenAIResponseFormatter
-from api.utils.openai_client import azure_client, OVERALL_TIMEOUT
-from ..config import AZURE_OPENAI_DEPLOYMENT
+from api.utils.openai_client import azure_client
+from ..config import AZURE_OPENAI_DEPLOYMENT, AZURE_OPENAI_CLIENT_TIMEOUT
 
 async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str = None, request_id: str = None) -> Dict[str, Any]:
     """
@@ -65,7 +65,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
         log(f"Error: Invalid image data URL format - missing base64 delimiter", level="ERROR", request_id=request_id)
         raise ValueError("Invalid image data URL format - missing base64 delimiter")
     
-    log(f"Starting Azure OpenAI API call for hex color '{hex_color}' with image. Overall timeout {OVERALL_TIMEOUT}s.", request_id=request_id)
+    log(f"Starting Azure OpenAI API call for hex color '{hex_color}' with image. Overall timeout {AZURE_OPENAI_CLIENT_TIMEOUT}s.", request_id=request_id)
     api_call_start_time = time.time()
 
     try:
@@ -146,7 +146,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                     max_completion_tokens=1500,
                     response_format=ColorCardDetails,
                 ),
-                timeout=OVERALL_TIMEOUT
+                timeout=AZURE_OPENAI_CLIENT_TIMEOUT
             )
             
             openai_api_duration = time.time() - openai_api_start_time
@@ -177,8 +177,8 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             return final_details
                 
         except asyncio.TimeoutError:
-            log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", level="ERROR", request_id=request_id)
-            raise ValueError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
+            log(f"Azure OpenAI API call timed out via asyncio.wait_for after {AZURE_OPENAI_CLIENT_TIMEOUT}s.", level="ERROR", request_id=request_id)
+            raise ValueError(f"AI generation timed out after {AZURE_OPENAI_CLIENT_TIMEOUT} seconds")
         except Exception as api_error:
             log(f"Error calling Azure OpenAI API: {str(api_error)}", level="ERROR", request_id=request_id)
             raise ValueError(f"Error calling Azure OpenAI API: {str(api_error)}")
@@ -187,8 +187,8 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
         log(f"Azure OpenAI API call completed in {api_call_duration:.2f} seconds", request_id=request_id)
 
     except asyncio.TimeoutError:
-        log(f"Azure OpenAI API call timed out via asyncio.wait_for after {OVERALL_TIMEOUT}s.", level="ERROR", request_id=request_id)
-        raise ValueError(f"AI generation timed out after {OVERALL_TIMEOUT} seconds")
+        log(f"Azure OpenAI API call timed out via asyncio.wait_for after {AZURE_OPENAI_CLIENT_TIMEOUT}s.", level="ERROR", request_id=request_id)
+        raise ValueError(f"AI generation timed out after {AZURE_OPENAI_CLIENT_TIMEOUT} seconds")
         
     except Exception as e:
         log(f"Error during Azure OpenAI call or processing: {str(e)}", level="ERROR", request_id=request_id)

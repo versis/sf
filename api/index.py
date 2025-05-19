@@ -26,6 +26,7 @@ from .config import (
     AZURE_OPENAI_DEPLOYMENT, 
     ENABLE_AI_CARD_DETAILS,
     ALLOWED_ORIGINS,
+    UVICORN_TIMEOUT_KEEP_ALIVE,
 )
 
 # Supabase Client Initialization
@@ -188,7 +189,7 @@ if __name__ == "__main__":
         port=8000, 
         reload=True, 
         reload_dirs=["api"], 
-        timeout_keep_alive=120,
+        timeout_keep_alive=UVICORN_TIMEOUT_KEEP_ALIVE,
         log_level="debug",
         log_config=log_config,
         use_colors=True,

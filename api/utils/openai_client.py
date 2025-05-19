@@ -9,14 +9,9 @@ from openai import AsyncAzureOpenAI
 from ..config import (
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_API_VERSION,
-    AZURE_OPENAI_ENDPOINT
+    AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_CLIENT_TIMEOUT,
 )
-
-# Load environment variables only once at module level
-# load_dotenv(".env.local") # Removed
-
-# Constants
-OVERALL_TIMEOUT = 119.0  # Slightly less than Vercel's 60s Hobby limit
 
 # Client for Azure OpenAI - initialize once at module level
 azure_client = AsyncAzureOpenAI(
@@ -26,4 +21,5 @@ azure_client = AsyncAzureOpenAI(
     api_key=AZURE_OPENAI_API_KEY,
     api_version=AZURE_OPENAI_API_VERSION, # Default is handled in config.py if env var not set
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
+    timeout=AZURE_OPENAI_CLIENT_TIMEOUT, # Use the imported config
 ) 

@@ -130,6 +130,34 @@ You can also selectively enable debug logs by setting the `LOG_LEVEL` environmen
 LOG_LEVEL=DEBUG
 ```
 
+## Timeout Configuration
+
+This project involves several layers where timeouts can occur. Here's a summary of how they are configured:
+
+1.  **Vercel Serverless Function Timeout (`vercel.json`)**:
+    *   The `maxDuration` setting in `vercel.json` under `functions -> api/index.py` controls the maximum execution time for the main Python backend function on Vercel.
+    *   This is set to **120 seconds** (2 minutes) for Pro plan compatibility.
+    *   Example: `"maxDuration": 120`
+
+2.  **Next.js Proxy Timeout (`next.config.js`)**:
+    *   The `experimental.proxyTimeout` in `next.config.js` sets the timeout for requests proxied from the Next.js frontend to the backend (FastAPI in this case).
+    *   This is set to **120000 milliseconds** (2 minutes) to accommodate the backend function's max duration.
+    *   Example: `proxyTimeout: 120000`
+
+3.  **Python FastAPI (Uvicorn) Keep-Alive Timeout (`api/config.py`)**:
+    *   For local development, the Uvicorn server (run via `api/index.py`) has a `timeout_keep_alive` setting.
+    *   This is configured in `api/config.py` via the `UVICORN_TIMEOUT_KEEP_ALIVE` variable, which defaults to **120 seconds**.
+    *   It can be overridden by setting the `UVICORN_TIMEOUT_KEEP_ALIVE` environment variable.
+    *   Used in: `api/index.py` when calling `uvicorn.run()`.
+
+4.  **Azure OpenAI Client Timeout (`api/config.py`)**:
+    *   The timeout for requests made by the Azure OpenAI Python client is configured in `api/config.py` via the `AZURE_OPENAI_CLIENT_TIMEOUT` variable.
+    *   This defaults to **119.0 seconds** (slightly less than the typical 2-minute function timeout to allow for overhead).
+    *   It can be overridden by setting the `AZURE_OPENAI_CLIENT_TIMEOUT` environment variable.
+    *   Used in: `api/utils/openai_client.py` when initializing `AsyncAzureOpenAI` and in `api/utils/ai_utils.py` for `asyncio.wait_for()` calls.
+
+It is recommended to keep these timeouts aligned, with client timeouts being slightly less than server/function timeouts to allow for graceful error handling.
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:
