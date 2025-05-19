@@ -424,7 +424,8 @@ export default function HomePage() {
     if (stepName === 'upload' && (isUploadStepCompleted || currentWizardStep === 'upload')) return true;
     if (stepName === 'crop' && (isCropStepCompleted || (currentWizardStep === 'crop' && isUploadStepCompleted))) return true;
     if (stepName === 'color' && (isColorStepCompleted || (currentWizardStep === 'color' && isCropStepCompleted))) return true;
-    if (stepName === 'results' && (isResultsStepCompleted || (currentWizardStep === 'results' && isColorStepCompleted))) return true;
+    // Allow returning to results if generating, or if results are completed, or if currently on results and color step was done.
+    if (stepName === 'results' && (isGenerating || isResultsStepCompleted || (currentWizardStep === 'results' && isColorStepCompleted))) return true;
     return false;
   };
 
