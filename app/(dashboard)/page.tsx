@@ -490,7 +490,7 @@ export default function HomePage() {
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
-              title="1: Pick a nice photo you like"
+              title="1: Pick a nice photo"
               stepNumber={1} 
               isActive={currentWizardStep === 'upload'} 
               isCompleted={isUploadStepCompleted}
