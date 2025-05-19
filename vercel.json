@@ -8,7 +8,7 @@
   },
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/api/((?!download-image(?:/|$)).*)",
       "dest": "/api/index.py"
     }
   ]
