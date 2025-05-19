@@ -5,7 +5,8 @@ import base64
 
 from ..config import (
     SUPABASE_URL, SUPABASE_SERVICE_KEY, BLOB_READ_WRITE_TOKEN,
-    DEFAULT_STATUS_PROCESSING, DEFAULT_STATUS_COMPLETED, DEFAULT_STATUS_FAILED
+    DEFAULT_STATUS_PROCESSING, DEFAULT_STATUS_COMPLETED, DEFAULT_STATUS_FAILED,
+    ENABLE_AI_CARD_DETAILS # Added import for AI flag
 )
 from ..models.card_generation_models import (
     CardGenerationCreateRequest, CardGenerationRecord, InitiateCardGenerationResponse,
@@ -17,6 +18,7 @@ from ..utils.logger import log, error
 from ..dependencies import verify_api_key
 from ..utils.card_utils import generate_card_image_bytes
 from ..utils.color_utils import hex_to_rgb, rgb_to_cmyk
+from ..utils.ai_utils import generate_ai_card_details # Added import for AI function
 
 router = APIRouter()
 
@@ -68,9 +70,9 @@ async def initiate_card_generation(payload: CardGenerationCreateRequest):
 async def finalize_card_generation(
     db_id: int, 
     user_image: UploadFile = File(...),
-    card_name: str = Body(...),
-    user_prompt: Optional[str] = Body(None), # For potential future AI integration for name/details
-    ai_generated_details: Optional[Dict[str, Any]] = Body(None) # If AI details are pre-generated and passed
+    card_name: str = Body(...), # This will be a fallback if AI is off or fails
+    user_prompt: Optional[str] = Body(None), # Stored in metadata, not currently used for AI call generation
+    # ai_generated_details: Optional[Dict[str, Any]] = Body(None) # This param is now redundant if backend calls AI
 ):
     """
     Finalizes the card generation process:
@@ -114,28 +116,52 @@ async def finalize_card_generation(
         user_image_content_type = user_image.content_type or 'image/png' # Default if not provided
         user_image_data_url = f"data:{user_image_content_type};base64,{base64.b64encode(user_image_bytes).decode('utf-8')}"
 
+        # --- AI Details Generation Step --- 
+        processed_ai_details = {} # Store details from AI or fallback
+        raw_ai_response_for_metadata = None # Store raw AI response for logging/metadata
+
+        if ENABLE_AI_CARD_DETAILS:
+            log(f"AI Card Details enabled. Calling AI service for DB ID: {db_id}", request_id=str(db_id))
+            try:
+                # generate_ai_card_details is expected to return a dict like ColorCardDetails model
+                processed_ai_details = await generate_ai_card_details(
+                    hex_color=hex_color,
+                    cropped_image_data_url=user_image_data_url,
+                    request_id=str(db_id)
+                )
+                log(f"AI details received: {processed_ai_details}", request_id=str(db_id))
+                raw_ai_response_for_metadata = processed_ai_details # Assuming this is the dict to store
+            except Exception as ai_exc:
+                log(f"AI details generation failed for DB ID {db_id}: {str(ai_exc)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
+                raw_ai_response_for_metadata = {"error": str(ai_exc), "status": "AI call failed"}
+                # Fallback details will be used (i.e., processed_ai_details remains empty or has defaults)
+        else:
+            log(f"AI Card Details are disabled. Using provided card name: {card_name}", request_id=str(db_id))
+            raw_ai_response_for_metadata = {"status": "AI disabled"}
+
+        # --- Prepare card details for image generation --- 
         card_details_for_image_gen = {
-            "shade_freude_text": "ShadeFREUDE", # This can be a constant or from config
-            "colorName": card_name,
-            "extendedId": extended_id, # Use the one from DB
-            "hex_code": hex_color, # For display on card
-            "rgb_code": f"{rgb_tuple[0]} {rgb_tuple[1]} {rgb_tuple[2]}", # For display
-            "cmyk_code": f"{cmyk_tuple[0]} {cmyk_tuple[1]} {cmyk_tuple[2]} {cmyk_tuple[3]}", # For display
-            # other details like phoneticName, article, description would come from ai_generated_details if used
+            "shade_freude_text": "ShadeFREUDE",
+            "colorName": processed_ai_details.get("colorName", card_name.upper()), # Prioritize AI, fallback to user input
+            "extendedId": extended_id,
+            "hex_code": hex_color,
+            "rgb_code": f"{rgb_tuple[0]} {rgb_tuple[1]} {rgb_tuple[2]}",
+            "cmyk_code": f"{cmyk_tuple[0]} {cmyk_tuple[1]} {cmyk_tuple[2]} {cmyk_tuple[3]}",
+            "phoneticName": processed_ai_details.get("phoneticName", ""), # Fallback to empty or placeholder
+            "article": processed_ai_details.get("article", ""),
+            "description": processed_ai_details.get("description", "Your unique shade.")
         }
-        if ai_generated_details: # Merge AI details if provided
-            card_details_for_image_gen.update(ai_generated_details)
 
         generated_images_for_blob = []
         orientations = ["horizontal", "vertical"]
         
         for orientation in orientations:
             img_bytes = await generate_card_image_bytes(
-                cropped_image_data_url=user_image_data_url, # Changed from user_image_bytes
+                cropped_image_data_url=user_image_data_url, 
                 card_details=card_details_for_image_gen,
                 hex_color_input=hex_color,
                 orientation=orientation,
-                request_id=str(db_id) # Pass db_id as request_id for logging continuity
+                request_id=str(db_id) 
             )
             generated_images_for_blob.append({
                 "data": img_bytes,
@@ -153,9 +179,10 @@ async def finalize_card_generation(
         # Ensure keys here match actual column names in your Supabase table
         update_payload = {
             "metadata": {
-                "card_name": card_name,
+                "card_name": card_details_for_image_gen["colorName"], # Store the final name used
+                "user_provided_initial_name": card_name, # Keep track of original user input
                 "user_prompt": user_prompt,
-                "ai_details": ai_generated_details, 
+                "ai_info": raw_ai_response_for_metadata, # Store AI call outcome/details
                 "original_filename": user_image.filename,
                 "image_generation_details": card_details_for_image_gen,
                 "uploaded_blob_info": uploaded_image_info # This correctly stores the dict with horizontal/vertical URLs
@@ -190,7 +217,8 @@ async def finalize_card_generation(
                 "metadata": {
                     "error_info": error_msg,
                     "original_user_image_filename": user_image.filename if user_image else None,
-                    "attempted_card_name": card_name
+                    "attempted_card_name": card_name,
+                    "ai_info_on_failure": raw_ai_response_for_metadata if 'raw_ai_response_for_metadata' in locals() else "AI not called or error before AI stage"
                 }
             }
             await update_card_generation_status(supabase_client, db_id, DEFAULT_STATUS_FAILED, failure_details)

@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 # Import logger early to ensure it's configured before use
-from api.utils.logger import log, error, info, warning, debug, critical
+from api.utils.logger import log, error, info, warning, debug
 
 # Import configuration, including CARD_ID_SUFFIX
 from .config import (
@@ -26,8 +26,6 @@ from .config import (
     AZURE_OPENAI_DEPLOYMENT, 
     ENABLE_AI_CARD_DETAILS,
     ALLOWED_ORIGINS,
-    BLOB_READ_WRITE_TOKEN,
-    DEFAULT_STATUS_COMPLETED
 )
 
 # Supabase Client Initialization
