@@ -66,7 +66,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
       >
         <div className="flex items-center">
           <span className="font-semibold">{title}</span>
-          {isCompleted && !isActive && 
+          {isCompleted &&
             <span className="text-[var(--accent-green)] text-2xl leading-none ml-2">{oldSchoolCheckmark}</span>
           }
         </div>
