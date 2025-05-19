@@ -134,22 +134,35 @@ async def finalize_card_generation(
             except Exception as ai_exc:
                 log(f"AI details generation failed for DB ID {db_id}: {str(ai_exc)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
                 raw_ai_response_for_metadata = {"error": str(ai_exc), "status": "AI call failed"}
-                # Fallback details will be used (i.e., processed_ai_details remains empty or has defaults)
+                # Populate processed_ai_details with dummy data if AI is off
+                processed_ai_details = {
+                    "colorName": card_name.upper(), # Use user-provided name
+                    "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
+                    "article": "[noun phrase]",
+                    "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
+                }
         else:
             log(f"AI Card Details are disabled. Using provided card name: {card_name}", request_id=str(db_id))
             raw_ai_response_for_metadata = {"status": "AI disabled"}
+            # Populate processed_ai_details with dummy data if AI is off
+            processed_ai_details = {
+                "colorName": card_name.upper(), # Use user-provided name
+                "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
+                "article": "[noun phrase]",
+                "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
+            }
 
         # --- Prepare card details for image generation --- 
         card_details_for_image_gen = {
             "shade_freude_text": "ShadeFREUDE",
-            "colorName": processed_ai_details.get("colorName", card_name.upper()), # Prioritize AI, fallback to user input
+            "colorName": processed_ai_details.get("colorName", card_name.upper()), 
             "extendedId": extended_id,
             "hex_code": hex_color,
             "rgb_code": f"{rgb_tuple[0]} {rgb_tuple[1]} {rgb_tuple[2]}",
             "cmyk_code": f"{cmyk_tuple[0]} {cmyk_tuple[1]} {cmyk_tuple[2]} {cmyk_tuple[3]}",
-            "phoneticName": processed_ai_details.get("phoneticName", ""), # Fallback to empty or placeholder
-            "article": processed_ai_details.get("article", ""),
-            "description": processed_ai_details.get("description", "Your unique shade.")
+            "phoneticName": processed_ai_details.get("phoneticName", "[ˈdʌmi fəˈnɛtɪk]"), # Fallback if AI fails after being enabled
+            "article": processed_ai_details.get("article", "[noun phrase]"),
+            "description": processed_ai_details.get("description", "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing.")
         }
 
         generated_images_for_blob = []
