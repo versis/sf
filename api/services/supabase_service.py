@@ -1,7 +1,7 @@
 import traceback
 from supabase import Client as SupabaseClient, PostgrestAPIResponse
 from ..models.card_generation_models import CardGenerationCreateRequest, CardGenerationRecord
-from ..core.config import CARD_ID_SUFFIX, DB_ID_PADDING_LENGTH, DEFAULT_STATUS_PENDING
+from ..config import CARD_ID_SUFFIX, DB_ID_PADDING_LENGTH, DEFAULT_STATUS_PENDING
 from ..utils.logger import log, error # Make sure logger is correctly placed
 
 async def create_card_generation_record(
