@@ -12,7 +12,7 @@ from api.utils.logger import log, info, debug
 from api.utils.image_processor import resize_and_convert_image_for_openai
 from api.utils.response_formatter import OpenAIResponseFormatter
 from api.utils.openai_client import azure_client, OVERALL_TIMEOUT
-from api.core.config import AZURE_OPENAI_DEPLOYMENT
+from ..config import AZURE_OPENAI_DEPLOYMENT
 
 async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str = None, request_id: str = None) -> Dict[str, Any]:
     """

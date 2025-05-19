@@ -36,6 +36,9 @@ BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 # Internal API Key for securing certain endpoints
 INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY")
 
+# Development Mode Flags
+DEV_MODE_SKIP_API_KEY_CHECK = os.environ.get("DEV_MODE_SKIP_API_KEY_CHECK", "False").lower() == "true"
+
 # Logging Configuration
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 

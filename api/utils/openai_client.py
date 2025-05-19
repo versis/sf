@@ -6,7 +6,7 @@ from openai import AsyncAzureOpenAI
 # from dotenv import load_dotenv # Removed, handled in api.core.config
 
 # Import necessary configurations
-from api.core.config import (
+from ..config import (
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_API_VERSION,
     AZURE_OPENAI_ENDPOINT

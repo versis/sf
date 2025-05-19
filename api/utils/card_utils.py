@@ -6,10 +6,12 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from api.utils.logger import log, debug # Added debug import
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk
 
-# --- Font Loading --- (Assuming assets path is relative to where api/index.py runs)
-ASSETS_BASE_PATH = "assets" # If api/index.py is in /api, this path is relative to /api
-# If running from root, this should be "api/assets"
-# For now, let's assume it is called from api/index.py context
+# --- Font Loading ---
+# Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
+# and assets folder is at the project root (sf/assets)
+ASSETS_BASE_PATH = "assets"
+# If running from root, this would be "assets"
+# If api/index.py is in /api, this path is relative to /api which becomes sf/assets
 
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
     import os # Keep os import here as it might check paths
