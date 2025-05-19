@@ -318,7 +318,7 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
             # Construct a unique filename for Vercel Blob
             # Making filename URL-safe and unique
             safe_extended_id = active_extended_id.replace(' ', '_').replace('/', '-') # Basic sanitization
-            unique_suffix = uuid.uuid4().hex[:8]
+            unique_suffix = uuid.uuid4().hex[:16] # New: 16 characters
             blob_filename = f"cards/{safe_extended_id}_{orientation}_{unique_suffix}.png"
             
             log(f"Uploading {orientation} card to Vercel Blob as {blob_filename}", request_id=request_id)
