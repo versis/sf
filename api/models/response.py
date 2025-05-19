@@ -12,17 +12,17 @@ class CardImageResponseItem(BaseModel):
     -----------
     orientation : str
         The orientation of the card image.
-    image_base64 : str
-        The base64-encoded image data.
+    imageUrl : str
+        The direct URL of the image stored in Vercel Blob.
     filename : str
-        The filename of the generated card image.
-    cardId : str
+        The filename of the generated card image (can be useful for reference or if user downloads with this name).
+    extendedId : str
         The unique identifier for the card.
     """
     orientation: str
-    image_base64: str
+    imageUrl: str
     filename: str
-    cardId: str
+    extendedId: str
 
 class GenerateCardsResponse(BaseModel):
     """

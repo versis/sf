@@ -227,22 +227,14 @@ export default function HomePage() {
       }
 
       for (const card of resultData.generated_cards) {
-        const MimeType = 'image/png'; // Use PNG for better quality
-        const byteString = atob(card.image_base64);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        const blob = new Blob([ab], { type: MimeType });
-        const blobUrl = URL.createObjectURL(blob);
+        const imageUrl = card.imageUrl; // Use the direct URL from the API response
 
         if (card.orientation === 'horizontal') {
-          tempHorizontalUrl = blobUrl;
+          tempHorizontalUrl = imageUrl; // New
           setGeneratedHorizontalImageUrl(tempHorizontalUrl);
           horizontalSuccess = true;
         } else if (card.orientation === 'vertical') {
-          tempVerticalUrl = blobUrl;
+          tempVerticalUrl = imageUrl; // New
           setGeneratedVerticalImageUrl(tempVerticalUrl);
           verticalSuccess = true;
         }
@@ -272,11 +264,10 @@ export default function HomePage() {
     } catch (error) {
       console.error('Error during image generation:', error);
       setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
-      if (tempHorizontalUrl) URL.revokeObjectURL(tempHorizontalUrl);
-      if (tempVerticalUrl) URL.revokeObjectURL(tempVerticalUrl);
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
       setIsColorStepCompleted(false); // Generation failed, so color step not truly done for advancing
+      setCurrentWizardStep('color'); // Explicitly navigate back to the color selection step on error
       clearInterval(progressInterval); // Stop interval on error
     } finally {
       setIsGenerating(false);

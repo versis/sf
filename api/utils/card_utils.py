@@ -181,7 +181,7 @@ async def generate_card_image_bytes(
     brand_text = "shadefreude"
     # Get font heights for layout
     _, brand_h = get_text_dimensions(brand_text, f_brand)
-    id_display_for_height_calc = card_details.get("cardId", "0000000 XX X")
+    id_display_for_height_calc = card_details["extendedId"]
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
     _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
 
@@ -213,7 +213,7 @@ async def generate_card_image_bytes(
     # Draw Brand, ID, Metrics with new Y positions
     draw.text((pad_l, brand_y_pos), brand_text, font=f_brand, fill=text_color)
     
-    id_display = card_details.get("cardId", "0000000 XX X")
+    id_display = card_details["extendedId"]
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
     # Align metrics to the left (pad_l)

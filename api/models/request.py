@@ -19,5 +19,6 @@ class GenerateCardsRequest(BaseModel):
     """
     croppedImageDataUrl: str
     hexColor: str
-    # Only for manual API calls if needed
-    cardId: Optional[str] = "0000023 FE T" 
+    # Optional: The backend will now generate the definitive ID.
+    # This field might be removed later if frontend never sends it.
+    cardId: Optional[str] = None 

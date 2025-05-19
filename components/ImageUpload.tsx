@@ -78,7 +78,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       }
       
       // Create an offscreen image to check dimensions
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         URL.revokeObjectURL(img.src);
         
@@ -431,9 +431,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 onComplete={handleCropComplete}
                 aspect={aspectRatio}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={imgRef}
-                  src={previewUrl}
+                  src={previewUrl!}
                   alt="Selected preview for cropping"
                   onLoad={onImageLoad}
                   style={{ 
