@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { Metadata } from 'next';
+import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className={cn(GeistSans.className, "antialiased")}>
         <Toaster position="top-center" richColors />
         {children}
+        <Footer />
       </body>
     </html>
   );
