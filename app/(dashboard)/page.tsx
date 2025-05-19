@@ -331,13 +331,16 @@ export default function HomePage() {
   const handleDownloadImage = (orientation: 'vertical' | 'horizontal' = 'vertical') => {
     const imageUrl = orientation === 'vertical' ? generatedVerticalImageUrl : generatedHorizontalImageUrl;
     if (!imageUrl) return;
-    
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `shadefreude-${orientation}-${selectedHexColor.substring(1)}-${new Date().getTime()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // Construct the filename as before
+    const filename = `shadefreude-${orientation}-${selectedHexColor.substring(1)}-${new Date().getTime()}.png`;
+
+    // Construct the URL to the new API endpoint
+    const downloadUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
+
+    // Trigger the download by navigating to the API endpoint
+    // The browser will handle the download prompt because of the Content-Disposition header set by the API
+    window.location.href = downloadUrl;
   };
 
   return (
