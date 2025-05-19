@@ -25,11 +25,15 @@ from api.core.config import (
     AZURE_OPENAI_API_VERSION, 
     AZURE_OPENAI_DEPLOYMENT, 
     ENABLE_AI_CARD_DETAILS,
-    ALLOWED_ORIGINS
+    ALLOWED_ORIGINS,
+    BLOB_READ_WRITE_TOKEN
 )
 
 # Supabase Client Initialization
 from supabase import create_client, Client as SupabaseClient
+
+# Vercel Blob import
+from vercel_blob import put as vercel_blob_put
 
 supabase_client: SupabaseClient | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
@@ -289,6 +293,9 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
     generated_cards_response_items: List[CardImageResponseItem] = []
     orientations_to_generate = ["horizontal", "vertical"]
 
+    # Store Blob URLs here
+    blob_urls: Dict[str, str] = {}
+
     try:
         for orientation in orientations_to_generate:
             debug(f"Generating {orientation} card image...", request_id=request_id)
@@ -299,17 +306,48 @@ async def generate_cards_route(data: GenerateCardsRequest, request: FastAPIReque
                 orientation=orientation,
                 request_id=request_id
             )
-            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            # image_base64 = base64.b64encode(image_bytes).decode('utf-8') # No longer sending base64 to client
+
+            # --- Vercel Blob Upload ---
+            if not BLOB_READ_WRITE_TOKEN:
+                log("BLOB_READ_WRITE_TOKEN not configured. Cannot upload to Vercel Blob.", level="ERROR", request_id=request_id)
+                # Depending on requirements, either fail or skip upload
+                # For now, we'll throw an error as upload is a key part of this step
+                raise ConnectionError("Blob storage token not configured. Cannot save card image.")
+
+            # Construct a unique filename for Vercel Blob
+            # Making filename URL-safe and unique
+            safe_extended_id = active_extended_id.replace(' ', '_').replace('/', '-') # Basic sanitization
+            unique_suffix = uuid.uuid4().hex[:8]
+            blob_filename = f"cards/{safe_extended_id}_{orientation}_{unique_suffix}.png"
+            
+            log(f"Uploading {orientation} card to Vercel Blob as {blob_filename}", request_id=request_id)
+            try:
+                blob_upload_response = vercel_blob_put(
+                    blob_filename, 
+                    image_bytes, 
+                    options={'token': BLOB_READ_WRITE_TOKEN, 'access': 'public'}
+                )
+                blob_url = blob_upload_response['url']
+                blob_urls[orientation] = blob_url # Store for potential later use (e.g., DB update)
+                log(f"Successfully uploaded {orientation} card. URL: {blob_url}", request_id=request_id)
+            except Exception as e_blob:
+                log(f"Error uploading {orientation} image to Vercel Blob: {str(e_blob)}", level="ERROR", request_id=request_id)
+                # Include traceback for blob errors
+                error(f"Vercel Blob upload traceback: {traceback.format_exc()}")
+                raise ConnectionError(f"Failed to upload {orientation} image to blob storage: {str(e_blob)}")
+            # --- End Vercel Blob Upload ---
+
             generated_cards_response_items.append(
                 CardImageResponseItem(
                     orientation=orientation,
-                    image_base64=image_base64,
-                    filename=f"card_{final_card_details['colorName'].replace(' ', '_')}_{orientation}_{request_id}.jpg",
-                    # extendedId=final_card_details.get('extendedId', "0000000 XX X") # Old way with fallback
-                    extendedId=final_card_details['extendedId'] # New, stricter way
+                    # image_base64=image_base64, # Old
+                    imageUrl=blob_url, # New
+                    filename=blob_filename, # Using the blob filename
+                    extendedId=final_card_details['extendedId'] 
                 )
             )
-            log(f"Successfully generated {orientation} card image.", request_id=request_id)
+            log(f"Successfully generated and processed {orientation} card image.", request_id=request_id)
         
         total_duration = time.time() - request_start_time
         log(f"All cards generated successfully in {total_duration:.2f} seconds.", request_id=request_id)
