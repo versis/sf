@@ -74,7 +74,7 @@ export default function CardPage() {
     } else {
       fetchCardFromApi(orientation, hexColor);
     }
-  }, [orientation]);
+  }, [orientation, hexColor]);
   
   const fetchCardFromApi = async (orientationParam: string | null, colorParam: string | null) => {
     try {
