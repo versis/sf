@@ -5,6 +5,12 @@ const nextConfig = {
   },
   rewrites: async () => {
     return [
+      // Special case: Keep download-image handled by Next.js API route
+      {
+        source: "/api/download-image",
+        destination: "/api/download-image",
+      },
+      // All other API routes go to the FastAPI backend
       {
         source: "/api/:path*",
         destination:
