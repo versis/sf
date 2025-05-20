@@ -135,39 +135,19 @@ async def finalize_card_generation(
                 # Check if this ValueError is specifically our timeout error
                 if "AI generation timed out" in str(ve):
                     log(f"AI details generation timed out for DB ID {db_id}: {str(ve)}", level="ERROR", request_id=str(db_id))
-                    # Store specific timeout info for metadata, though this response won't be 'successful'
                     raw_ai_response_for_metadata = {"error": str(ve), "status": "AI call timed out"}
-                    raise HTTPException(status_code=408, detail="Sometimes the AI just wanders somewhere. <br/> It should gather its thoughts during 2nd try though:)")
+                    raise HTTPException(status_code=408, detail="AI generation timed out. Please try again.")
                 else:
-                    # Handle other ValueErrors as generic AI failures (or re-raise if needed)
                     log(f"AI details generation failed with ValueError for DB ID {db_id}: {str(ve)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
                     raw_ai_response_for_metadata = {"error": str(ve), "status": "AI call failed (ValueError)"}
-                    processed_ai_details = {
-                        "colorName": card_name.upper(),
-                        "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
-                        "article": "[noun]",
-                        "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
-                    }
+                    raise HTTPException(status_code=500, detail="AI failed to process details. Please try again.")
             except Exception as ai_exc:
                 log(f"AI details generation failed for DB ID {db_id}: {str(ai_exc)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
                 raw_ai_response_for_metadata = {"error": str(ai_exc), "status": "AI call failed"}
-                # Populate processed_ai_details with dummy data if AI is off
-                processed_ai_details = {
-                    "colorName": card_name.upper(), # Use user-provided name
-                    "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
-                    "article": "[noun]",
-                    "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
-                }
+                raise HTTPException(status_code=500, detail="An unexpected error occurred with AI processing. Please try again.")
         else:
             log(f"AI Card Details are disabled. Using provided card name: {card_name}", request_id=str(db_id))
             raw_ai_response_for_metadata = {"status": "AI disabled"}
-            # Populate processed_ai_details with dummy data if AI is off
-            processed_ai_details = {
-                "colorName": card_name.upper(), # Use user-provided name
-                "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
-                "article": "[noun]",
-                "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
-            }
 
         # --- Prepare card details for image generation --- 
         card_details_for_image_gen = {
