@@ -741,7 +741,7 @@ export default function HomePage() {
                         <button
                         key={index}
                         onClick={() => setCurrentExampleCardIndex(index)}
-                        className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-muted hover:bg-muted-foreground/50'}`}
+                        className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-gray-300 hover:bg-gray-400'}`}
                         aria-label={`Go to example card ${index + 1}`}
                         />
                     ))}
