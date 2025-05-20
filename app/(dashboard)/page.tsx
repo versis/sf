@@ -352,6 +352,24 @@ export default function HomePage() {
       // setGenerationProgress(70); // REMOVE discrete progress update
 
       // console.log('Frontend: Finalization call successful.'); // DEBUG REMOVED
+      
+      // Check for non-OK response before trying to parse JSON
+      if (!finalizeResponse.ok) {
+        // Try to parse error detail from JSON response if possible
+        let errorDetail = `Failed to finalize card generation: ${finalizeResponse.status}`;
+        try {
+          const errorResult = await finalizeResponse.json();
+          errorDetail = errorResult.detail || errorDetail;
+        } catch (parseError) {
+          // If JSON parsing fails, stick with the status code error
+          console.warn('Could not parse error response JSON:', parseError);
+        }
+        // Throw an error that includes the status code
+        const error = new Error(errorDetail);
+        (error as any).status = finalizeResponse.status; // Attach status to error object
+        throw error;
+      }
+      
       const finalizeResult = await finalizeResponse.json();
       // console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DEBUG REMOVED
 
@@ -389,13 +407,21 @@ export default function HomePage() {
 
     } catch (error) {
       console.error('Frontend: Error during image generation process:', error); // KEEP this generic error log
-      setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
+      
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      // For ANY error during the actual generation attempt (initiate or finalize)
+      // stay on the 'results' step and show an error + retry option.
+      setGenerationError(errorMessage);
       setGeneratedHorizontalImageUrl(null); 
       setGeneratedVerticalImageUrl(null);
-      setIsColorStepCompleted(false); 
-      setCurrentWizardStep('color'); 
-      if (dbId) {
-        console.warn(`Generation failed after initiating with DB ID: ${dbId}. Status on server might be pending/failed.`);
+      // Do NOT change currentWizardStep here, stay on 'results'
+      // Do NOT change isColorStepCompleted here
+
+      // The API key check earlier has its own reset to 'color' step.
+      // Only log dbId warning if it's not a handled client-side error already.
+      if (dbId && !(error instanceof Error && (error as any).status === 408)) { // Example: don't repeat for already specific 408 log.
+        // This console warning might need refinement based on what errors we expect to handle gracefully vs. what are true backend issues.
+        console.warn(`Generation process failed after initiating with DB ID: ${dbId}. Error: ${errorMessage}`);
       }
       clearInterval(progressInterval); // Clear interval on error
     } finally {
@@ -669,12 +695,32 @@ export default function HomePage() {
                     </div>
                   </div>
                 )}
-                {!isGenerating && isResultsStepCompleted && (
+                {!isGenerating && generationError && currentWizardStep === 'results' && (
+                  <div className="p-4 text-center">
+                    <p className="text-base text-red-500 mb-4">{generationError}</p>
+                    <div className="flex justify-center w-full mt-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateImageClick}
+                        className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center 
+                          ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`}
+                        disabled={isGenerating}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10"></polyline>
+                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                        Retry Generation
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
                   <div className="p-4 text-center">
                     <p className="text-base">Your unique shadefreude color card is ready below.</p>
                   </div>
                 )}
-                 {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && (
+                 {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
                   <div className="p-4 text-center">
                     <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
                   </div>

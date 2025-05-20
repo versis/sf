@@ -131,6 +131,23 @@ async def finalize_card_generation(
                 )
                 log(f"AI details received: {processed_ai_details}", request_id=str(db_id))
                 raw_ai_response_for_metadata = processed_ai_details # Assuming this is the dict to store
+            except ValueError as ve:
+                # Check if this ValueError is specifically our timeout error
+                if "AI generation timed out" in str(ve):
+                    log(f"AI details generation timed out for DB ID {db_id}: {str(ve)}", level="ERROR", request_id=str(db_id))
+                    # Store specific timeout info for metadata, though this response won't be 'successful'
+                    raw_ai_response_for_metadata = {"error": str(ve), "status": "AI call timed out"}
+                    raise HTTPException(status_code=408, detail="Sometimes the AI just wanders somewhere... <br/> Maybe too many thoughts about your image? <br/> Try again, it should gather its thoughts this time.")
+                else:
+                    # Handle other ValueErrors as generic AI failures (or re-raise if needed)
+                    log(f"AI details generation failed with ValueError for DB ID {db_id}: {str(ve)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
+                    raw_ai_response_for_metadata = {"error": str(ve), "status": "AI call failed (ValueError)"}
+                    processed_ai_details = {
+                        "colorName": card_name.upper(),
+                        "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
+                        "article": "[noun]",
+                        "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
+                    }
             except Exception as ai_exc:
                 log(f"AI details generation failed for DB ID {db_id}: {str(ai_exc)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
                 raw_ai_response_for_metadata = {"error": str(ai_exc), "status": "AI call failed"}
@@ -138,7 +155,7 @@ async def finalize_card_generation(
                 processed_ai_details = {
                     "colorName": card_name.upper(), # Use user-provided name
                     "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
-                    "article": "[noun phrase]",
+                    "article": "[noun]",
                     "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
                 }
         else:
@@ -148,7 +165,7 @@ async def finalize_card_generation(
             processed_ai_details = {
                 "colorName": card_name.upper(), # Use user-provided name
                 "phoneticName": "[ˈdʌmi fəˈnɛtɪk]",
-                "article": "[noun phrase]",
+                "article": "[noun]",
                 "description": "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing."
             }
 
@@ -161,7 +178,7 @@ async def finalize_card_generation(
             "rgb_code": f"{rgb_tuple[0]} {rgb_tuple[1]} {rgb_tuple[2]}",
             "cmyk_code": f"{cmyk_tuple[0]} {cmyk_tuple[1]} {cmyk_tuple[2]} {cmyk_tuple[3]}",
             "phoneticName": processed_ai_details.get("phoneticName", "[ˈdʌmi fəˈnɛtɪk]"), # Fallback if AI fails after being enabled
-            "article": processed_ai_details.get("article", "[noun phrase]"),
+            "article": processed_ai_details.get("article", "[noun]"),
             "description": processed_ai_details.get("description", "This is a detailed dummy description for the color when AI is not available. It provides a bit more text for layout testing.")
         }
 
