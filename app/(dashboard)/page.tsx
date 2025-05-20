@@ -347,12 +347,11 @@ export default function HomePage() {
       const imageFile = new File([blob], selectedFileName || 'user_image.png', { type: blob.type });
 
       // STEP 2: Finalize Card Generation
-      console.log(`Frontend: Finalizing card generation for DB ID: ${dbId} with name: ${colorNameInput}`);
+      const cardNameToSend = colorNameInput.trim() === '' ? 'Untitled Shade' : colorNameInput;
+      console.log(`Frontend: Finalizing card generation for DB ID: ${dbId} with name: ${cardNameToSend}`);
       const formData = new FormData();
       formData.append('user_image', imageFile);
-      formData.append('card_name', colorNameInput);
-      // Add other optional fields if needed, e.g., user_prompt, ai_generated_details
-      // formData.append('user_prompt', 'some prompt'); 
+      formData.append('card_name', cardNameToSend);
 
       const finalizeResponse = await fetch(`/api/finalize-card-generation/${dbId}`, {
         method: 'POST',
@@ -369,16 +368,18 @@ export default function HomePage() {
       
       // Check for non-OK response before trying to parse JSON
       if (!finalizeResponse.ok) {
-        // Try to parse error detail from JSON response if possible
         let errorDetail = `Failed to finalize card generation: ${finalizeResponse.status}`;
         try {
           const errorResult = await finalizeResponse.json();
-          errorDetail = errorResult.detail || errorDetail;
+          // Attempt to get a more specific message from FastAPI validation errors
+          if (errorResult.detail && Array.isArray(errorResult.detail) && errorResult.detail[0] && errorResult.detail[0].msg) {
+            errorDetail = errorResult.detail[0].msg;
+          } else if (typeof errorResult.detail === 'string') {
+            errorDetail = errorResult.detail;
+          } // else stick with the status code error or errorResult itself if it's a plain string
         } catch (parseError) {
-          // If JSON parsing fails, stick with the status code error
           console.warn('Could not parse error response JSON:', parseError);
         }
-        // Throw an error that includes the status code
         const error = new Error(errorDetail);
         (error as any).status = finalizeResponse.status; // Attach status to error object
         throw error;
@@ -449,7 +450,20 @@ export default function HomePage() {
       setGenerationProgress(100); // Explicitly set to 100 on success
 
     } catch (error) {
-      console.error('Frontend: Error during image generation process:', error); // KEEP this generic error log
+      // Ensure we log a string message from the error object for console
+      let consoleErrorMessage = 'Unknown error during image generation';
+      if (error instanceof Error) {
+        consoleErrorMessage = error.message;
+      } else if (typeof error === 'string') {
+        consoleErrorMessage = error;
+      } else if (typeof error === 'object' && error !== null && (error as any).message) {
+        consoleErrorMessage = (error as any).message;
+      } else if (typeof error === 'object' && error !== null) {
+        try {
+            consoleErrorMessage = JSON.stringify(error);
+        } catch { /* ignore stringify error */ }
+      }
+      console.error(`Frontend: Error during image generation process: -- ${consoleErrorMessage}`, error); // Log the original error object too for full context
       
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       // For ANY error during the actual generation attempt (initiate or finalize)
@@ -654,7 +668,7 @@ export default function HomePage() {
             {/* Left Column: Text - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
               <h2 className="text-2xl md:text-3xl font-semibold mb-3">
-                Your photo's hue,<br /> AI's poetic debut.
+                Your photo's hue, AI's poetic debut.
               </h2>
               <p className="text-md md:text-lg text-muted-foreground">
                 Hi, I'm Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
@@ -866,7 +880,12 @@ export default function HomePage() {
                   <div className="p-4 text-center">
                     <p
                       className="text-base text-red-500 mb-4"
-                      dangerouslySetInnerHTML={{ __html: generationError.replace(/<br\s*\/?b?>/gi, '<br />') }}
+                      dangerouslySetInnerHTML={{
+                        __html: (typeof generationError === 'string' ? 
+                                 generationError : 
+                                 (generationError as any).message || 'An unexpected error occurred'
+                                ).replace(/<br\s*\/?b?>/gi, '<br />')
+                      }}
                     />
                     <div className="flex justify-center w-full mt-2">
                       <button
