@@ -152,19 +152,9 @@ export default function ColorCardPage() {
     return <div className="flex justify-center items-center min-h-screen">Card not found.</div>;
   }
 
-  // Add console logs for debugging image display issue
-  console.log("--- [ColorCardPage Debug Start] ---");
-  console.log("[State] loading:", loading);
-  console.log("[State] error:", error);
-  console.log("[State] cardDetails:", cardDetails); // Check horizontalImageUrl and verticalImageUrl here
-  console.log("[State] currentDisplayOrientation:", currentDisplayOrientation);
-
   const currentImageUrl = currentDisplayOrientation === 'horizontal' 
-    ? cardDetails?.horizontalImageUrl 
+    ? cardDetails?.horizontalImageUrl
     : cardDetails?.verticalImageUrl;
-
-  console.log("[Calculated] currentImageUrl:", currentImageUrl);
-  console.log("--- [ColorCardPage Debug End] ---");
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
@@ -186,16 +176,14 @@ export default function ColorCardPage() {
           </p>
         </header>
         
-        <div className="mt-6 text-center">
-          <h2 className="text-3xl font-bold mb-1">{cardDetails.colorName || 'Unnamed Color'}</h2>
-          <p className="text-lg text-muted-foreground mb-1">{cardDetails.hexColor}</p>
-          <p className="text-sm text-muted-foreground mb-1">ID: {cardDetails.extendedId}</p>
-          {cardDetails.phoneticName && cardDetails.article && (
-             <p className="text-md italic mb-1">{cardDetails.phoneticName} {cardDetails.article}</p>
-          )}
-          {cardDetails.description && (
-            <p className="text-md max-w-xl mx-auto mt-2">{cardDetails.description}</p>
-          )}
+        <div className="mt-6">
+          <h2 className="text-3xl font-bold mb-2 text-center">{cardDetails.colorName || 'A Unique Color'}</h2>
+          <div className="text-md text-muted-foreground max-w-xl mx-auto mt-4 space-y-3">
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            </p>
+          </div>
         </div>
 
         <hr className="my-8 border-t-2 border-foreground w-full" />
