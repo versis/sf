@@ -697,7 +697,10 @@ export default function HomePage() {
                 )}
                 {!isGenerating && generationError && currentWizardStep === 'results' && (
                   <div className="p-4 text-center">
-                    <p className="text-base text-red-500 mb-4">{generationError}</p>
+                    <p
+                      className="text-base text-red-500 mb-4"
+                      dangerouslySetInnerHTML={{ __html: generationError.replace(/<br\s*\/?b?>/gi, '<br />') }}
+                    />
                     <div className="flex justify-center w-full mt-2">
                       <button
                         type="button"

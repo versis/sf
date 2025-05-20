@@ -46,7 +46,7 @@ LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 # Used by the local Uvicorn development server
 UVICORN_TIMEOUT_KEEP_ALIVE = int(os.environ.get("UVICORN_TIMEOUT_KEEP_ALIVE", "120")) 
 # Used by the Azure OpenAI client
-AZURE_OPENAI_CLIENT_TIMEOUT = float(os.environ.get("AZURE_OPENAI_CLIENT_TIMEOUT", "2.0"))  # 119.0
+AZURE_OPENAI_CLIENT_TIMEOUT = float(os.environ.get("AZURE_OPENAI_CLIENT_TIMEOUT", "119.0"))
 
 # CORS Origins
 ALLOWED_ORIGINS = [

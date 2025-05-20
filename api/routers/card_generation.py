@@ -137,7 +137,7 @@ async def finalize_card_generation(
                     log(f"AI details generation timed out for DB ID {db_id}: {str(ve)}", level="ERROR", request_id=str(db_id))
                     # Store specific timeout info for metadata, though this response won't be 'successful'
                     raw_ai_response_for_metadata = {"error": str(ve), "status": "AI call timed out"}
-                    raise HTTPException(status_code=408, detail="Sometimes the AI just wanders somewhere... <br/> Maybe too many thoughts about your image? <br/> Try again, it should gather its thoughts this time.")
+                    raise HTTPException(status_code=408, detail="Sometimes the AI just wanders somewhere. <br/> It should gather its thoughts during 2nd try though:)")
                 else:
                     # Handle other ValueErrors as generic AI failures (or re-raise if needed)
                     log(f"AI details generation failed with ValueError for DB ID {db_id}: {str(ve)}. Proceeding with fallback details.", level="ERROR", request_id=str(db_id))
