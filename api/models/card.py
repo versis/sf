@@ -25,7 +25,7 @@ class ColorCardDetails(BaseModel):
         description="Phonetic pronunciation (IPA symbols) for your creative colorName"
     )
     article: str = Field(
-        description="The part of speech for the colorName (e.g., noun, adjective phrase)"
+        description="The part of speech for the colorName (e.g., noun, adjective). Do not use the word `phrase`. It's just `noun`, and not `noun phrase`."
     )
     description: str = Field(
         description="A poetic description (max 30-40 words) that evokes the feeling/mood of this color, inspired by the image"
