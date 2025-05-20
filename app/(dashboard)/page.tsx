@@ -510,40 +510,46 @@ export default function HomePage() {
       return;
     }
 
+    const shareMessage = `Check this out. This is my own unique color card: ${currentImageUrl}`;
+
     const shareData = {
       title: 'Shadefreude Color Card',
-      text: `Check out this color card I created with Shadefreude! HEX: ${selectedHexColor}`,
-      url: currentImageUrl, // This is the direct blob URL
+      text: shareMessage,
+      url: currentImageUrl, // This is the direct blob URL, some platforms might use this for a preview
     };
 
     let copied = false;
     try {
       if (navigator.share) {
         await navigator.share(shareData);
-        // If navigator.share is successful, it handles the feedback.
-        // We can still copy to clipboard as a fallback or primary action depending on UX.
+        setShareFeedback('Shared successfully!'); // Or rely on system feedback
+        // Optionally, still copy to clipboard as a fallback or primary action for some users
+        // await navigator.clipboard.writeText(currentImageUrl);
+        // copied = true;
+      } else {
+        // If navigator.share is not available, fall back to copying the URL and message
+        await navigator.clipboard.writeText(shareMessage); // Copy the full message with URL
+        copied = true;
+        setShareFeedback('Share message with image link copied to clipboard!');
       }
-      // Always try to copy to clipboard
-      await navigator.clipboard.writeText(currentImageUrl);
-      copied = true;
-      setShareFeedback('Link copied to clipboard!');
     } catch (err) {
       console.error('Share/Copy failed:', err);
       // If navigator.share fails or is unavailable, ensure clipboard copy is attempted
-      if (!copied) { // Only if previous attempt failed
+      if (!copied) { 
         try {
-          await navigator.clipboard.writeText(currentImageUrl);
-          setShareFeedback('Link copied to clipboard!');
+          await navigator.clipboard.writeText(shareMessage); // Copy the full message with URL
+          setShareFeedback('Share message with image link copied to clipboard!');
         } catch (copyErr) {
           console.error('Clipboard copy failed:', copyErr);
           setShareFeedback('Failed to copy link.');
         }
       } else if (!navigator.share) {
-        // If share API was not present, but copy succeeded.
-        setShareFeedback('Link copied to clipboard!');
+        // This case is already handled above where navigator.share is not available.
       } else {
-        // If share API was present and failed, but copy succeeded.
-        setShareFeedback('Sharing failed, but link copied!');
+        // If share API was present and failed, but copy succeeded (if we enabled copy above even on share success).
+        // For now, the primary feedback for share failure is just logging the error.
+        // If share fails, and we didn't try to copy, this is just a failed share.
+        setShareFeedback('Sharing failed. Try copying the link.'); 
       }
     } finally {
       setTimeout(() => setShareFeedback(''), 3000);
