@@ -195,7 +195,6 @@ export default function ColorCardPage() {
         </header>
         
         <div className="mt-6">
-          <h2 className="text-3xl font-bold mb-2 text-center">{cardDetails.colorName || 'A Unique Color'}</h2>
           <div className="text-md text-muted-foreground max-w-xl mx-auto mt-4 space-y-3">
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
