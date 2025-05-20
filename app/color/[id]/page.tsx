@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation'; // Correct hook for App Router
 import Link from 'next/link'; // Added Link for navigation
+import CardDisplay from '@/components/CardDisplay'; // Import the new component
 
 interface CardDetails {
   // Define structure based on what your API will return
@@ -29,6 +30,7 @@ export default function ColorCardPage() {
   const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
+  const cardDisplaySectionRef = useRef<HTMLDivElement>(null); // Ref for scrolling to the card display
 
   // Detect if user is on mobile for initial orientation
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function ColorCardPage() {
   useEffect(() => {
     if (id && loading) {
       const fetchCardDetails = async () => {
+        setLoading(true); // Ensure loading is true at the start of fetch
         try {
           const response = await fetch(`/api/retrieve-card-by-extended-id/${id}`);
           if (!response.ok) {
@@ -71,54 +74,63 @@ export default function ColorCardPage() {
           // CRUCIAL LOG: Inspect the raw data object here
           console.log("RAW DATA FROM API (response.json()):", JSON.stringify(data, null, 2)); 
           setCardDetails(data);
-          // Set initial orientation after data is fetched
+          
+          let initialOrientation: 'horizontal' | 'vertical';
           if (isMobile && data.verticalImageUrl) {
-            setCurrentDisplayOrientation('vertical');
+            initialOrientation = 'vertical';
           } else if (data.horizontalImageUrl) {
-            setCurrentDisplayOrientation('horizontal');
-          } else if (data.verticalImageUrl) { // Fallback if only vertical
-            setCurrentDisplayOrientation('vertical');
+            initialOrientation = 'horizontal';
+          } else if (data.verticalImageUrl) {
+            initialOrientation = 'vertical';
+          } else {
+            initialOrientation = 'horizontal'; // Default
           }
+          setCurrentDisplayOrientation(initialOrientation);
           setError(null);
+          // Scroll to card display after data is loaded and orientation set
+          // Ensure this happens after the DOM has a chance to update with the CardDisplay component
+          setTimeout(() => {
+            cardDisplaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150); // Small delay
+
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
           setCardDetails(null);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
       };
       fetchCardDetails();
     }
   }, [id, loading, isMobile]);
 
-  const handleDownload = () => {
-    const imageUrl = currentDisplayOrientation === 'horizontal' 
+  // handleDownload function to be passed to CardDisplay
+  const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
+    const imageUrl = orientation === 'horizontal' 
       ? cardDetails?.horizontalImageUrl 
       : cardDetails?.verticalImageUrl;
     
     if (!imageUrl || !cardDetails) return;
 
-    const filename = `shadefreude-${currentDisplayOrientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.colorName?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
-    
-    // Use the new API endpoint for robust downloads
+    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.colorName?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
     const downloadApiUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
     window.location.href = downloadApiUrl;
   };
 
- const handleShare = async () => {
+  // handleShare function to be passed to CardDisplay
+  const handleShareAction = async () => {
     if (!idFromUrl) {
         setShareFeedback('Card ID not available for sharing.');
         setTimeout(() => setShareFeedback(''), 3000);
         return;
     }
-    const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`; // Use the clean URL
+    const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`;
     const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
-
     const shareData = {
       title: cardDetails?.colorName ? `Shadefreude: ${cardDetails.colorName}` : 'Shadefreude Color Card',
       text: shareMessage,
       url: shareUrl,
     };
-
     try {
       if (navigator.share) {
         await navigator.share(shareData);
@@ -132,17 +144,18 @@ export default function ColorCardPage() {
       setShareFeedback('Failed to share or copy link.');
     } finally {
       setTimeout(() => setShareFeedback(''), 3000);
-      setCopyUrlFeedback(''); // Clear copy feedback if share is used
+      setCopyUrlFeedback('');
     }
   };
 
-  const handleCopyPageUrl = async () => {
+  // handleCopyPageUrl function to be passed to CardDisplay as handleCopyGeneratedUrl
+  const handleCopyLinkAction = async () => {
     if (!idFromUrl) {
       setCopyUrlFeedback('Cannot copy URL: Card ID missing.');
       setTimeout(() => setCopyUrlFeedback(''), 3000);
       return;
     }
-    const urlToCopy = window.location.href; // This page's URL is the nice URL
+    const urlToCopy = window.location.href;
     try {
       await navigator.clipboard.writeText(urlToCopy);
       setCopyUrlFeedback('Page URL copied to clipboard!');
@@ -151,10 +164,10 @@ export default function ColorCardPage() {
       setCopyUrlFeedback('Failed to copy URL.');
     }
     setTimeout(() => setCopyUrlFeedback(''), 3000);
-    setShareFeedback(''); // Clear share feedback if copy is used
+    setShareFeedback('');
   };
 
-  if (!idFromUrl) { // Initial check before first useEffect sets 'id' or error
+  if (!idFromUrl && !loading && !error) { // If idFromUrl is null and we are not in an initial loading/error state for it
     return <div className="flex justify-center items-center min-h-screen text-red-500">Invalid URL or Card ID.</div>;
   }
 
@@ -169,10 +182,6 @@ export default function ColorCardPage() {
   if (!cardDetails) {
     return <div className="flex justify-center items-center min-h-screen">Card not found.</div>;
   }
-
-  const currentImageUrl = currentDisplayOrientation === 'horizontal' 
-    ? cardDetails?.horizontalImageUrl
-    : cardDetails?.verticalImageUrl;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
@@ -210,89 +219,21 @@ export default function ColorCardPage() {
 
         <hr className="my-8 border-t-2 border-foreground w-full" />
         
-        <div className="mt-2 flex flex-col items-center justify-center">
-          <div className="flex justify-center gap-6 mb-4">
-            <button 
-              onClick={() => setCurrentDisplayOrientation('horizontal')}
-              className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-              title="Display Horizontal Card"
-              disabled={!cardDetails.horizontalImageUrl}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" /></svg>
-              <span className="text-xs mt-1">Horizontal</span>
-            </button>
-            <button
-              onClick={() => setCurrentDisplayOrientation('vertical')}
-              className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-              title="Display Vertical Card"
-              disabled={!cardDetails.verticalImageUrl}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2" /></svg>
-              <span className="text-xs mt-1">Vertical</span>
-            </button>
-          </div>
-          
-          {/* Outer container for centering the image unit */}
-          <div className="flex justify-center w-full mt-4"> 
-            {/* Inner container that defines aspect ratio and max-width */}
-            <div 
-              className={`
-                ${isMobile 
-                  ? (currentDisplayOrientation === 'horizontal' ? 'w-full max-w-md aspect-video' : 'w-full max-w-sm aspect-[3/4]') 
-                  : (currentDisplayOrientation === 'horizontal' ? 'max-w-2xl lg:max-w-4xl aspect-video mx-auto' : 'max-w-xl aspect-[3/4] mx-auto')
-                }
-              `}
-            >
-              {cardDetails && currentImageUrl ? (
-                <img 
-                  src={currentImageUrl} 
-                  alt={`${cardDetails.colorName || 'Color'} card - ${currentDisplayOrientation}`}
-                  className="w-full h-full object-contain rounded-md" // Image fills container, respects aspect ratio
-                />
-              ) : cardDetails ? (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted rounded-md">
-                  Image not available for this orientation.
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted rounded-md">
-                  Preparing image display...
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-4 mt-8 w-full max-w-sm md:max-w-md">
-            <button
-              onClick={handleShare}
-              disabled={!idFromUrl}
-              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share
-            </button>
-            <button
-              onClick={handleCopyPageUrl}
-              disabled={!idFromUrl}
-              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
-              Copy URL
-            </button>
-            <button
-              onClick={handleDownload}
-              disabled={!currentImageUrl}
-              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download
-            </button>
-          </div>
-           {shareFeedback && !copyUrlFeedback && (
-             <p className="text-sm text-blue-700 mt-4 text-center h-5">{shareFeedback}</p>
-           )}
-           {copyUrlFeedback && (
-             <p className="text-sm text-green-700 mt-4 text-center h-5">{copyUrlFeedback}</p> // Different color for copy feedback
-           )}
+        <div ref={cardDisplaySectionRef} className="mt-2 flex flex-col items-center justify-center">
+          <CardDisplay
+            isVisible={!loading && !error && !!cardDetails}
+            generatedHorizontalImageUrl={cardDetails.horizontalImageUrl || null}
+            generatedVerticalImageUrl={cardDetails.verticalImageUrl || null}
+            currentDisplayOrientation={currentDisplayOrientation}
+            setCurrentDisplayOrientation={setCurrentDisplayOrientation}
+            handleShare={handleShareAction} 
+            handleCopyGeneratedUrl={handleCopyLinkAction}
+            handleDownloadImage={handleDownloadImage} 
+            isGenerating={false}
+            generatedExtendedId={id}
+            shareFeedback={shareFeedback}
+            copyUrlFeedback={copyUrlFeedback}
+          />
 
           <Link
             href="/"
