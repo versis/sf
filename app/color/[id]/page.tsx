@@ -28,6 +28,7 @@ export default function ColorCardPage() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [shareFeedback, setShareFeedback] = useState<string>('');
+  const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
 
   // Detect if user is on mobile for initial orientation
   useEffect(() => {
@@ -133,7 +134,26 @@ export default function ColorCardPage() {
       setShareFeedback('Failed to share or copy link.');
     } finally {
       setTimeout(() => setShareFeedback(''), 3000);
+      setCopyUrlFeedback(''); // Clear copy feedback if share is used
     }
+  };
+
+  const handleCopyPageUrl = async () => {
+    if (!idFromUrl) {
+      setCopyUrlFeedback('Cannot copy URL: Card ID missing.');
+      setTimeout(() => setCopyUrlFeedback(''), 3000);
+      return;
+    }
+    const urlToCopy = window.location.href; // This page's URL is the nice URL
+    try {
+      await navigator.clipboard.writeText(urlToCopy);
+      setCopyUrlFeedback('Page URL copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy page URL:', err);
+      setCopyUrlFeedback('Failed to copy URL.');
+    }
+    setTimeout(() => setCopyUrlFeedback(''), 3000);
+    setShareFeedback(''); // Clear share feedback if copy is used
   };
 
   if (!idFromUrl) { // Initial check before first useEffect sets 'id' or error
@@ -215,7 +235,7 @@ export default function ColorCardPage() {
               <img 
                 src={currentImageUrl} 
                 alt={`${cardDetails.colorName || 'Color'} card - ${currentDisplayOrientation}`}
-                className={`max-w-full rounded-md ${currentDisplayOrientation === 'horizontal' ? 'md:max-w-2xl' : 'md:max-w-sm max-h-[70vh]'} h-auto`}
+                className={`max-w-full rounded-md ${currentDisplayOrientation === 'horizontal' ? 'md:max-w-2xl lg:max-w-4xl' : 'md:max-w-2xl max-h-[80vh]'} h-auto`}
               />
             ) : cardDetails ? (
               <div className="text-muted-foreground flex items-center justify-center">
@@ -228,6 +248,22 @@ export default function ColorCardPage() {
           
           <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-4 mt-8 w-full max-w-sm md:max-w-md">
             <button
+              onClick={handleShare}
+              disabled={!idFromUrl}
+              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share
+            </button>
+            <button
+              onClick={handleCopyPageUrl}
+              disabled={!idFromUrl}
+              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+              Copy URL
+            </button>
+            <button
               onClick={handleDownload}
               disabled={!currentImageUrl}
               className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
@@ -235,17 +271,12 @@ export default function ColorCardPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download
             </button>
-            <button
-              onClick={handleShare}
-              disabled={!idFromUrl} // Share button depends on having a valid page ID
-              className="w-full md:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share
-            </button>
           </div>
-           {shareFeedback && (
+           {shareFeedback && !copyUrlFeedback && (
              <p className="text-sm text-blue-700 mt-4 text-center h-5">{shareFeedback}</p>
+           )}
+           {copyUrlFeedback && (
+             <p className="text-sm text-green-700 mt-4 text-center h-5">{copyUrlFeedback}</p> // Different color for copy feedback
            )}
 
           <Link

@@ -37,6 +37,7 @@ export default function HomePage() {
   const [colorInstructionKey, setColorInstructionKey] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [shareFeedback, setShareFeedback] = useState<string>('');
+  const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -564,7 +565,27 @@ export default function HomePage() {
       }
     } finally {
       setTimeout(() => setShareFeedback(''), 3000);
+      setCopyUrlFeedback(''); // Clear copy feedback if share is used
     }
+  };
+
+  const handleCopyGeneratedUrl = async () => {
+    if (!generatedExtendedId) {
+      setCopyUrlFeedback('Cannot copy URL: Card not yet fully generated.');
+      setTimeout(() => setCopyUrlFeedback(''), 3000);
+      return;
+    }
+    const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
+    const urlToCopy = `https://sf.tinker.institute/color/${slug}`;
+    try {
+      await navigator.clipboard.writeText(urlToCopy);
+      setCopyUrlFeedback('Color page URL copied!');
+    } catch (err) {
+      console.error('Failed to copy generated URL:', err);
+      setCopyUrlFeedback('Failed to copy URL.');
+    }
+    setTimeout(() => setCopyUrlFeedback(''), 3000);
+    setShareFeedback(''); // Clear share feedback if copy is used
   };
 
   return (
@@ -819,6 +840,22 @@ export default function HomePage() {
             
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6 w-full">
                   <button
+                    onClick={handleShare}
+                    disabled={isGenerating || !(generatedHorizontalImageUrl || generatedVerticalImageUrl) || !generatedExtendedId}
+                    className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    Share
+                  </button>
+                  <button
+                    onClick={handleCopyGeneratedUrl}
+                    disabled={isGenerating || !generatedExtendedId}
+                    className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+                    Copy URL
+                  </button>
+                  <button
                     onClick={() => handleDownloadImage(currentDisplayOrientation)}
                     disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
                     className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2"
@@ -826,17 +863,12 @@ export default function HomePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Download
                   </button>
-                  <button
-                    onClick={handleShare}
-                    disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
-                    className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                    Share
-                  </button>
                 </div>
-                {shareFeedback && (
-                  <p className="text-sm text-blue-700 mt-2 text-center h-5">{shareFeedback}</p> // Added h-5 for layout consistency
+                {(shareFeedback && !copyUrlFeedback) && (
+                  <p className="text-sm text-blue-700 mt-2 text-center h-5">{shareFeedback}</p>
+                )}
+                {copyUrlFeedback && (
+                  <p className="text-sm text-green-700 mt-2 text-center h-5">{copyUrlFeedback}</p> 
                 )}
                 
                 <button
