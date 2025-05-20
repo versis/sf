@@ -200,7 +200,7 @@ export default function ColorCardPage() {
               You&apos;ve landed on a unique shadefreude creation
               {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
                 <span className="font-mono text-xs">
-                  {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}HEX: {cardDetails.hexColor || 'N/A'})
+                  {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}{cardDetails.hexColor || 'N/A'})
                 </span>
               )}
               , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!
