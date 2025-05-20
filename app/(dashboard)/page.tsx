@@ -24,7 +24,7 @@ const DUMMY_MESSAGES = [
   "Get ready! Your personal shadefreude is about to debut."
 ];
 const CHAR_TYPING_SPEED_MS = 30;
-const NEW_LINE_DELAY_TICKS = Math.floor(2000 / CHAR_TYPING_SPEED_MS);
+const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
 const EXAMPLE_CARDS = [
   { v: "/example-card-v-1.png", h: "/example-card-h-1.png" },
@@ -846,35 +846,71 @@ export default function HomePage() {
               >
                 {isGenerating && (
                   <div className="w-full mb-6">
-                    <div className="text-base text-left text-blue-600 mb-2 pl-2">
-                      {typedLines.map((line, index) => {
-                        const currentLogicLine = typingLogicRef.current.lineIdx;
-                        const isWaitingForNextLine = typingLogicRef.current.isWaitingForNewLineDelay;
-                        let showCursorOnThisLine = false;
+                    <div className="text-xs text-left text-blue-600">
+                      {(() => {
+                        const logic = typingLogicRef.current;
+                        let lineToDisplay: string | undefined;
+                        let currentMessageContent: string | undefined;
+                        let showCursor = false;
+                        // Use a fixed height matching text-xs and leading-tight to prevent layout shifts
+                        const pClassName = "whitespace-nowrap overflow-hidden text-ellipsis m-0 p-0 leading-tight h-[1.25em]";
 
-                        if (currentLogicLine < DUMMY_MESSAGES.length) { 
-                            if (index === currentLogicLine && !isWaitingForNextLine) {
-                                showCursorOnThisLine = true;
-                            } else if (index === currentLogicLine - 1 && isWaitingForNextLine) {
-                                showCursorOnThisLine = true;
+                        if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
+                          // Waiting for new line delay: display the *previous* fully typed line.
+                          const prevLineIdx = logic.lineIdx - 1;
+                          currentMessageContent = DUMMY_MESSAGES[prevLineIdx];
+                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent; // Should be fully typed.
+                          // Show cursor on the completed line during the pause.
+                          if (lineToDisplay && lineToDisplay.length === (currentMessageContent?.length || 0)) {
+                            showCursor = true;
+                          }
+                        } else {
+                          // Actively typing the current line, or just about to start it.
+                          currentMessageContent = DUMMY_MESSAGES[logic.lineIdx];
+                          lineToDisplay = typedLines[logic.lineIdx] || "";
+
+                          if (logic.lineIdx < DUMMY_MESSAGES.length) {
+                            // Show cursor if actively typing OR if the line is empty and we have content to type.
+                            if (lineToDisplay.length < (currentMessageContent?.length || 0)) {
+                                showCursor = true;
+                            } else if (lineToDisplay === "" && currentMessageContent) {
+                                // About to type the first character of the current line.
+                                showCursor = true;
                             }
-                        } else if (currentLogicLine === DUMMY_MESSAGES.length && index === DUMMY_MESSAGES.length - 1) {
-                            // Show cursor on the very last character of the last line if interval is still active
-                            if (typedLines[index] && DUMMY_MESSAGES[index] && typedLines[index].length === DUMMY_MESSAGES[index].length && typingLogicRef.current.intervalId) {
-                                showCursorOnThisLine = true;
+                          }
+                        }
+                        
+                        // Defensive: If all messages are done but interval is somehow still active (e.g. timing edge case)
+                        if (logic.lineIdx >= DUMMY_MESSAGES.length && logic.intervalId && DUMMY_MESSAGES.length > 0) {
+                            const lastMessageIndex = DUMMY_MESSAGES.length - 1;
+                            const lastTypedLine = typedLines[lastMessageIndex];
+                            const lastDummyMessage = DUMMY_MESSAGES[lastMessageIndex];
+                            if (lastTypedLine && lastDummyMessage && lastTypedLine.length === lastDummyMessage.length) {
+                                lineToDisplay = lastTypedLine;
+                                showCursor = true; // Keep cursor on very last line.
                             }
                         }
 
-                        return (
-                          <p key={index} className="whitespace-pre-wrap m-0 p-0 leading-tight">
-                            {line}
-                            {showCursorOnThisLine && (<span className="blinking-cursor">_</span>)}
-                          </p>
-                        );
-                      })}
-                      {typedLines.length === 0 && isGenerating && typingLogicRef.current.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && (
-                        <p className="whitespace-pre-wrap m-0 p-0 leading-tight"><span className="blinking-cursor">_</span></p>
-                      )}
+                        // Render logic
+                        if (lineToDisplay !== undefined) { // lineToDisplay could be an empty string ""
+                          return (
+                            <p className={pClassName}>
+                              {lineToDisplay}
+                              {showCursor && <span className="blinking-cursor">_</span>}
+                            </p>
+                          );
+                        } 
+                        // Fallback for initial state: cursor on empty line if messages exist and generation started.
+                        else if (isGenerating && logic.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && typedLines.length > 0 && typedLines[0] === "") {
+                           return (
+                            <p className={pClassName}>
+                                <span className="blinking-cursor">_</span>
+                            </p>
+                           );
+                        }
+                        // Default empty state to maintain height if no line to display.
+                        return <p className={pClassName}>&nbsp;</p>;
+                      })()}
                     </div>
                     <div className="h-2 w-full bg-muted overflow-hidden rounded mt-1">
                       <div 
