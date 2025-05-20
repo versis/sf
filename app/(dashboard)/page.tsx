@@ -676,7 +676,7 @@ export default function HomePage() {
             {/* Left Column: Text - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
               <h2 className="text-3xl md:text-4xl font-semibold mb-3">
-                Your photo&apos;s hue,<br /> AI&apos;s poetic debut.
+                Your photo&apos;s shade,<br /> AI&apos;s poetic debut.
               </h2>
               <p className="text-md md:text-lg text-muted-foreground">
                 Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
@@ -796,7 +796,7 @@ export default function HomePage() {
 
             {isCropStepCompleted && (
             <WizardStep 
-              title="3: Select Your Signature Shade"
+              title="3: Pick Your Signature Shade"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
