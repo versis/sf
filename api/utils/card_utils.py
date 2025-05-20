@@ -259,11 +259,8 @@ async def generate_card_image_bytes(
     debug("Applied rounded corners", request_id=request_id)
 
     img_byte_arr = io.BytesIO()
-    # Convert to RGB for image saving
-    final_image_rgb = Image.new("RGB", canvas.size, (255, 255, 255)) # White background
-    final_image_rgb.paste(canvas, mask=canvas.split()[3] if canvas.mode == 'RGBA' else None)
-    # Save as PNG with compression to reduce file size
-    final_image_rgb.save(img_byte_arr, format='PNG', compress_level=2)
+    # Save as PNG with compression to reduce file size, preserving RGBA
+    canvas.save(img_byte_arr, format='PNG', compress_level=2)
     image_bytes = img_byte_arr.getvalue()
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
