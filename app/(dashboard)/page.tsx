@@ -688,7 +688,7 @@ export default function HomePage() {
               {/* Image Container - Common for Mobile and Desktop Image Source */}
               <div 
                 className={`relative w-full mb-2 cursor-grab active:cursor-grabbing 
-                            ${isMobile ? 'max-w-lg aspect-[3/4] mx-auto' : 'max-w-xl aspect-video mx-auto'}`}
+                            ${isMobile ? 'max-w-xl aspect-[2/3] mx-auto' : 'max-w-xl aspect-video mx-auto'}`}
                 onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
                 onTouchMove={(e) => { /* Visual feedback */ }}
                 onTouchEnd={(e) => {
