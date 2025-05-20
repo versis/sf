@@ -32,7 +32,11 @@ class CardDetailsResponse(BaseModel):
     class Config:
         populate_by_name = True # Allows using alias for field names from DB
 
-@router.get("/retrieve-card-by-extended-id/{extended_id_slug}", response_model=CardDetailsResponse)
+@router.get(
+    "/retrieve-card-by-extended-id/{extended_id_slug}", 
+    response_model=CardDetailsResponse,
+    response_model_by_alias=False # Ensure API response uses field names (camelCase)
+)
 async def retrieve_card_by_extended_id(extended_id_slug: str):
     if not supabase_client:
         raise HTTPException(status_code=503, detail="Database service unavailable.")
