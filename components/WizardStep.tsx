@@ -29,7 +29,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
     setIsExpanded(isActive);
   }, [isActive]);
   
-  let headerClasses = "text-xl font-semibold p-4 flex justify-between items-center";
+  let headerClasses = "text-lg md:text-xl font-semibold p-4 flex justify-between items-center";
   if (onHeaderClick && !isFutureStep) headerClasses += " cursor-pointer";
 
   if (isActive) {
