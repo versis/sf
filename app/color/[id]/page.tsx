@@ -232,20 +232,33 @@ export default function ColorCardPage() {
             </button>
           </div>
           
-          <div className="flex justify-center w-full min-h-[300px]">
-            {cardDetails && currentImageUrl ? (
-              <img 
-                src={currentImageUrl} 
-                alt={`${cardDetails.colorName || 'Color'} card - ${currentDisplayOrientation}`}
-                className={`max-w-full rounded-md ${currentDisplayOrientation === 'horizontal' ? 'md:max-w-2xl lg:max-w-4xl' : 'md:max-w-2xl max-h-[80vh]'} h-auto`}
-              />
-            ) : cardDetails ? (
-              <div className="text-muted-foreground flex items-center justify-center">
-                Image not available for this orientation. (Debug: H:{cardDetails.horizontalImageUrl ? '✓' : '✗'}, V:{cardDetails.verticalImageUrl ? '✓' : '✗'}, Orientation: {currentDisplayOrientation})
-              </div>
-            ) : (
-              <div className="text-muted-foreground flex items-center justify-center">Preparing image display... (No cardDetails yet)</div>
-            )}
+          {/* Outer container for centering the image unit */}
+          <div className="flex justify-center w-full mt-4"> 
+            {/* Inner container that defines aspect ratio and max-width */}
+            <div 
+              className={`
+                ${isMobile 
+                  ? (currentDisplayOrientation === 'horizontal' ? 'w-full max-w-md aspect-video' : 'w-full max-w-sm aspect-[3/4]') 
+                  : (currentDisplayOrientation === 'horizontal' ? 'max-w-2xl lg:max-w-4xl aspect-video mx-auto' : 'max-w-xl aspect-[3/4] mx-auto')
+                }
+              `}
+            >
+              {cardDetails && currentImageUrl ? (
+                <img 
+                  src={currentImageUrl} 
+                  alt={`${cardDetails.colorName || 'Color'} card - ${currentDisplayOrientation}`}
+                  className="w-full h-full object-contain rounded-md" // Image fills container, respects aspect ratio
+                />
+              ) : cardDetails ? (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted rounded-md">
+                  Image not available for this orientation.
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted rounded-md">
+                  Preparing image display...
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-4 mt-8 w-full max-w-sm md:max-w-md">
