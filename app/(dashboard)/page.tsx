@@ -676,7 +676,7 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col items-center w-full md:col-span-3 relative">
+            <div className="flex flex-col md:items-start w-full md:col-span-3 relative -mt-3">
               {/* Image Container - Common for Mobile and Desktop Image Source */}
               <div 
                 className={`relative w-full mb-2 cursor-grab active:cursor-grabbing 
