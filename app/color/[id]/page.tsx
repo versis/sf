@@ -158,7 +158,7 @@ export default function ColorCardPage() {
     const urlToCopy = window.location.href;
     try {
       await navigator.clipboard.writeText(urlToCopy);
-      setCopyUrlFeedback('Page URL copied to clipboard!');
+      setCopyUrlFeedback("Link to your shade&apos;s story, copied! Go on, spread the freude.");
     } catch (err) {
       console.error('Failed to copy page URL:', err);
       setCopyUrlFeedback('Failed to copy URL.');
