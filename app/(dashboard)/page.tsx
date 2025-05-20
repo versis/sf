@@ -44,6 +44,7 @@ export default function HomePage() {
   const [isCropStepCompleted, setIsCropStepCompleted] = useState(false);
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
   const [isResultsStepCompleted, setIsResultsStepCompleted] = useState(false);
+  const [generatedExtendedId, setGeneratedExtendedId] = useState<string | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
@@ -163,6 +164,7 @@ export default function HomePage() {
     setSelectedHexColor('#000000');
     setGeneratedVerticalImageUrl(null);
     setGeneratedHorizontalImageUrl(null);
+    setGeneratedExtendedId(null);
     setCurrentDisplayOrientation('horizontal');
     setIsGenerating(false);
     setGenerationError(null);
@@ -324,8 +326,9 @@ export default function HomePage() {
       }
       
       dbId = initiateResult.db_id;
-      const extendedId = initiateResult.extended_id;
-      console.log(`Frontend: Initiation successful. DB ID: ${dbId}, Extended ID: ${extendedId}`);
+      const extendedIdFromServer = initiateResult.extended_id;
+      setGeneratedExtendedId(extendedIdFromServer);
+      console.log(`Frontend: Initiation successful. DB ID: ${dbId}, Extended ID: ${extendedIdFromServer}`);
       // setGenerationProgress(30); // REMOVE discrete progress update
 
       // Convert base64 Data URL to Blob for multipart/form-data upload
@@ -510,12 +513,20 @@ export default function HomePage() {
       return;
     }
 
-    const shareMessage = `Check this out. This is my own unique color card: ${currentImageUrl}`;
+    let shareUrl = currentImageUrl; // Default to direct image URL
+    if (generatedExtendedId) {
+      const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
+      shareUrl = `https://sf.tinker.institute/color/${slug}`;
+    }
+
+    // const shareMessage = `Check this out. This is my own unique color card: ${currentImageUrl}`;
+    // Updated to use the new shareUrl for the card page if available
+    const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
 
     const shareData = {
       title: 'Shadefreude Color Card',
       text: shareMessage,
-      url: currentImageUrl, // This is the direct blob URL, some platforms might use this for a preview
+      url: shareUrl, // Use the new sf.tinker.institute URL if available, otherwise blob URL
     };
 
     let copied = false;
