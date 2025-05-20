@@ -7,8 +7,8 @@ import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
-  title: "shadefreude - unique color cards (part of tinker.institute)",
-  description: "Create beautiful color reference cards with Shadefreude",
+  title: "shadefreude: where colors tell your story, infused with AI | tinker.institute",
+  description: "More than mere pigment: from a shade in your photo, shadefreude\'s AI crafts a unique story and poetic name. Experience the delightful side of shade.",
   icons: [
     { rel: "icon", url: "/sf-icon.png" },
     { rel: "apple-touch-icon", url: "/sf-icon.png" },

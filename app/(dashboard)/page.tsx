@@ -18,6 +18,13 @@ const DUMMY_MESSAGES = [
 const CHAR_TYPING_SPEED_MS = 30;
 const NEW_LINE_DELAY_TICKS = Math.floor(2000 / CHAR_TYPING_SPEED_MS);
 
+const EXAMPLE_CARDS = [
+  { v: "/example-card-v-1.png", h: "/example-card-h-1.png" },
+  { v: "/example-card-v-2.png", h: "/example-card-h-2.png" },
+  { v: "/example-card-v-3.png", h: "/example-card-h-3.png" },
+];
+const SWIPE_THRESHOLD = 50; // Minimum pixels for a swipe to be registered
+
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
@@ -27,7 +34,7 @@ export default function HomePage() {
   const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
-  const [colorNameInput, setColorNameInput] = useState<string>('EXAMPLE COLOR NAME');
+  const [colorNameInput, setColorNameInput] = useState<string>('');
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -46,6 +53,8 @@ export default function HomePage() {
   const [isColorStepCompleted, setIsColorStepCompleted] = useState(false);
   const [isResultsStepCompleted, setIsResultsStepCompleted] = useState(false);
   const [generatedExtendedId, setGeneratedExtendedId] = useState<string | null>(null);
+  const [currentExampleCardIndex, setCurrentExampleCardIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
@@ -169,7 +178,7 @@ export default function HomePage() {
     setCurrentDisplayOrientation('horizontal');
     setIsGenerating(false);
     setGenerationError(null);
-    setColorNameInput('EXAMPLE COLOR NAME');
+    setColorNameInput('');
     setGenerationProgress(0);
     setSelectedFileName(null);
     setUserHasInteractedWithColor(false);
@@ -519,10 +528,8 @@ export default function HomePage() {
       const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
       shareUrl = `https://sf.tinker.institute/color/${slug}`;
     }
-
-    // const shareMessage = `Check this out. This is my own unique color card: ${currentImageUrl}`;
-    // Updated to use the new shareUrl for the card page if available
-    const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
+    
+    const shareMessage = `My latest shadefreude discovery – a color with a tale to tell: ${shareUrl}`;
 
     const shareData = {
       title: 'Shadefreude Color Card',
@@ -579,13 +586,21 @@ export default function HomePage() {
     const urlToCopy = `https://sf.tinker.institute/color/${slug}`;
     try {
       await navigator.clipboard.writeText(urlToCopy);
-      setCopyUrlFeedback('Color page URL copied!');
+      setCopyUrlFeedback("Link to your shade's story, copied! Go on, spread the freude.");
     } catch (err) {
       console.error('Failed to copy generated URL:', err);
       setCopyUrlFeedback('Failed to copy URL.');
     }
     setTimeout(() => setCopyUrlFeedback(''), 3000);
     setShareFeedback(''); // Clear share feedback if copy is used
+  };
+
+  const handleNextExampleCard = () => {
+    setCurrentExampleCardIndex((prevIndex) => (prevIndex + 1) % EXAMPLE_CARDS.length);
+  };
+
+  const handlePrevExampleCard = () => {
+    setCurrentExampleCardIndex((prevIndex) => (prevIndex - 1 + EXAMPLE_CARDS.length) % EXAMPLE_CARDS.length);
   };
 
   return (
@@ -633,10 +648,91 @@ export default function HomePage() {
           </p>
         </header>
 
+        {/* Hero Section Text & Example Card */}
+        <section className="w-full py-2 md:py-4">
+          <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
+            {/* Left Column: Text - takes 2/5ths */}
+            <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
+              <h2 className="text-2xl md:text-3xl font-semibold mb-3">
+                Your photo's hue,<br /> AI's poetic debut.
+              </h2>
+              <p className="text-md md:text-lg text-muted-foreground">
+                Hi, I'm Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
+              </p>
+            </div>
+
+            {/* Right Column: Example Card with Navigation - takes 3/5ths */}
+            <div className="flex flex-col items-center w-full md:col-span-3 relative">
+              {/* Image Container - Common for Mobile and Desktop Image Source */}
+              <div 
+                className={`relative w-full mb-2 cursor-grab active:cursor-grabbing 
+                            ${isMobile ? 'max-w-sm aspect-[3/4]' : 'max-w-xl aspect-video mx-auto'}`}
+                onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+                onTouchMove={(e) => { /* Visual feedback */ }}
+                onTouchEnd={(e) => {
+                  if (touchStartX === null) return;
+                  const touchEndX = e.changedTouches[0].clientX;
+                  const deltaX = touchEndX - touchStartX;
+                  if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+                    if (deltaX > 0) { handlePrevExampleCard(); }
+                    else { handleNextExampleCard(); }
+                  }
+                  setTouchStartX(null);
+                }}
+              >
+                <img 
+                  src={isMobile ? EXAMPLE_CARDS[currentExampleCardIndex].v : EXAMPLE_CARDS[currentExampleCardIndex].h}
+                  alt={`Example Shadefreude Card ${currentExampleCardIndex + 1}`}
+                  className="w-full h-full rounded-lg object-contain"
+                  draggable="false"
+                />
+
+                {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
+                {!isMobile && (
+                  <>
+                    {currentExampleCardIndex > 0 && (
+                      <button 
+                        onClick={handlePrevExampleCard} 
+                        className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        aria-label="Previous example card"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                    )}
+                    {currentExampleCardIndex < EXAMPLE_CARDS.length - 1 && (
+                      <button 
+                        onClick={handleNextExampleCard} 
+                        className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        aria-label="Next example card"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Mobile Dot Indicators - Hidden on Desktop */}
+              {isMobile && (
+                <div className="flex justify-center items-center space-x-2 mt-3">
+                    {EXAMPLE_CARDS.map((_, index) => (
+                        <button
+                        key={index}
+                        onClick={() => setCurrentExampleCardIndex(index)}
+                        className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-muted hover:bg-muted-foreground/50'}`}
+                        aria-label={`Go to example card ${index + 1}`}
+                        />
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
-              title="1: Pick a nice photo"
+              title="1: Begin with an Image"
               stepNumber={1} 
               isActive={currentWizardStep === 'upload'} 
               isCompleted={isUploadStepCompleted}
@@ -655,7 +751,7 @@ export default function HomePage() {
 
             {isUploadStepCompleted && (
             <WizardStep 
-              title="2: Cut a square"
+              title="2: Frame Your Focus"
               stepNumber={2} 
               isActive={currentWizardStep === 'crop'} 
               isCompleted={isCropStepCompleted}
@@ -678,7 +774,7 @@ export default function HomePage() {
 
             {isCropStepCompleted && (
             <WizardStep 
-              title="3: Choose your color"
+              title="3: Select Your Signature Shade"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
@@ -712,7 +808,7 @@ export default function HomePage() {
                       }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                    {isGenerating ? 'Working the magic...' : 'Claim this color'}
+                    {isGenerating ? 'Working the magic...' : 'Reveal Its Story'}
                   </button>
                 </div>
               </WizardStep>
@@ -720,7 +816,7 @@ export default function HomePage() {
 
             {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
               <WizardStep
-                title="4: Creating card..."
+                title="4: Your Shade Takes Form..."
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
@@ -791,7 +887,7 @@ export default function HomePage() {
                 )}
                 {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
                   <div className="p-2 text-center">
-                    <p className="text-base">Your unique shadefreude color card is ready below.</p>
+                    <p className="text-base">Your unique hue, now with its own story.</p>
                   </div>
                 )}
                  {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
