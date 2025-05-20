@@ -55,7 +55,7 @@ export default function ColorCardPage() {
 
   // Effect to fetch data when 'id' state is set and valid
   useEffect(() => {
-    if (id && loading) { // Only fetch if we have a valid id and are in a loading state for it
+    if (id && loading) {
       const fetchCardDetails = async () => {
         try {
           const response = await fetch(`/api/retrieve-card-by-extended-id/${id}`);
@@ -64,13 +64,12 @@ export default function ColorCardPage() {
             try {
                 const errorData = await response.json();
                 errorMsg = errorData.detail || errorMsg;
-            } catch (jsonError) {
-                // Stick with status error if JSON parsing fails
-            }
+            } catch (jsonError) { /* Stick with status error */ }
             throw new Error(errorMsg);
           }
           const data: CardDetails = await response.json();
-          console.log("[FetchEffect] Raw data from API:", data); // Log the raw data
+          // CRUCIAL LOG: Inspect the raw data object here
+          console.log("RAW DATA FROM API (response.json()):", JSON.stringify(data, null, 2)); 
           setCardDetails(data);
           // Set initial orientation after data is fetched
           if (isMobile && data.verticalImageUrl) {
@@ -80,17 +79,16 @@ export default function ColorCardPage() {
           } else if (data.verticalImageUrl) { // Fallback if only vertical
             setCurrentDisplayOrientation('vertical');
           }
-          setError(null); // Clear any previous error on success
+          setError(null);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
-          setCardDetails(null); // Clear card details on error
+          setCardDetails(null);
         }
-        setLoading(false); // Set loading to false once fetch attempt is complete
+        setLoading(false);
       };
       fetchCardDetails();
     }
-    // If id is null, loading might have been set to false by the previous effect's 'else' block.
-  }, [id, loading, isMobile]); // Depend on 'id' (our stable internal id), 'loading' state, and 'isMobile'
+  }, [id, loading, isMobile]);
 
   const handleDownload = () => {
     const imageUrl = currentDisplayOrientation === 'horizontal' 
