@@ -675,8 +675,8 @@ export default function HomePage() {
           <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
             {/* Left Column: Text - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
-              <h2 className="text-2xl md:text-3xl font-semibold mb-3">
-                Your photo&apos;s hue,<span className="hidden md:inline"><br /></span> AI&apos;s poetic debut.
+              <h2 className="text-3xl md:text-4xl font-semibold mb-3">
+                Your photo&apos;s hue,<br /> AI&apos;s poetic debut.
               </h2>
               <p className="text-md md:text-lg text-muted-foreground">
                 Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
@@ -684,11 +684,11 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-start w-full md:col-span-3 relative -mt-3">
+            <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
               {/* Image Container - Common for Mobile and Desktop Image Source */}
               <div 
                 className={`relative w-full mb-2 cursor-grab active:cursor-grabbing 
-                            ${isMobile ? 'max-w-sm aspect-[3/4]' : 'max-w-xl aspect-video mx-auto'}`}
+                            ${isMobile ? 'max-w-md aspect-[3/4] mx-auto' : 'max-w-xl aspect-video mx-auto'}`}
                 onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
                 onTouchMove={(e) => { /* Visual feedback */ }}
                 onTouchEnd={(e) => {
