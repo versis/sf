@@ -4,6 +4,8 @@ from typing import Any, Dict
 
 from ..config import SUPABASE_URL, SUPABASE_SERVICE_KEY # Assuming these are in your config
 from ..utils.logger import info, warning, error
+from ..models.card_generation_models import CardGenerationRecord
+from typing import List
 
 router = APIRouter()
 
@@ -31,6 +33,36 @@ class CardDetailsResponse(BaseModel):
 
     class Config:
         populate_by_name = True # Allows using alias for field names from DB
+
+@router.get("/generations", response_model=List[CardGenerationRecord])
+async def get_generations(limit: int = 30, offset: int = 0):
+    if not supabase_client:
+        raise HTTPException(status_code=503, detail="Database service unavailable.")
+
+    info(f"Attempting to retrieve generations with limit: {limit}, offset: {offset}")
+    
+    try:
+        db_response = (
+            supabase_client.table("card_generations")
+            .select("id, extended_id, hex_color, status, metadata, horizontal_image_url, vertical_image_url, created_at, updated_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .offset(offset)
+            .execute()
+        )
+
+        if db_response.data is None: # Check if data is None, could happen if execute() returns unexpected result
+            warning(f"No generations found or error in query. Limit: {limit}, Offset: {offset}")
+            return [] # Return empty list if no data or error
+        
+        # The response.data should already be a list of dicts suitable for CardGenerationRecord.model_validate
+        generations = [CardGenerationRecord.model_validate(item) for item in db_response.data]
+        info(f"Successfully retrieved {len(generations)} generations.")
+        return generations
+
+    except Exception as e:
+        error(f"Error retrieving generations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while retrieving generations: {str(e)}")
 
 @router.get(
     "/retrieve-card-by-extended-id/{extended_id_slug}", 
