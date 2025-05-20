@@ -194,11 +194,16 @@ export default function ColorCardPage() {
           </p>
         </header>
         
-        <div className="mt-6">
-          <div className="text-md text-muted-foreground max-w-xl mx-auto mt-4 space-y-3">
+        <div className="mt-6 text-left">
+          <div className="text-md text-muted-foreground max-w-xl mx-auto mt-2 space-y-3">
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+              You&apos;ve landed on a unique shadefreude creation
+              {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
+                <span className="font-mono text-xs">
+                  {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}HEX: {cardDetails.hexColor || 'N/A'})
+                </span>
+              )}
+              , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!
             </p>
           </div>
         </div>
