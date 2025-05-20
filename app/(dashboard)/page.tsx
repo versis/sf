@@ -671,7 +671,7 @@ export default function HomePage() {
                 Your photo&apos;s hue,<span className="hidden md:inline"><br /></span> AI&apos;s poetic debut.
               </h2>
               <p className="text-md md:text-lg text-muted-foreground">
-                Hi, I'm Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
+                Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
               </p>
             </div>
 
