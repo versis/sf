@@ -195,7 +195,7 @@ export default function ColorCardPage() {
         </header>
         
         <div className="mt-6 text-left">
-          <div className="text-md text-muted-foreground max-w-xl mx-auto mt-2 space-y-3">
+          <div className="text-md text-muted-foreground max-w-2xl mx-auto mt-2 space-y-3">
             <p>
               You&apos;ve landed on a unique shadefreude creation
               {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
