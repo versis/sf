@@ -846,14 +846,14 @@ export default function HomePage() {
               >
                 {isGenerating && (
                   <div className="w-full mb-6">
-                    <div className="text-xs text-left text-blue-600">
+                    <div className="text-xs text-left text-blue-600 min-h-[1.875rem]">
                       {(() => {
                         const logic = typingLogicRef.current;
                         let lineToDisplay: string | undefined;
                         let currentMessageContent: string | undefined;
                         let showCursor = false;
                         // Use a fixed height matching text-xs and leading-tight to prevent layout shifts
-                        const pClassName = "whitespace-nowrap overflow-hidden text-ellipsis m-0 p-0 leading-tight h-[1.25em]";
+                        const pClassName = "m-0 p-0 leading-tight";
 
                         if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
                           // Waiting for new line delay: display the *previous* fully typed line.
