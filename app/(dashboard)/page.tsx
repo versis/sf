@@ -790,7 +790,7 @@ export default function HomePage() {
                   </div>
                 )}
                 {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
-                  <div className="p-4 text-center">
+                  <div className="p-2 text-center">
                     <p className="text-base">Your unique shadefreude color card is ready below.</p>
                   </div>
                 )}
@@ -805,7 +805,7 @@ export default function HomePage() {
 
           {/* New Section for Card Display - Outside/Below Wizard */}
           {isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
-            <section ref={resultRef} className="w-full px-1 py-2 md:px-2 md:py-8 mt-2 md:order-2 flex flex-col items-center">
+            <section ref={resultRef} className="w-full px-1 py-2 md:px-2 md:py-2 mt-0 md:order-2 flex flex-col items-center">
               <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
                 <div ref={cardDisplayControlsRef} className="flex justify-center gap-6 mb-4 scroll-target-with-offset">
                   <button 
