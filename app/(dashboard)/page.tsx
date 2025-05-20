@@ -31,6 +31,7 @@ export default function HomePage() {
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const cardDisplayControlsRef = useRef<HTMLDivElement>(null);
   const [userHasInteractedWithColor, setUserHasInteractedWithColor] = useState(false);
   const [showColorInstructionHighlight, setShowColorInstructionHighlight] = useState(false);
   const [colorInstructionKey, setColorInstructionKey] = useState(0);
@@ -388,17 +389,46 @@ export default function HomePage() {
       setGeneratedVerticalImageUrl(verticalUrl || null);
       
       setIsColorStepCompleted(true);
-      setCurrentWizardStep('results'); 
+      // setCurrentWizardStep('results'); // Already on results step
       setIsResultsStepCompleted(true);
       // console.log('Frontend: State updated for results step. currentWizardStep:', 'results'); // DEBUG REMOVED
       
-      // Set the display orientation based on availability and preference
+      // Determine initial display orientation and target image for preloading
+      let initialDisplayUrl: string | null = null;
+      let initialOrientation: 'horizontal' | 'vertical';
+
       if (isMobile && verticalUrl) {
-        setCurrentDisplayOrientation('vertical');
+        initialOrientation = 'vertical';
+        initialDisplayUrl = verticalUrl;
       } else if (horizontalUrl) {
-        setCurrentDisplayOrientation('horizontal');
-      } else if (verticalUrl) {
-        setCurrentDisplayOrientation('vertical');
+        initialOrientation = 'horizontal';
+        initialDisplayUrl = horizontalUrl;
+      } else if (verticalUrl) { // Fallback if only vertical is available (non-mobile)
+        initialOrientation = 'vertical';
+        initialDisplayUrl = verticalUrl;
+      } else {
+        initialOrientation = 'horizontal'; // Default if somehow no URLs (though we check above)
+      }
+      setCurrentDisplayOrientation(initialOrientation);
+
+      // Preload the initially displayed image and scroll after it loads
+      if (initialDisplayUrl) {
+        const img = new Image();
+        img.onload = () => {
+          console.log('Frontend: Initial image loaded, scrolling to controls.');
+          cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        img.onerror = () => {
+          console.warn('Frontend: Initial image failed to preload, scrolling anyway.');
+          cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        img.src = initialDisplayUrl;
+      } else {
+        // If no specific image to preload (should not happen if URLs are present),
+        // scroll immediately (or with a small delay as a fallback)
+        setTimeout(() => {
+            cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },100);
       }
 
       // setGenerationProgress(100); // REMOVE discrete progress update, handled by interval or finally block
@@ -541,6 +571,9 @@ export default function HomePage() {
         .blinking-cursor {
           display: inline-block;
           animation: blink 1s step-end infinite;
+        }
+        .scroll-target-with-offset {
+          scroll-margin-top: 2rem; /* Adjust this value as needed */
         }
       `}</style>
       
@@ -736,7 +769,7 @@ export default function HomePage() {
           {isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl) && (
             <section ref={resultRef} className="w-full px-1 py-2 md:px-2 md:py-8 mt-2 md:order-2 flex flex-col items-center">
               <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
-                <div className="flex justify-center gap-6 mb-4">
+                <div ref={cardDisplayControlsRef} className="flex justify-center gap-6 mb-4 scroll-target-with-offset">
                   <button 
                     onClick={() => setCurrentDisplayOrientation('horizontal')}
                     className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
