@@ -315,7 +315,7 @@ async def generate_back_card_image_bytes(
         base_rgb_for_back = (200, 200, 200) 
     
     white_bg_rgb = (255, 255, 255)
-    opacity_for_original_color = 0.07 # Changed from 0.15 to 0.07 (7% opacity for more desaturation)
+    opacity_for_original_color = 0.15
 
     try:
         r_orig, g_orig, b_orig = base_rgb_for_back
