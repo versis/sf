@@ -1334,7 +1334,7 @@ export default function HomePage() {
                             className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                           >
                             <PenSquare size={20} className="mr-2" />
-                            Save The Note On The Back
+                            Save The Note
                           </button>
                           <button
                             onClick={() => handleNoteSubmission()} 

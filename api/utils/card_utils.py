@@ -458,26 +458,28 @@ async def generate_back_card_image_bytes(
         current_elements_y = pad_y + (available_height_for_elements - date_placeholder_h) / 2
         current_elements_y = max(pad_y, current_elements_y)
 
-    # Render Date
+    # Render Date (New Positioning Logic)
     if created_at_iso_str:
         try:
             dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
             date_str = dt_object.strftime('%B %d, %Y')
             date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
             
-            vertical_gap_after_note = int(note_line_h * 1.0 if lines else 0) + (30 if lines else 0)
-            date_y = current_elements_y + vertical_gap_after_note
+            # Y position: Just below the stamp
+            gap_below_stamp = int(card_h * 0.03) # Increased from 0.015 for more margin above date
+            date_y = main_stamp_y_start + main_stamp_area_size + gap_below_stamp
             
-            # Date X positioning: Align end of date string with the right card padding.
-            date_x = card_w - date_w - 4 * pad_x
-            date_x = max(pad_x, date_x) # Ensure it doesn't go left of the left padding
+            # X position: Centered under the stamp
+            date_x = main_stamp_x_start + (main_stamp_area_size - date_w) // 2
+            # Ensure it doesn't go left of the initial left padding (safety, though unlikely for centered date under stamp)
+            date_x = max(pad_x, date_x) 
 
-            if date_y + date_h < card_h - pad_y: 
+            if date_y + date_h < card_h - pad_y: # Check if date fits vertically on card
                  draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
             else:
-                 log("Date does not fit below note text / at new position.", request_id=request_id)
+                 log(f"Date does not fit on card at new position below stamp. Y: {date_y}", request_id=request_id)
         except ValueError:
-            log(f"Could not parse date for below note: {created_at_iso_str}", level="WARNING", request_id=request_id)
+            log(f"Could not parse date for date string: {created_at_iso_str}", level="WARNING", request_id=request_id)
 
     radius = 40
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
