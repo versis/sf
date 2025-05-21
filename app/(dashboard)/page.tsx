@@ -875,7 +875,7 @@ export default function HomePage() {
 
         {/* Inserted Title and HR */}
         <div className="w-full flex flex-col items-start my-4">
-          <hr className="w-full border-b border-foreground mb-2" />
+          <hr className="w-full border-t border-foreground my-6" />
           <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
         </div>
 

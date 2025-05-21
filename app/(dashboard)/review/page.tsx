@@ -195,14 +195,14 @@ export default function ReviewPage() {
                 </div>
 
               </div>
-              {index < generations.length - 1 && <hr className="mt-6 border-gray-300" />}
             </article>
           );
-
-          if (generations.length === index + 1) {
-            return React.cloneElement(itemContent, { ref: lastElementRef });
-          }
-          return itemContent;
+          return (
+            <React.Fragment key={gen.id}>
+              {itemContent}
+              {index < generations.length - 1 && <hr className="w-full border-t border-foreground my-6" />}
+            </React.Fragment>
+          );
         })}
       </div>
       {isLoading && (

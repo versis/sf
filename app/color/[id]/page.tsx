@@ -203,45 +203,50 @@ export default function ColorCardPage() {
           </p>
         </header>
         
-        <div className="mt-6 text-left">
-          <div className="text-md text-muted-foreground max-w-2xl mx-auto mt-2 space-y-3">
-            <p>
-              You&apos;ve landed on a unique shadefreude creation
-              {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
-                <span className="font-mono text-xs">
-                  {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}{cardDetails.hexColor || 'N/A'})
-                </span>
-              )}
-              , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!
-            </p>
+        {/* Use a flex container with explicit order to ensure consistent layout */}
+        <div className="flex flex-col items-center w-full mt-6">
+          <div ref={cardDisplaySectionRef} className="w-full flex flex-col items-center justify-center order-1">
+            <CardDisplay
+              isVisible={!loading && !error && !!cardDetails}
+              generatedHorizontalImageUrl={cardDetails.horizontalImageUrl || null}
+              generatedVerticalImageUrl={cardDetails.verticalImageUrl || null}
+              currentDisplayOrientation={currentDisplayOrientation}
+              setCurrentDisplayOrientation={setCurrentDisplayOrientation}
+              handleShare={handleShareAction} 
+              handleCopyGeneratedUrl={handleCopyLinkAction}
+              handleDownloadImage={handleDownloadImage} 
+              isGenerating={false}
+              generatedExtendedId={id}
+              shareFeedback={shareFeedback}
+              copyUrlFeedback={copyUrlFeedback}
+            />
           </div>
-        </div>
+          
+          <div className="w-full flex justify-center order-2 mt-6">
+            <Link
+              href="/"
+              className="text-blue-700 font-semibold underline flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Create Your Own Unique Card
+            </Link>
+          </div>
 
-        <hr className="my-8 border-t-2 border-foreground w-full" />
-        
-        <div ref={cardDisplaySectionRef} className="mt-2 flex flex-col items-center justify-center">
-          <CardDisplay
-            isVisible={!loading && !error && !!cardDetails}
-            generatedHorizontalImageUrl={cardDetails.horizontalImageUrl || null}
-            generatedVerticalImageUrl={cardDetails.verticalImageUrl || null}
-            currentDisplayOrientation={currentDisplayOrientation}
-            setCurrentDisplayOrientation={setCurrentDisplayOrientation}
-            handleShare={handleShareAction} 
-            handleCopyGeneratedUrl={handleCopyLinkAction}
-            handleDownloadImage={handleDownloadImage} 
-            isGenerating={false}
-            generatedExtendedId={id}
-            shareFeedback={shareFeedback}
-            copyUrlFeedback={copyUrlFeedback}
-          />
+          <hr className="w-full border-t-2 border-foreground order-3 mt-6 mb-4" />
 
-          <Link
-            href="/"
-            className="mt-10 text-blue-700 font-semibold hover:underline flex items-center justify-center gap-2"
-          >
-             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Create Your Own Unique Card
-          </Link>
+          <div className="w-full text-left order-4 mt-4">
+            <div className="text-md text-muted-foreground max-w-2xl mx-auto space-y-3">
+              <p>
+                You&apos;ve landed on a unique shadefreude creation
+                {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
+                  <span className="font-mono text-xs">
+                    {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}{cardDetails.hexColor || 'N/A'})
+                  </span>
+                )}
+                , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </main>

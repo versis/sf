@@ -54,7 +54,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   }
 
   return (
-    <section ref={cardDisplayControlsRef} className="w-full px-1 py-2 md:px-2 md:py-2 mt-0 md:order-2 flex flex-col items-center scroll-target-with-offset">
+    <section ref={cardDisplayControlsRef} className="w-full px-1 py-2 md:px-2 md:py-2 mt-0 flex flex-col items-center scroll-target-with-offset">
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className="flex justify-center gap-6 mb-4">
           <button
