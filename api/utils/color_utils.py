@@ -161,7 +161,6 @@ def generate_color_variations(hex_color: str, request_id: Optional[str] = None) 
     variations.append({"name": "Original", "hex": rgb_to_hex(*original_rgb)})
 
     # Generate variations from the proposals, ensuring we get up to 19 more to make 20 total
-    # (or fewer if proposals list is shorter)
     for proposal in COLOR_VARIATION_PROPOSALS[:19]: # Ensure we don't exceed 20 total with Original
         name = proposal["name"]
         h_offset_deg = proposal.get("h_offset_deg", 0)

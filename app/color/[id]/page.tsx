@@ -44,9 +44,6 @@ export default function ColorCardPage() {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
   const cardDisplaySectionRef = useRef<HTMLDivElement>(null); // Ref for scrolling to the card display
-  const [colorVariations, setColorVariations] = useState<Array<{name: string, hex: string}>>([]);
-  const [variationsLoading, setVariationsLoading] = useState<boolean>(false);
-  const [variationsError, setVariationsError] = useState<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false); // Added for card flip state
 
   const handleFlip = () => {
@@ -103,10 +100,7 @@ export default function ColorCardPage() {
   useEffect(() => {
     if (id && loading) {
       const fetchCardDetails = async () => {
-        setLoading(true); 
-        setVariationsLoading(true);
-        setVariationsError(null);
-        setColorVariations([]);
+        setLoading(true);
         try {
           const response = await fetch(`/api/retrieve-card-by-extended-id/${id}`);
           if (!response.ok) {
@@ -120,29 +114,6 @@ export default function ColorCardPage() {
           const data: CardDetails = await response.json();
           setCardDetails(data);
           
-          // After successfully fetching main card details, fetch color variations
-          if (data.hexColor) {
-            try {
-              const cleanedHexForApi = data.hexColor.startsWith('#') ? data.hexColor.substring(1) : data.hexColor;
-              const variationsResponse = await fetch(`/api/color-variations?hex_color=${cleanedHexForApi}`);
-              if (!variationsResponse.ok) {
-                let varErrorMsg = `Error fetching color variations: ${variationsResponse.status}`;
-                 try {
-                    const varErrorData = await variationsResponse.json();
-                    varErrorMsg = varErrorData.detail || varErrorMsg;
-                } catch (jsonError) { /* Stick with status error */ }
-                throw new Error(varErrorMsg);
-              }
-              const variationsData = await variationsResponse.json();
-              setColorVariations(variationsData.variations || []); 
-            } catch (varErr) {
-                setVariationsError(varErr instanceof Error ? varErr.message : 'Failed to load color variations');
-                setColorVariations([]);
-            }
-          } else {
-             setVariationsError("Main card color not available to generate variations.");
-          }
-
           let initialOrientation: 'horizontal' | 'vertical';
           if (isMobile && data.frontVerticalImageUrl) {
             initialOrientation = 'vertical';
@@ -164,11 +135,8 @@ export default function ColorCardPage() {
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
           setCardDetails(null);
-          setColorVariations([]); // Clear variations on main card error
-          setVariationsError("Cannot fetch variations due to main card error.");
         } finally {
             setLoading(false);
-            setVariationsLoading(false); // Set variations loading to false here
         }
       };
       fetchCardDetails();
@@ -305,33 +273,6 @@ export default function ColorCardPage() {
           </div>
           
           <hr className="w-full border-t-2 border-foreground my-6 order-3" />
-
-          {/* Color Variations Section */}
-          <div className="w-full order-3 mt-8 mb-8">
-            <div className="max-w-4xl mx-auto">
-              <h3 className="text-2xl font-semibold mb-4 text-center">Color Variation Ideas (for Card Back)</h3>
-              {variationsLoading && <p className="text-center">Loading color variations...</p>}
-              {variationsError && <p className="text-center text-red-500">Error: {variationsError}</p>}
-              {!variationsLoading && !variationsError && colorVariations.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {colorVariations.map(variation => (
-                    <div key={variation.name} className="flex flex-col items-center">
-                      <div 
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-md border border-muted shadow-md mb-2"
-                        style={{ backgroundColor: variation.hex }}
-                        title={variation.hex}
-                      ></div>
-                      <p className="text-xs text-center text-muted-foreground">{variation.name}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!variationsLoading && !variationsError && colorVariations.length === 0 && !cardDetails?.hexColor && (
-                  <p className="text-center text-muted-foreground">No main color found to generate variations.</p>
-              )}
-            </div>
-          </div>
-          {/* End Color Variations Section */}
 
           <div className="w-full order-4 mt-4">
             <div className="max-w-4xl mx-auto">

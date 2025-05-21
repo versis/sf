@@ -6,7 +6,7 @@ from datetime import datetime
 import os # Added for path joining
 
 from api.utils.logger import log, debug, error # Ensure error is imported if used
-from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
+from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls, blend_with_background
 
 # --- Font Loading ---
 # Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
@@ -309,15 +309,22 @@ async def generate_back_card_image_bytes(
 ) -> bytes:
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
-    # 4. Card Back Background Color Strategy - Default: Desaturate 60%, Lighten 15%
     base_rgb_for_back = hex_to_rgb(hex_color_input, request_id=request_id)
     if not base_rgb_for_back:
         log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
-        base_rgb_for_back = (200, 200, 200) # Fallback grey
+        base_rgb_for_back = (200, 200, 200) # Fallback grey for the original color if invalid
     
-    # Apply default HLS adjustment for the card back that will be generated
-    # Desaturate by 60% (s_factor = 0.4), Lighten by 15% (l_factor = 1.15)
-    final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
+    # New background logic: Original color at 20% opacity over a white background
+    white_bg_rgb = (255, 255, 255)
+    opacity_for_original_color = 0.20 # 20% opacity for the original color
+
+    try:
+        final_bg_rgb = blend_with_background(base_rgb_for_back, white_bg_rgb, opacity_for_original_color)
+    except Exception as e:
+        log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
+        # Fallback to a simple desaturated version if blending fails for any reason
+        final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15) # Previous fallback
+
     bg_color_tuple = (*final_bg_rgb, 255)
 
     VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
@@ -349,7 +356,7 @@ async def generate_back_card_image_bytes(
 
     # --- Main Logo Stamp (Top-Right) - No date here anymore --
     # 2. Make post stamp border smaller (closer to the page logo)
-    main_stamp_area_size = int(min(card_w, card_h) * 0.25) # Reduced from 0.30
+    main_stamp_area_size = int(min(card_w, card_h) * 0.20) # Reduced from 0.25
     main_stamp_padding = int(main_stamp_area_size * 0.1)
     main_stamp_x_start = card_w - pad_x - main_stamp_area_size
     main_stamp_y_start = pad_y
@@ -396,7 +403,7 @@ async def generate_back_card_image_bytes(
         if char_count < 50: # T1: Very Short
             if orientation == "vertical":
                 # 3. You still wrap too early on vertical card.
-                actual_max_text_w = int(available_width_for_note_default * 0.75) # Increased from 0.65
+                actual_max_text_w = int(available_width_for_note_default * 0.85) # Increased from 0.75
             else:
                 actual_max_text_w = int(available_width_for_note_default * 0.50)
             # For horizontal centering of the text block itself
@@ -405,7 +412,7 @@ async def generate_back_card_image_bytes(
         elif char_count < 150: # T2: Medium
             if orientation == "vertical":
                 # 3. You still wrap too early on vertical card.
-                actual_max_text_w = int(available_width_for_note_default * 0.90) # Increased from 0.85
+                actual_max_text_w = int(available_width_for_note_default * 0.95) # Increased from 0.90
             else:
                 actual_max_text_w = int(available_width_for_note_default * 0.75)
             text_block_x_start = pad_x + (available_width_for_note_default - actual_max_text_w) // 2
