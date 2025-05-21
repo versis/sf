@@ -59,6 +59,7 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
+  const [isHeroVisible, setIsHeroVisible] = useState(true);
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -283,6 +284,8 @@ export default function HomePage() {
     setIsColorStepCompleted(false);
     setIsResultsStepCompleted(false);
     
+    setIsHeroVisible(false);
+
     // Revoke URLs
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
@@ -651,10 +654,10 @@ export default function HomePage() {
     };
 
     await shareOrCopy(shareData, shareMessage, {
-        onShareSuccess: (message) => setShareFeedback(message),
-        onCopySuccess: (message) => setShareFeedback(message), // Use setShareFeedback for copy fallback
-        onShareError: (message) => setShareFeedback(message),
-        onCopyError: (message) => setShareFeedback(message),
+        onShareSuccess: (message: string) => setShareFeedback(message),
+        onCopySuccess: (message: string) => setShareFeedback(message),
+        onShareError: (message: string) => setShareFeedback(message),
+        onCopyError: (message: string) => setShareFeedback(message),
         shareSuccessMessage: 'Shared successfully!',
         copySuccessMessage: 'Share message with image link copied to clipboard!',
         shareErrorMessage: 'Sharing failed. Try copying the link.',
@@ -674,8 +677,8 @@ export default function HomePage() {
     const urlToCopy = `https://sf.tinker.institute/color/${slug}`;
     
     await copyTextToClipboard(urlToCopy, {
-        onSuccess: (message) => setCopyUrlFeedback(message),
-        onError: (message) => setCopyUrlFeedback(message),
+        onSuccess: (message: string) => setCopyUrlFeedback(message),
+        onError: (message: string) => setCopyUrlFeedback(message),
         successMessage: COPY_SUCCESS_MESSAGE,
     });
 
@@ -913,122 +916,138 @@ export default function HomePage() {
           </p>
         </header>
 
-        {/* Hero Section Text & Example Card */}
-        <section className="w-full py-2 md:py-4">
-          <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
-            {/* Left Column: Text - takes 2/5ths */}
-            <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
-              <h2 className="text-3xl md:text-4xl font-semibold mb-3">
-                Your photo&apos;s shade,<br /> AI&apos;s poetic debut.
-              </h2>
-              <p className="text-md md:text-lg text-muted-foreground">
-                Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
-              </p>
-            </div>
+        {/* Control to Show Hero Section when it's hidden */}
+        {!isHeroVisible && (
+          <div className="w-full flex items-center justify-start mb-3 md:mb-4 pt-2 md:pt-4">
+            <button
+              onClick={() => setIsHeroVisible(true)}
+              className="flex items-center text-left text-sm font-medium text-muted-foreground hover:text-foreground hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md transition-colors p-1 gap-1" // Adjusted text size, added gap
+              aria-label="Remind me what this page is about"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              <span>Remind me what is shadefreude about</span>
+            </button>
+          </div>
+        )}
 
-            {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
-              <div
-                className={'relative w-full mb-2 cursor-grab active:cursor-grabbing overflow-hidden example-card-image-container'}
-                onTouchStart={(e) => {
-                  if (isAnimating) return;
-                  setTouchStartX(e.touches[0].clientX);
-                  setAnimationClass('');
-                  setSwipeDeltaX(0); // Reset delta for direct interaction on image
-                }}
-                onTouchMove={(e) => {
-                  if (touchStartX === null || isAnimating) return;
-                  const currentX = e.touches[0].clientX;
-                  const delta = currentX - touchStartX;
-                  setSwipeDeltaX(delta);
-                }}
-                onTouchEnd={(e) => {
-                  if (touchStartX === null || isAnimating) return;
-                  if (Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
-                    setIsAnimating(true);
-                    if (swipeDeltaX < 0) {
-                      triggerImageChangeAnimation('next');
+        {/* Hero Section Text & Example Card */}
+        {isHeroVisible && (
+          <section className="w-full py-2 md:py-4">
+            <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
+              {/* Left Column: Text - takes 2/5ths */}
+              <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
+                <h2 className="text-3xl md:text-4xl font-semibold mb-3">
+                  Your photo&apos;s shade,<br /> AI&apos;s poetic debut.
+                </h2>
+                <p className="text-md md:text-lg text-muted-foreground">
+                  Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
+                </p>
+              </div>
+
+              {/* Right Column: Example Card with Navigation - takes 3/5ths */}
+              <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
+                <div
+                  className={'relative w-full mb-2 cursor-grab active:cursor-grabbing overflow-hidden example-card-image-container'}
+                  onTouchStart={(e) => {
+                    if (isAnimating) return;
+                    setTouchStartX(e.touches[0].clientX);
+                    setAnimationClass('');
+                    setSwipeDeltaX(0); // Reset delta for direct interaction on image
+                  }}
+                  onTouchMove={(e) => {
+                    if (touchStartX === null || isAnimating) return;
+                    const currentX = e.touches[0].clientX;
+                    const delta = currentX - touchStartX;
+                    setSwipeDeltaX(delta);
+                  }}
+                  onTouchEnd={(e) => {
+                    if (touchStartX === null || isAnimating) return;
+                    if (Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
+                      setIsAnimating(true);
+                      if (swipeDeltaX < 0) {
+                        triggerImageChangeAnimation('next');
+                      } else {
+                        triggerImageChangeAnimation('prev');
+                      }
                     } else {
-                      triggerImageChangeAnimation('prev');
+                      // Snap back if swipe was not strong enough
+                      setAnimationClass('snap-back-animation');
+                      // swipeDeltaX will be reset by handleAnimationEnd after snap-back
                     }
-                  } else {
-                    // Snap back if swipe was not strong enough
-                    setAnimationClass('snap-back-animation');
-                    // swipeDeltaX will be reset by handleAnimationEnd after snap-back
-                  }
-                  setTouchStartX(null);
-                }}
-              >
-                {heroCardsLoading ? (
-                  <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
-                    <p className="text-muted-foreground">Loading examples...</p>
-                    {/* Optional: Add a spinner SVG icon here */}
-                  </div>
-                ) : fetchedHeroCards.length > 0 && displayedImageSrc ? (
-                  <img
-                    key={displayedImageSrc} // Add key for re-rendering on src change
-                    src={displayedImageSrc}
-                    alt={`Example Shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
-                    className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
-                    style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
-                    draggable="false"
-                    onAnimationEnd={handleAnimationEnd}
-                    onTransitionEnd={handleTransitionEnd}
-                    onError={(e) => { 
-                        console.error("[Hero Image Error] Failed to load displayedImageSrc:", displayedImageSrc, e);
-                        // Optionally set to a placeholder if an image fails to load, e.g.:
-                        // setDisplayedImageSrc('/placeholder-error.png'); 
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
-                    <p className="text-muted-foreground">No example images available.</p>
+                    setTouchStartX(null);
+                  }}
+                >
+                  {heroCardsLoading ? (
+                    <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
+                      <p className="text-muted-foreground">Loading examples...</p>
+                      {/* Optional: Add a spinner SVG icon here */}
+                    </div>
+                  ) : fetchedHeroCards.length > 0 && displayedImageSrc ? (
+                    <img
+                      key={displayedImageSrc} // Add key for re-rendering on src change
+                      src={displayedImageSrc}
+                      alt={`Example Shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
+                      className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
+                      style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
+                      draggable="false"
+                      onAnimationEnd={handleAnimationEnd}
+                      onTransitionEnd={handleTransitionEnd}
+                      onError={(e) => { 
+                          console.error("[Hero Image Error] Failed to load displayedImageSrc:", displayedImageSrc, e);
+                          // Optionally set to a placeholder if an image fails to load, e.g.:
+                          // setDisplayedImageSrc('/placeholder-error.png'); 
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
+                      <p className="text-muted-foreground">No example images available.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
+                {!isMobile && fetchedHeroCards.length > 1 && (
+                  <>
+                    {currentExampleCardIndex > 0 && (
+                      <button
+                        onClick={handlePrevExampleCard}
+                        className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        aria-label="Previous example card"
+                        disabled={isAnimating}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                    )}
+                    {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
+                      <button
+                        onClick={handleNextExampleCard}
+                        className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        aria-label="Next example card"
+                        disabled={isAnimating}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* Mobile Dot Indicators - Hidden on Desktop */}
+                {isMobile && fetchedHeroCards.length > 1 && (
+                  <div className="flex justify-center items-center space-x-2 mt-3">
+                      {fetchedHeroCards.map((card, index) => (
+                          <button
+                          key={card.id || index} // Use card.id if available, otherwise index
+                          onClick={() => handleDotClick(index)}
+                          className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-gray-300 hover:bg-gray-400'}`}
+                          aria-label={`Go to example card ${index + 1}`}
+                          />
+                      ))}
                   </div>
                 )}
               </div>
-
-              {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
-              {!isMobile && fetchedHeroCards.length > 1 && (
-                <>
-                  {currentExampleCardIndex > 0 && (
-                    <button
-                      onClick={handlePrevExampleCard}
-                      className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                      aria-label="Previous example card"
-                      disabled={isAnimating}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-                  )}
-                  {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
-                    <button
-                      onClick={handleNextExampleCard}
-                      className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                      aria-label="Next example card"
-                      disabled={isAnimating}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
-                  )}
-                </>
-              )}
-
-              {/* Mobile Dot Indicators - Hidden on Desktop */}
-              {isMobile && fetchedHeroCards.length > 1 && (
-                <div className="flex justify-center items-center space-x-2 mt-3">
-                    {fetchedHeroCards.map((card, index) => (
-                        <button
-                        key={card.id || index} // Use card.id if available, otherwise index
-                        onClick={() => handleDotClick(index)}
-                        className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-gray-300 hover:bg-gray-400'}`}
-                        aria-label={`Go to example card ${index + 1}`}
-                        />
-                    ))}
-                </div>
-              )}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <hr className="w-full border-t-2 border-foreground my-6" />
 

@@ -31,7 +31,7 @@ const Footer = () => {
           &copy; {new Date().getFullYear()} <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="hover:underline">tinker.institute</a>
         </span>
         <span className="hidden md:inline">|</span>
-        <span>Made in Poland ❤️</span>
+        <span>Made in Poland</span>
         <span className="hidden md:inline">|</span>
         <div 
           id="email-container" 
