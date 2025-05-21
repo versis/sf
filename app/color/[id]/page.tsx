@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import Link from 'next/link'; // Re-added Link import for the header
 import CardDisplay from '@/components/CardDisplay'; // Import the new component
+import { copyTextToClipboard } from '@/lib/clipboardUtils';
+import { shareOrCopy } from '@/lib/shareUtils';
+import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 
 interface CardDetails {
   // Define structure based on what your API will return
@@ -132,21 +135,16 @@ export default function ColorCardPage() {
       text: shareMessage,
       url: shareUrl,
     };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        setShareFeedback('Shared successfully!');
-      } else {
-        await navigator.clipboard.writeText(shareMessage);
-        setShareFeedback('Share message with link copied to clipboard!');
-      }
-    } catch (err) {
-      console.error('Share/Copy failed:', err);
-      setShareFeedback('Failed to share or copy link.');
-    } finally {
-      setTimeout(() => setShareFeedback(''), 3000);
-      setCopyUrlFeedback('');
-    }
+
+    await shareOrCopy(shareData, shareMessage, {
+      onShareSuccess: (message) => setShareFeedback(message),
+      onCopySuccess: (message) => setShareFeedback(message), // Use setShareFeedback for copy fallback as well
+      onShareError: (message) => setShareFeedback(message),
+      onCopyError: (message) => setShareFeedback(message),
+      copySuccessMessage: 'Share message with link copied to clipboard!',
+    });
+    setTimeout(() => setShareFeedback(''), 3000);
+    setCopyUrlFeedback(''); // Clear other feedback
   };
 
   // handleCopyPageUrl function to be passed to CardDisplay as handleCopyGeneratedUrl
@@ -157,15 +155,13 @@ export default function ColorCardPage() {
       return;
     }
     const urlToCopy = window.location.href;
-    try {
-      await navigator.clipboard.writeText(urlToCopy);
-      setCopyUrlFeedback("Link to your shade&apos;s story, copied! Go on, spread the freude.");
-    } catch (err) {
-      console.error('Failed to copy page URL:', err);
-      setCopyUrlFeedback('Failed to copy URL.');
-    }
+    await copyTextToClipboard(urlToCopy, {
+        onSuccess: (message) => setCopyUrlFeedback(message),
+        onError: (message) => setCopyUrlFeedback(message),
+        successMessage: COPY_SUCCESS_MESSAGE,
+    });
     setTimeout(() => setCopyUrlFeedback(''), 3000);
-    setShareFeedback('');
+    setShareFeedback(''); // Clear other feedback
   };
 
   // New handler for the "Create New Card" button from CardDisplay

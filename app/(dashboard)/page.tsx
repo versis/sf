@@ -5,6 +5,9 @@ import ColorTools from '@/components/ColorTools';
 import WizardStep from '@/components/WizardStep';
 import CardDisplay from '@/components/CardDisplay';
 import { useState, useRef, useEffect } from 'react';
+import { copyTextToClipboard } from '@/lib/clipboardUtils';
+import { shareOrCopy } from '@/lib/shareUtils';
+import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -576,46 +579,21 @@ export default function HomePage() {
     const shareData = {
       title: 'Shadefreude Color Card',
       text: shareMessage,
-      url: shareUrl, // Use the new sf.tinker.institute URL if available, otherwise blob URL
+      url: shareUrl, 
     };
 
-    let copied = false;
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        setShareFeedback('Shared successfully!'); // Or rely on system feedback
-        // Optionally, still copy to clipboard as a fallback or primary action for some users
-        // await navigator.clipboard.writeText(currentImageUrl);
-        // copied = true;
-      } else {
-        // If navigator.share is not available, fall back to copying the URL and message
-        await navigator.clipboard.writeText(shareMessage); // Copy the full message with URL
-        copied = true;
-        setShareFeedback('Share message with image link copied to clipboard!');
-      }
-    } catch (err) {
-      console.error('Share/Copy failed:', err);
-      // If navigator.share fails or is unavailable, ensure clipboard copy is attempted
-      if (!copied) { 
-        try {
-          await navigator.clipboard.writeText(shareMessage); // Copy the full message with URL
-          setShareFeedback('Share message with image link copied to clipboard!');
-        } catch (copyErr) {
-          console.error('Clipboard copy failed:', copyErr);
-          setShareFeedback('Failed to copy link.');
-        }
-      } else if (!navigator.share) {
-        // This case is already handled above where navigator.share is not available.
-      } else {
-        // If share API was present and failed, but copy succeeded (if we enabled copy above even on share success).
-        // For now, the primary feedback for share failure is just logging the error.
-        // If share fails, and we didn't try to copy, this is just a failed share.
-        setShareFeedback('Sharing failed. Try copying the link.'); 
-      }
-    } finally {
-      setTimeout(() => setShareFeedback(''), 3000);
-      setCopyUrlFeedback(''); // Clear copy feedback if share is used
-    }
+    await shareOrCopy(shareData, shareMessage, {
+        onShareSuccess: (message) => setShareFeedback(message),
+        onCopySuccess: (message) => setShareFeedback(message), // Use setShareFeedback for copy fallback
+        onShareError: (message) => setShareFeedback(message),
+        onCopyError: (message) => setShareFeedback(message),
+        shareSuccessMessage: 'Shared successfully!',
+        copySuccessMessage: 'Share message with image link copied to clipboard!',
+        shareErrorMessage: 'Sharing failed. Try copying the link.',
+    });
+
+    setTimeout(() => setShareFeedback(''), 3000);
+    setCopyUrlFeedback(''); // Clear copy feedback if share is used
   };
 
   const handleCopyGeneratedUrl = async () => {
@@ -626,13 +604,13 @@ export default function HomePage() {
     }
     const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
     const urlToCopy = `https://sf.tinker.institute/color/${slug}`;
-    try {
-      await navigator.clipboard.writeText(urlToCopy);
-      setCopyUrlFeedback("Link to your shade's story, copied! Go on, spread the freude.");
-    } catch (err) {
-      console.error('Failed to copy generated URL:', err);
-      setCopyUrlFeedback('Failed to copy URL.');
-    }
+    
+    await copyTextToClipboard(urlToCopy, {
+        onSuccess: (message) => setCopyUrlFeedback(message),
+        onError: (message) => setCopyUrlFeedback(message),
+        successMessage: COPY_SUCCESS_MESSAGE,
+    });
+
     setTimeout(() => setCopyUrlFeedback(''), 3000);
     setShareFeedback(''); // Clear share feedback if copy is used
   };
