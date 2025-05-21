@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical } from 'lucide-react';
 
 interface CardDisplayProps {
   generatedHorizontalImageUrl: string | null;
@@ -36,6 +37,9 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   copyUrlFeedback,
   isVisible,
 }) => {
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+
   // Effect to scroll to controls when orientation changes and ref is available
   useEffect(() => {
     if (isVisible && cardDisplayControlsRef?.current) {
@@ -48,71 +52,96 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     }
   }, [currentDisplayOrientation, isVisible, cardDisplayControlsRef, generatedHorizontalImageUrl, generatedVerticalImageUrl]);
 
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setIsActionsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
 
   if (!isVisible) {
     return null;
   }
 
+  const commonButtonStyles = "w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2";
+  const dropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+  const activeDropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-blue-700 bg-blue-50 font-semibold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+
+
   return (
     <section ref={cardDisplayControlsRef} className="w-full px-1 py-2 md:px-2 md:py-2 mt-0 flex flex-col items-center scroll-target-with-offset">
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
-        <div className="flex justify-center gap-6 mb-4">
-          <button
-            onClick={() => setCurrentDisplayOrientation('horizontal')}
-            className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'horizontal' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
-            title="Display Horizontal Card"
-            disabled={!generatedHorizontalImageUrl}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" /></svg>
-            <span className="text-xs mt-1">Horizontal</span>
-          </button>
-          <button
-            onClick={() => setCurrentDisplayOrientation('vertical')}
-            className={`p-2 border-2 rounded-md ${currentDisplayOrientation === 'vertical' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'} flex flex-col items-center transition-all duration-200`}
-            title="Display Vertical Card"
-            disabled={!generatedVerticalImageUrl}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2" /></svg>
-            <span className="text-xs mt-1">Vertical</span>
-          </button>
-        </div>
-
         <div className="flex justify-center w-full">
           {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
             <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className="max-w-full rounded-md md:max-w-2xl lg:max-w-4xl h-auto" />
           ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
             <img src={generatedVerticalImageUrl} alt="Generated vertical card" className="max-w-full rounded-md md:max-w-sm lg:max-w-md max-h-[70vh] sm:max-h-[80vh] h-auto" />
           ) : (
-            <p className="text-muted-foreground py-10">Select an orientation to view your card.</p>
+            <div className="flex justify-center items-center w-full aspect-[16/9] md:aspect-[4/3] lg:aspect-[3/2] bg-muted rounded-md">
+              <p className="text-muted-foreground text-center p-4">Image not available or selected orientation has no image.</p>
+            </div>
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6 w-full">
+        <div className="relative flex flex-col sm:flex-row justify-center items-center gap-4 mt-6 w-full" ref={actionsMenuRef}>
           <button
-            onClick={handleShare}
-            disabled={isGenerating || !(generatedHorizontalImageUrl || generatedVerticalImageUrl) || !generatedExtendedId}
-            className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2"
+            onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+            className={`${commonButtonStyles} sm:w-auto`}
+            title="More actions"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            Share
+            <MoreHorizontal size={20} />
           </button>
-          <button
-            onClick={handleCopyGeneratedUrl}
-            disabled={isGenerating || !generatedExtendedId}
-            className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
-            Copy URL
-          </button>
-          <button
-            onClick={() => handleDownloadImage(currentDisplayOrientation)}
-            disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
-            className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download
-          </button>
+
+          {isActionsMenuOpen && (
+            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border-2 border-foreground shadow-lg rounded-md py-1 w-60 z-10">
+               <button
+                onClick={() => { setCurrentDisplayOrientation('horizontal'); setIsActionsMenuOpen(false); }}
+                disabled={!generatedHorizontalImageUrl}
+                className={currentDisplayOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
+              >
+                <RectangleHorizontal size={16} className="mr-2" /> View Horizontal
+              </button>
+              <button
+                onClick={() => { setCurrentDisplayOrientation('vertical'); setIsActionsMenuOpen(false); }}
+                disabled={!generatedVerticalImageUrl}
+                className={currentDisplayOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
+              >
+                <RectangleVertical size={16} className="mr-2" /> View Vertical
+              </button>
+              {/* Divider */}
+              <div className="h-px bg-border my-1 mx-2"></div>
+              <button
+                onClick={() => { handleShare(); setIsActionsMenuOpen(false); }}
+                disabled={isGenerating || !(generatedHorizontalImageUrl || generatedVerticalImageUrl) || !generatedExtendedId}
+                className={dropdownItemStyles}
+              >
+                <Share2 size={16} className="mr-2" /> Share
+              </button>
+              <button
+                onClick={() => { handleCopyGeneratedUrl(); setIsActionsMenuOpen(false); }}
+                disabled={isGenerating || !generatedExtendedId}
+                className={dropdownItemStyles}
+              >
+                <Link2 size={16} className="mr-2" /> Copy URL
+              </button>
+              <button
+                onClick={() => { handleDownloadImage(currentDisplayOrientation); setIsActionsMenuOpen(false); }}
+                disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !generatedHorizontalImageUrl : !generatedVerticalImageUrl)}
+                className={dropdownItemStyles}
+              >
+                <Download size={16} className="mr-2" /> Download
+              </button>
+            </div>
+          )}
         </div>
+        
         {(shareFeedback && !copyUrlFeedback) && (
           <p className="text-sm text-blue-700 mt-2 text-center h-5">{shareFeedback}</p>
         )}
