@@ -40,3 +40,39 @@ def rgb_to_cmyk(r: int, g: int, b: int) -> Tuple[int, int, int, int]:
     k = min_cmy
 
     return round(c * 100), round(m * 100), round(y * 100), round(k * 100) 
+
+# --- New utility for desaturation ---
+def desaturate_hex_color(hex_str: str, amount: float = 0.7, request_id: Optional[str] = None) -> Optional[tuple[int, int, int]]:
+    """
+    Desaturates a hex color by a specified amount towards grey.
+
+    Args:
+        hex_str: The hex color string (e.g., "#RRGGBB").
+        amount: The desaturation amount (0.0 to 1.0). 
+                0.0 means no change, 1.0 means fully desaturated (grey).
+        request_id: Optional request ID for logging.
+
+    Returns:
+        A tuple of (R, G, B) for the desaturated color, or None if input is invalid.
+    """
+    rgb = hex_to_rgb(hex_str, request_id)
+    if not rgb:
+        return None
+
+    r, g, b = rgb
+    
+    # Luminosity for grey value (standard formula)
+    # Using a common approximation for perceived luminance
+    luminance = int(0.299 * r + 0.587 * g + 0.114 * b)
+    
+    # Interpolate towards the grey value
+    r_desat = int(r + (luminance - r) * amount)
+    g_desat = int(g + (luminance - g) * amount)
+    b_desat = int(b + (luminance - b) * amount)
+    
+    # Ensure values are within 0-255 range
+    r_desat = max(0, min(255, r_desat))
+    g_desat = max(0, min(255, g_desat))
+    b_desat = max(0, min(255, b_desat))
+    
+    return (r_desat, g_desat, b_desat) 

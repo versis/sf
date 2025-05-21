@@ -16,7 +16,7 @@ from ..services.supabase_service import create_card_generation_record, update_ca
 from ..services.blob_service import BlobService
 from ..utils.logger import log, error
 from ..dependencies import verify_api_key
-from ..utils.card_utils import generate_card_image_bytes
+from ..utils.card_utils import generate_card_image_bytes, generate_back_card_image_bytes
 from ..utils.color_utils import hex_to_rgb, rgb_to_cmyk
 from ..utils.ai_utils import generate_ai_card_details # Added import for AI function
 
@@ -202,9 +202,9 @@ async def finalize_card_generation(
         # Add direct columns for horizontal and vertical URLs if they exist in the table
         # These should match your actual table column names.
         if uploaded_image_info.get("horizontal", {}).get("url"):
-            update_payload["horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]
+            update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]
         if uploaded_image_info.get("vertical", {}).get("url"):
-            update_payload["vertical_image_url"] = uploaded_image_info["vertical"]["url"]
+            update_payload["front_vertical_image_url"] = uploaded_image_info["vertical"]["url"]
 
         # Update Supabase record with image URLs, metadata, and set status to completed
         final_record = await update_card_generation_status(
@@ -234,6 +234,104 @@ async def finalize_card_generation(
             await update_card_generation_status(supabase_client, db_id, DEFAULT_STATUS_FAILED, failure_details)
         except Exception as update_err:
             error(f"Additionally, failed to update status to 'failed' for DB ID {db_id}: {str(update_err)}")
+        raise HTTPException(status_code=500, detail=error_msg)
+
+# Example router inclusion comment was here, now fully removed. 
+
+@router.post("/cards/{db_id}/add-note",
+             response_model=CardGenerationRecord,
+             dependencies=[Depends(verify_api_key)])
+async def add_note_to_card(
+    db_id: int,
+    payload: Optional[Dict[str, Optional[str]]] = Body(None) # Expecting {"note_text": "..."} or None/empty for skip
+):
+    """
+    Adds a note to the back of a card and generates corresponding back images.
+    If note_text is None or empty, it generates default back images.
+    """
+    if not supabase_client or not blob_service:
+        error("Supabase client or Blob service not available for add_note_to_card")
+        raise HTTPException(status_code=503, detail="A required service is unavailable.")
+
+    note_text = payload.get("note_text") if payload else None
+
+    try:
+        log(f"Adding note for DB ID: {db_id}. Note provided: {bool(note_text)}")
+
+        # 1. Fetch the existing card record to get hex_color and extended_id
+        fetch_response = supabase_client.table("card_generations").select("hex_color, extended_id, created_at").eq("id", db_id).single().execute()
+        if not fetch_response.data:
+            error(f"No record found for DB ID: {db_id} when trying to add note.")
+            raise HTTPException(status_code=404, detail=f"Card record with ID {db_id} not found.")
+        
+        record_data = fetch_response.data
+        hex_color = record_data.get("hex_color")
+        extended_id = record_data.get("extended_id", f"{str(db_id).zfill(9)} ???")
+        created_at_str = record_data.get("created_at") # Will be used for default back if no note
+
+        if not hex_color:
+            # This should ideally not happen if the record exists
+            raise HTTPException(status_code=400, detail="Hex color is missing for the specified card record.")
+
+        # 2. Generate back images (details of this function in Step 4)
+        
+        back_images_for_blob = []
+        orientations = ["horizontal", "vertical"]
+        
+        for orientation in orientations:
+            img_bytes = await generate_back_card_image_bytes(
+                note_text=note_text,
+                hex_color_input=hex_color, # Corrected variable name
+                orientation=orientation,
+                created_at_iso_str=created_at_str, # Pass created_at for default back
+                request_id=str(db_id)
+            )
+            back_images_for_blob.append({
+                "data": img_bytes,
+                "filename": f"card_back_{extended_id.replace(' ', '_')}_{orientation}.png",
+                "content_type": "image/png",
+                "orientation": orientation
+            })
+
+        log(f"Preparing to upload {len(back_images_for_blob)} back images for DB ID: {db_id}")
+        uploaded_back_image_info = blob_service.upload_multiple_images(back_images_for_blob)
+        log(f"Back images uploaded for DB ID: {db_id}. Result: {uploaded_back_image_info}")
+
+        # 3. Prepare payload for database update
+        update_payload_for_note = {
+            "note_text": note_text if note_text and note_text.strip() else None,
+            "has_note": bool(note_text and note_text.strip()),
+        }
+        if uploaded_back_image_info.get("horizontal", {}).get("url"):
+            update_payload_for_note["back_horizontal_image_url"] = uploaded_back_image_info["horizontal"]["url"]
+        if uploaded_back_image_info.get("vertical", {}).get("url"):
+            update_payload_for_note["back_vertical_image_url"] = uploaded_back_image_info["vertical"]["url"]
+
+        # 4. Update the database record
+        # Note: We are not changing the main card 'status' here, just adding note-related info.
+        updated_record_response = (
+            supabase_client.table("card_generations")
+            .update(update_payload_for_note)
+            .eq("id", db_id)
+            .execute()
+        )
+
+        if not updated_record_response.data or len(updated_record_response.data) == 0:
+            error_msg = f"Failed to update record ID {db_id} with note details."
+            if updated_record_response.error:
+                error_msg += f" Details: {updated_record_response.error.message}"
+            error(error_msg)
+            raise Exception(error_msg)
+        
+        log(f"Successfully updated record ID {db_id} with note and back image URLs.")
+        return CardGenerationRecord.model_validate(updated_record_response.data[0])
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        error_msg = f"Error in add_note_to_card for DB ID {db_id}: {str(e)}"
+        error(error_msg)
+        # Potentially update status to a specific 'note_failed' status if desired, or just log
         raise HTTPException(status_code=500, detail=error_msg)
 
 # Example router inclusion comment was here, now fully removed. 

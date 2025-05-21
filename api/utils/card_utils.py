@@ -2,9 +2,10 @@ import io
 import base64
 from typing import Tuple, Dict, Any, Optional
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from datetime import datetime
 
-from api.utils.logger import log, debug # Added debug import
-from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk
+from api.utils.logger import log, debug, error # Ensure error is imported if used
+from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color
 
 # --- Font Loading ---
 # Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
@@ -260,4 +261,107 @@ async def generate_card_image_bytes(
     canvas.save(img_byte_arr, format='PNG', compress_level=2)
     image_bytes = img_byte_arr.getvalue()
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
+    return image_bytes 
+
+# --- Back Card Generation Logic ---
+async def generate_back_card_image_bytes(
+    note_text: Optional[str],
+    hex_color_input: str, 
+    orientation: str,
+    created_at_iso_str: Optional[str] = None, # Expecting ISO format string from DB
+    request_id: Optional[str] = None
+) -> bytes:
+    log(f"Starting back card image generation. Orientation: {orientation}, Color: {hex_color_input}", request_id=request_id)
+
+    desaturated_rgb_color = desaturate_hex_color(hex_color_input, amount=0.85, request_id=request_id)
+    if desaturated_rgb_color is None:
+        log(f"Invalid hex color for back card generation: {hex_color_input}, using default grey.", level="WARNING", request_id=request_id)
+        desaturated_rgb_color = (200, 200, 200) # Default light grey if desaturation fails
+
+    # Card dimensions (same as front for consistency in overall size)
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
+    bg_color_tuple = (*desaturated_rgb_color, 255) # RGBA with full opacity
+
+    if orientation == "horizontal":
+        card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+    else: # vertical
+        card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
+    
+    log(f"Back card dims: {card_w}x{card_h}", request_id=request_id)
+
+    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
+    draw = ImageDraw.Draw(canvas)
+
+    # Determine text color based on background lightness
+    text_color = (20, 20, 20) if sum(desaturated_rgb_color) > 384 else (245, 245, 245)
+    
+    pad_x = int(card_w * 0.05)
+    pad_y = int(card_h * 0.05)
+    max_text_w = card_w - (2 * pad_x)
+    current_y = pad_y
+
+    # Fonts
+    # Adjust font sizes as needed for the back of the card
+    base_font_scale = card_w / 1000 # Adjusted base scale for potentially more text
+    f_note = get_font(int(30 * base_font_scale), "Regular", request_id=request_id)
+    f_date = get_font(int(22 * base_font_scale), "Light", "Italic", request_id=request_id)
+    f_placeholder = get_font(int(28 * base_font_scale), "Regular", request_id=request_id)
+
+    if note_text and note_text.strip():
+        log(f"Rendering note: {note_text[:50]}...", request_id=request_id)
+        note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.2 # Line height with spacing
+        words = note_text.split(' ')
+        lines = []
+        current_line = ""
+        for word in words:
+            if get_text_dimensions(current_line + word, f_note)[0] <= max_text_w:
+                current_line += word + " "
+            else:
+                lines.append(current_line.strip())
+                current_line = word + " "
+        lines.append(current_line.strip())
+
+        for line in lines:
+            if current_y + note_line_h < card_h - pad_y: # Ensure text stays within bounds
+                draw.text((pad_x, current_y), line, font=f_note, fill=text_color)
+                current_y += note_line_h
+            else:
+                break # Stop if no more space
+    else:
+        log("No note text provided, rendering default back.", request_id=request_id)
+        placeholder_text = "This space is for your thoughts."
+        date_text = ""
+        if created_at_iso_str:
+            try:
+                dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
+                date_text = f"Card created: {dt_object.strftime('%B %d, %Y')}"
+            except ValueError:
+                log(f"Could not parse created_at_iso_str: {created_at_iso_str}", level="WARNING", request_id=request_id)
+                date_text = "Card creation date unavailable"
+        
+        # Center placeholder text
+        text_w, text_h = get_text_dimensions(placeholder_text, f_placeholder)
+        placeholder_x = (card_w - text_w) / 2
+        placeholder_y = (card_h - text_h) / 2 - (text_h if date_text else 0) # Move up if date is present
+        draw.text((placeholder_x, placeholder_y), placeholder_text, font=f_placeholder, fill=text_color)
+
+        if date_text:
+            date_w, date_h = get_text_dimensions(date_text, f_date)
+            date_x = (card_w - date_w) / 2
+            date_y = placeholder_y + text_h + int(card_h * 0.02)
+            draw.text((date_x, date_y), date_text, font=f_date, fill=text_color)
+
+    # Rounded corners (same as front)
+    radius = 40
+    mask = Image.new('L', (card_w * 2, card_h * 2), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
+    mask = mask.resize((card_w, card_h), Image.Resampling.LANCZOS)
+    canvas.putalpha(mask)
+    debug("Applied rounded corners to back card", request_id=request_id)
+
+    img_byte_arr = io.BytesIO()
+    canvas.save(img_byte_arr, format='PNG', compress_level=2)
+    image_bytes = img_byte_arr.getvalue()
+    log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 

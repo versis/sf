@@ -9,16 +9,22 @@ import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 
 interface CardDetails {
-  // Define structure based on what your API will return
   extendedId?: string;
   hexColor?: string;
-  colorName?: string;
-  description?: string;
-  phoneticName?: string;
-  article?: string;
-  horizontalImageUrl?: string;
-  verticalImageUrl?: string;
-  // Add other fields as necessary
+  card_name?: string;
+  status?: string;
+  front_horizontal_image_url?: string;
+  front_vertical_image_url?: string;
+  note_text?: string;
+  has_note?: boolean;
+  back_horizontal_image_url?: string;
+  back_vertical_image_url?: string;
+  ai_name?: string;
+  ai_phonetic?: string;
+  ai_article?: string;
+  ai_description?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function ColorCardPage() {
@@ -80,11 +86,11 @@ export default function ColorCardPage() {
           setCardDetails(data);
           
           let initialOrientation: 'horizontal' | 'vertical';
-          if (isMobile && data.verticalImageUrl) {
+          if (isMobile && data.front_vertical_image_url) {
             initialOrientation = 'vertical';
-          } else if (data.horizontalImageUrl) {
+          } else if (data.front_horizontal_image_url) {
             initialOrientation = 'horizontal';
-          } else if (data.verticalImageUrl) {
+          } else if (data.front_vertical_image_url) {
             initialOrientation = 'vertical';
           } else {
             initialOrientation = 'horizontal'; // Default
@@ -111,12 +117,12 @@ export default function ColorCardPage() {
   // handleDownload function to be passed to CardDisplay
   const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
     const imageUrl = orientation === 'horizontal' 
-      ? cardDetails?.horizontalImageUrl 
-      : cardDetails?.verticalImageUrl;
+      ? cardDetails?.front_horizontal_image_url 
+      : cardDetails?.front_vertical_image_url;
     
     if (!imageUrl || !cardDetails) return;
 
-    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.colorName?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
+    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.card_name?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
     const downloadApiUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
     window.location.href = downloadApiUrl;
   };
@@ -131,7 +137,7 @@ export default function ColorCardPage() {
     const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`;
     const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
     const shareData = {
-      title: cardDetails?.colorName ? `Shadefreude: ${cardDetails.colorName}` : 'Shadefreude Color Card',
+      title: cardDetails?.card_name ? `Shadefreude: ${cardDetails.card_name}` : 'Shadefreude Color Card',
       text: shareMessage,
       url: shareUrl,
     };
@@ -210,8 +216,13 @@ export default function ColorCardPage() {
           <div ref={cardDisplaySectionRef} className="w-full flex flex-col items-center justify-center order-1">
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
-              generatedHorizontalImageUrl={cardDetails.horizontalImageUrl || null}
-              generatedVerticalImageUrl={cardDetails.verticalImageUrl || null}
+              frontHorizontalImageUrl={cardDetails.front_horizontal_image_url || null}
+              frontVerticalImageUrl={cardDetails.front_vertical_image_url || null}
+              backHorizontalImageUrl={cardDetails.back_horizontal_image_url || null}
+              backVerticalImageUrl={cardDetails.back_vertical_image_url || null}
+              noteText={cardDetails.note_text || null}
+              hasNote={cardDetails.has_note || false}
+              isFlippable={true}
               currentDisplayOrientation={currentDisplayOrientation}
               setCurrentDisplayOrientation={setCurrentDisplayOrientation}
               handleShare={handleShareAction} 
@@ -234,9 +245,9 @@ export default function ColorCardPage() {
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
                   You&apos;ve landed on a unique shadefreude creation
-                  {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
+                  {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono text-xs">
-                      {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}{cardDetails.hexColor || 'N/A'})
+                      {' '}({cardDetails.card_name ? `${cardDetails.card_name}, ` : ''}{cardDetails.hexColor || 'N/A'})
                     </span>
                   )}
                   , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!

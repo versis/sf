@@ -33,8 +33,12 @@ interface CardDataFromDB {
     };
     // Add other metadata fields you might want to return
   };
-  horizontal_image_url?: string;
-  vertical_image_url?: string;
+  front_horizontal_image_url?: string;
+  front_vertical_image_url?: string;
+  note_text?: string;
+  has_note?: boolean;
+  back_horizontal_image_url?: string;
+  back_vertical_image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -58,7 +62,7 @@ export async function GET(
     // console.log(`Fetching card with extended_id: ${extended_id}`);
     const { data, error } = await supabase
       .from('card_generations') // Your table name
-      .select('id, extended_id, hex_color, status, metadata, horizontal_image_url, vertical_image_url, created_at, updated_at')
+      .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
       .eq('extended_id', extended_id)
       .single(); // Expecting only one record for a unique extended_id
 
@@ -91,10 +95,12 @@ export async function GET(
       hex_color: cardRecord.hex_color,
       card_name: cardName, // This is what the CardData interface on frontend expects
       status: cardRecord.status,
-      horizontal_card_url: cardRecord.horizontal_image_url,
-      vertical_card_url: cardRecord.vertical_image_url,
-      // You can choose to pass through the entire metadata or specific parts
-      // metadata: cardRecord.metadata, 
+      front_horizontal_image_url: cardRecord.front_horizontal_image_url,
+      front_vertical_image_url: cardRecord.front_vertical_image_url,
+      note_text: cardRecord.note_text,
+      has_note: cardRecord.has_note,
+      back_horizontal_image_url: cardRecord.back_horizontal_image_url,
+      back_vertical_image_url: cardRecord.back_vertical_image_url,
       ai_name: cardRecord.metadata?.ai_info?.colorName, 
       ai_phonetic: cardRecord.metadata?.ai_info?.phoneticName,
       ai_article: cardRecord.metadata?.ai_info?.article,

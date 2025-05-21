@@ -8,6 +8,7 @@ import { useState, useRef, useEffect } from 'react';
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
+import { useRouter } from 'next/navigation';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -40,6 +41,7 @@ const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
 const SWIPE_THRESHOLD = 50;
 
 export default function HomePage() {
+  const router = useRouter();
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
   const [selectedHexColor, setSelectedHexColor] = useState<string>('#000000');
@@ -75,6 +77,8 @@ export default function HomePage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedImageSrc, setDisplayedImageSrc] = useState<string>('');
   
+  const [currentDbId, setCurrentDbId] = useState<number | null>(null);
+  
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
     intervalId: NodeJS.Timeout | null;
@@ -93,6 +97,14 @@ export default function HomePage() {
   const [heroCardsLoading, setHeroCardsLoading] = useState<boolean>(true);
   const [fetchedHeroCards, setFetchedHeroCards] = useState<Array<{ id: string; v: string | null; h: string | null }>>([]);
   
+  // New states for note feature
+  const [noteText, setNoteText] = useState<string>("");
+  const [isNoteStepActive, setIsNoteStepActive] = useState<boolean>(false);
+  const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
+  const [noteSubmissionError, setNoteSubmissionError] = useState<string | null>(null);
+  
+  const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
+
   // Scroll to the active step or results
   useEffect(() => {
     if (currentWizardStep === 'results') {
@@ -284,6 +296,13 @@ export default function HomePage() {
     setIsColorStepCompleted(false);
     setIsResultsStepCompleted(false);
     
+    // Reset note states as well
+    setNoteText("");
+    setCurrentDbId(null);
+    setIsNoteStepActive(false);
+    setIsSubmittingNote(false);
+    setNoteSubmissionError(null);
+
     setIsHeroVisible(false);
 
     // Revoke URLs
@@ -405,7 +424,6 @@ export default function HomePage() {
     }, progressIntervalTime);
     // ---- END: Restore smooth progress bar ----
     
-    const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
     if (!internalApiKey) {
       console.error('Internal API Key is not defined in frontend environment variables.');
       setGenerationError('Client-side configuration error: API key missing.');
@@ -440,6 +458,7 @@ export default function HomePage() {
       dbId = initiateResult.db_id;
       const extendedIdFromServer = initiateResult.extended_id;
       setGeneratedExtendedId(extendedIdFromServer);
+      setCurrentDbId(dbId);
       console.log(`Frontend: Initiation successful. DB ID: ${dbId}, Extended ID: ${extendedIdFromServer}`);
       // setGenerationProgress(30); // REMOVE discrete progress update
 
@@ -550,6 +569,12 @@ export default function HomePage() {
       // setGenerationProgress(100); // REMOVE discrete progress update, handled by interval or finally block
       clearInterval(progressInterval); // Ensure interval is cleared on successful completion
       setGenerationProgress(100); // Explicitly set to 100 on success
+      
+      // Activate the note input step instead of immediately redirecting
+      setIsNoteStepActive(true);
+      // Scroll to the note input section (we might need a ref for this later)
+      // For now, the card display controls ref might be close enough or we adjust scroll target later.
+      cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
 
     } catch (error) {
       // Ensure we log a string message from the error object for console
@@ -824,6 +849,46 @@ export default function HomePage() {
     // }
     // For simplicity, let's stick to the basic direction for now as clicks are usually direct.
     triggerImageChangeAnimation(direction, index);
+  };
+
+  // New function to handle note submission
+  const handleNoteSubmission = async (currentNoteText?: string) => {
+    if (!generatedExtendedId || !currentDbId) { // Use currentDbId from state
+      setNoteSubmissionError("Card ID not found. Cannot submit note.");
+      return;
+    }
+
+    setIsSubmittingNote(true);
+    setNoteSubmissionError(null);
+
+    try {
+      const response = await fetch(`/api/cards/${currentDbId}/add-note`, { // Use currentDbId
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-API-Key': internalApiKey!,
+        },
+        body: JSON.stringify({ note_text: currentNoteText ? currentNoteText.trim() : null }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || `Failed to submit note: ${response.status}`);
+      }
+
+      // Successfully submitted note or skipped
+      setIsNoteStepActive(false);
+      const slug = result.extended_id?.replace(/\s+/g, '-').toLowerCase() || generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
+      router.push(`/color/${slug}`);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred while submitting the note.";
+      setNoteSubmissionError(message);
+      console.error("Note submission error:", error);
+    } finally {
+      setIsSubmittingNote(false);
+    }
   };
 
   return (
@@ -1285,6 +1350,47 @@ export default function HomePage() {
             shareFeedback={shareFeedback}
             copyUrlFeedback={copyUrlFeedback}
           />
+
+          {/* === Section for Note Input === */}
+          {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
+            <section className="w-full mt-8 p-6 bg-card text-card-foreground border-2 border-foreground rounded-lg shadow-lg scroll-target-with-offset" id="note-input-section">
+              <h2 className="text-2xl font-semibold mb-4 text-center">Add a Personal Note (Optional)</h2>
+              <p className="text-sm text-muted-foreground mb-4 text-center">
+                Add a reflection, a memory, or a thought to the back of your card. Or, skip this step.
+              </p>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Your note..."
+                className="w-full p-3 border border-input rounded-md min-h-[100px] focus:ring-2 focus:ring-blue-500 bg-background text-foreground placeholder-muted-foreground"
+                maxLength={500} // Example character limit
+              />
+              <p className="text-xs text-muted-foreground text-right mt-1 pr-1">{noteText.length} / 500</p>
+
+              {noteSubmissionError && (
+                <p className="text-sm text-red-500 mt-3 text-center">Error: {noteSubmissionError}</p>
+              )}
+
+              <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                <button
+                  type="button"
+                  onClick={() => handleNoteSubmission(noteText)}
+                  disabled={isSubmittingNote}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmittingNote && noteText.trim() ? 'Saving Note...' : isSubmittingNote ? 'Processing...' : 'Save Note & View Card'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNoteSubmission()} // Call with no argument for skip
+                  disabled={isSubmittingNote}
+                  className="px-6 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-md border border-border shadow-sm transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmittingNote && !noteText.trim() ? 'Processing...' : 'Skip & View Card'}
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </main>
