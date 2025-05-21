@@ -72,9 +72,7 @@ export default function HomePage() {
   const [swipeDeltaX, setSwipeDeltaX] = useState(0);
   const [animationClass, setAnimationClass] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
-  const pendingImageChangeRef = useRef<{ direction: 'next' | 'prev'; newIndex: number } | null>(null);
   const [displayedImageSrc, setDisplayedImageSrc] = useState<string>('');
-  const [nextImageToLoad, setNextImageToLoad] = useState<string | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
@@ -290,11 +288,10 @@ export default function HomePage() {
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
     console.log('Wizard reset.');
 
-    // Reset new animation states if necessary, though they are mostly transient
+    // Reset animation states
     setSwipeDeltaX(0);
     setAnimationClass('');
     setIsAnimating(false);
-    pendingImageChangeRef.current = null;
   };
 
   const handleImageSelectedForUpload = (file: File) => {
@@ -687,162 +684,95 @@ export default function HomePage() {
   };
 
   const handleAnimationEnd = () => {
-    console.log("[Hero Animation] Animation ended:", animationClass);
-    if (animationClass.includes('slide-out')) {
-      // Current image has finished sliding out.
-      // The new image loading is handled by img.onload in triggerImageChangeAnimation.
-      // If nextImageToLoad is still set, it means the new image hasn't loaded yet OR an error occurred.
-      // If an error occurred, animationClass would be cleared by img.onerror.
-      // If it's still loading, we just wait. The slide-in class will be set by img.onload.
-      // This part of handleAnimationEnd might not need to do much for slide-out if img.onload is robust.
-      // However, if the new image *never* loads (e.g. broken URL and no onerror, or stuck), this could be an issue.
-      // For now, assume img.onload or img.onerror will handle the next step or reset.
-      // This case implies the image loaded, and slide-in should have started.
-      // This might be redundant if img.onload sets the slide-in class correctly.
-      if (!nextImageToLoad && pendingImageChangeRef.current) {
-         // This case implies the image loaded, and slide-in should have started.
-         // This might be redundant if img.onload sets the slide-in class correctly.
-      } else if (nextImageToLoad) {
-        console.log("[Hero Animation] Slide-out finished, but next image still loading or pending:", nextImageToLoad);
-      }
-      // It's important NOT to set isAnimating to false here if a new image is still pending load & slide-in.
-      // setIsAnimating(false) is handled after the *slide-in* of the new image.
-
-    } else if (animationClass.includes('slide-in')) {
-      // New image has finished sliding in.
-      console.log("[Hero Animation] Slide-in finished for:", displayedImageSrc);
+    console.log(`[Hero] Animation ended: ${animationClass}`);
+    
+    // Only when a slide-in animation finishes, we reset the animation state
+    if (animationClass.includes('slide-in')) {
+      console.log(`[Hero] Slide-in animation completed, resetting state`);
       setAnimationClass('');
       setIsAnimating(false);
-      pendingImageChangeRef.current = null; // Clear pending ref only after successful slide-in
-      setSwipeDeltaX(0); // Ensure clean state after animation
+      setSwipeDeltaX(0);
     } else if (animationClass === 'snap-back-animation') {
-      console.log("[Hero Animation] Snap-back finished.");
+      // Handle snap-back for swipe that didn't reach threshold
+      console.log(`[Hero] Snap-back animation completed`);
       setAnimationClass('');
-      setSwipeDeltaX(0); // Reset delta after snap back
-      setIsAnimating(false); // Was likely false already, but ensure clean state
-    } else {
-      // Catch any other animation end that isn't part of the sequence
       setIsAnimating(false);
+      setSwipeDeltaX(0);
     }
+    // We don't need to handle slide-out completion since the timeouts in 
+    // triggerImageChangeAnimation take care of that coordination
   };
 
   const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
-    if (isAnimating && animationClass.includes('slide-out')) return; // Already sliding out, new image is loading
+    // Don't start a new animation if one is already in progress
+    if (isAnimating) return;
+    
     setIsAnimating(true);
-    // No longer set swipeDeltaX to 0 here, allow current image to follow touch until new one loads
+    console.log(`[Hero] Starting ${direction} animation`);
 
+    // Calculate the target index
     let newIndex: number;
     if (targetIndex !== undefined) {
-        newIndex = targetIndex;
+      newIndex = targetIndex;
     } else {
-        if (fetchedHeroCards.length === 0) { // Guard against empty array before modulo
-            setIsAnimating(false);
-            return;
-        }
-        newIndex = direction === 'next'
+      if (fetchedHeroCards.length <= 1) {
+        setIsAnimating(false);
+        return;
+      }
+      newIndex = direction === 'next'
         ? (currentExampleCardIndex + 1) % fetchedHeroCards.length
         : (currentExampleCardIndex - 1 + fetchedHeroCards.length) % fetchedHeroCards.length;
     }
 
-    if (fetchedHeroCards.length === 0) {
-        setIsAnimating(false);
-        return;
-    }
+    console.log(`[Hero] Navigating from card ${currentExampleCardIndex} to ${newIndex}`);
 
-    if (newIndex === currentExampleCardIndex && !pendingImageChangeRef.current) {
-        setIsAnimating(false);
-        setSwipeDeltaX(0); // Reset if not actually changing image
-        return;
-    }
-
-    // If there's a pending change, and a new different one is triggered, cancel old and start new.
-    if (pendingImageChangeRef.current && pendingImageChangeRef.current.newIndex !== newIndex) {
-        // Potentially clear any ongoing loading for the old pending image if complex preloading is added
-    }
-
-    pendingImageChangeRef.current = { direction, newIndex };
-    
-    // Ensure we have card data for the newIndex
+    // Get the card data for the target index
     const card = fetchedHeroCards[newIndex];
     if (!card) {
-      console.error(`[Hero Animation] Card data not found for newIndex: ${newIndex}. Available cards: ${fetchedHeroCards.length}`);
+      console.error(`[Hero] No card data for index ${newIndex}`);
       setIsAnimating(false);
-      setNextImageToLoad(() => null); // Functional update
-      setAnimationClass('');
-      setSwipeDeltaX(0);
-      pendingImageChangeRef.current = null;
       return;
     }
 
-    const primaryImagePath = isMobile ? card.v : card.h;
-    const fallbackImagePath = isMobile ? card.h : card.v;
-    let finalImagePathToLoad: string | null = null;
+    // Select the appropriate image based on device
+    const imageUrl = isMobile 
+      ? card.v || card.h // Prefer vertical on mobile, fallback to horizontal
+      : card.h || card.v; // Prefer horizontal on desktop, fallback to vertical
 
-    if (primaryImagePath) {
-      finalImagePathToLoad = primaryImagePath;
-    } else if (fallbackImagePath) {
-      console.warn(`[Hero Animation] No image for preferred orientation (newIndex: ${newIndex}, mobile: ${isMobile}). Using fallback.`);
-      finalImagePathToLoad = fallbackImagePath;
-    } else {
-      console.error(`[Hero Animation] No image path for either orientation for card at newIndex: ${newIndex}`);
+    if (!imageUrl) {
+      console.error(`[Hero] No image available for card at index ${newIndex}`);
       setIsAnimating(false);
-      setNextImageToLoad(() => null); // Functional update
-      setAnimationClass('');
-      setSwipeDeltaX(0);
-      pendingImageChangeRef.current = null;
       return;
     }
-    
-    setNextImageToLoad(finalImagePathToLoad);
 
-    console.log("[Hero Animation] Triggering. Next image to load:", finalImagePathToLoad);
+    // Set the slide-out animation class
+    setAnimationClass(direction === 'next' ? 'slide-out-left-animation' : 'slide-out-right-animation');
 
-    // If, after all checks, finalImagePathToLoad is null, we shouldn't proceed to new Image()
-    if (finalImagePathToLoad === null) {
-        console.error("[Hero Animation] Critical error: finalImagePathToLoad is null before new Image(). This shouldn't happen.");
-        setIsAnimating(false);
-        // Reset relevant states if necessary
-        return;
-    }
-
+    // Preload the image
     const img = new Image();
     img.onload = () => {
-      console.log("[Hero Animation] New image loaded:", finalImagePathToLoad);
-      if (pendingImageChangeRef.current && 
-          pendingImageChangeRef.current.newIndex === newIndex && 
-          nextImageToLoad === finalImagePathToLoad) { // finalImagePathToLoad is implicitly a string here due to img.onload
-        // At this point, finalImagePathToLoad can't be null since we checked before creating the Image
-        setDisplayedImageSrc(finalImagePathToLoad as string); 
-        setCurrentExampleCardIndex(newIndex); 
-        setSwipeDeltaX(0); // Reset swipe delta before slide-in
+      console.log(`[Hero] Next image loaded: ${imageUrl}`);
+      
+      // Use a timeout matching the slide-out animation duration to coordinate the transition
+      setTimeout(() => {
+        // Set the new image and index
+        setDisplayedImageSrc(imageUrl);
+        setCurrentExampleCardIndex(newIndex);
         
-        // Determine slide-in direction based on the original intended direction
-        // even if currentExampleCardIndex was updated by a quick subsequent swipe.
-        const actualDirection = pendingImageChangeRef.current.direction;
-        if (actualDirection === 'next') {
-          setAnimationClass('slide-in-from-right-animation');
-        } else {
-          setAnimationClass('slide-in-from-left-animation');
-        }
-        setNextImageToLoad(() => null); // Functional update
-        // pendingImageChangeRef.current is cleared in handleAnimationEnd after slide-in
-      } else {
-        console.log("[Hero Animation] Loaded image does not match pending image. Likely a rapid new swipe. Current pending:", pendingImageChangeRef.current);
-      }
-      setIsAnimating(true); // Keep isAnimating true until slide-in finishes
+        // Apply the slide-in animation
+        setTimeout(() => {
+          setAnimationClass(direction === 'next' ? 'slide-in-from-right-animation' : 'slide-in-from-left-animation');
+        }, 50); // Small delay to ensure the DOM updates with the new image before animation starts
+      }, 300); // Match this to the animation duration in CSS
     };
+    
     img.onerror = () => {
-      console.error("[Hero Animation] Failed to load image:", finalImagePathToLoad);
-      if (nextImageToLoad === finalImagePathToLoad) { 
-        setNextImageToLoad(() => null); // Functional update
-        setAnimationClass(''); 
-        setIsAnimating(false);
-        setSwipeDeltaX(0);
-        pendingImageChangeRef.current = null; 
-      }
+      console.error(`[Hero] Failed to load image: ${imageUrl}`);
+      setAnimationClass('');
+      setIsAnimating(false);
     };
-    img.src = finalImagePathToLoad; // finalImagePathToLoad is confirmed not null here by the check above
-
+    
+    img.src = imageUrl;
   };
 
   const handleNextExampleCard = () => {
