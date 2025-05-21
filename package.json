@@ -47,5 +47,9 @@
     "types": "link:next-themes/dist/types",
     "typescript": "5.0.4",
     "usehooks-ts": "^3.1.0"
+  },
+  "devDependencies": {
+    "bufferutil": "^4.0.9",
+    "utf-8-validate": "^6.0.5"
   }
 }
