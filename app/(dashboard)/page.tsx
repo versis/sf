@@ -72,7 +72,7 @@ export default function HomePage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const pendingImageChangeRef = useRef<{ direction: 'next' | 'prev'; newIndex: number } | null>(null);
   const [displayedImageSrc, setDisplayedImageSrc] = useState<string>('');
-  const [nextImageToLoad, setNextImageToLoad] = useState<string | null>(null);
+  const [nextImageToLoad, setNextImageToLoad] = useState<string | undefined>(undefined);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
@@ -765,7 +765,7 @@ export default function HomePage() {
     if (!card) {
       console.error(`[Hero Animation] Card data not found for newIndex: ${newIndex}. Available cards: ${fetchedHeroCards.length}`);
       setIsAnimating(false);
-      setNextImageToLoad(null);
+      setNextImageToLoad(undefined);
       setAnimationClass('');
       setSwipeDeltaX(0);
       pendingImageChangeRef.current = null;
@@ -774,7 +774,7 @@ export default function HomePage() {
 
     const primaryImagePath = isMobile ? card.v : card.h;
     const fallbackImagePath = isMobile ? card.h : card.v;
-    let finalImagePathToLoad: string | null = null;
+    let finalImagePathToLoad: string | undefined = undefined;
 
     if (primaryImagePath) {
       finalImagePathToLoad = primaryImagePath;
@@ -784,7 +784,7 @@ export default function HomePage() {
     } else {
       console.error(`[Hero Animation] No image path for either orientation for card at newIndex: ${newIndex}`);
       setIsAnimating(false);
-      setNextImageToLoad(null);
+      setNextImageToLoad(undefined);
       setAnimationClass('');
       setSwipeDeltaX(0);
       pendingImageChangeRef.current = null;
@@ -796,8 +796,8 @@ export default function HomePage() {
     console.log("[Hero Animation] Triggering. Next image to load:", finalImagePathToLoad);
 
     // If, after all checks, finalImagePathToLoad is null, we shouldn't proceed to new Image()
-    if (finalImagePathToLoad === null) {
-        console.error("[Hero Animation] Critical error: finalImagePathToLoad is null before new Image(). This shouldn't happen.");
+    if (finalImagePathToLoad === undefined) {
+        console.error("[Hero Animation] Critical error: finalImagePathToLoad is undefined before new Image(). This shouldn't happen.");
         setIsAnimating(false);
         // Reset relevant states if necessary
         return;
@@ -821,7 +821,7 @@ export default function HomePage() {
         } else {
           setAnimationClass('slide-in-from-left-animation');
         }
-        setNextImageToLoad(null);
+        setNextImageToLoad(undefined);
         // pendingImageChangeRef.current is cleared in handleAnimationEnd after slide-in
       } else {
         console.log("[Hero Animation] Loaded image does not match pending image. Likely a rapid new swipe. Current pending:", pendingImageChangeRef.current);
@@ -831,7 +831,7 @@ export default function HomePage() {
     img.onerror = () => {
       console.error("[Hero Animation] Failed to load image:", finalImagePathToLoad);
       if (nextImageToLoad === finalImagePathToLoad) { 
-        setNextImageToLoad(null);
+        setNextImageToLoad(undefined);
         setAnimationClass(''); 
         setIsAnimating(false);
         setSwipeDeltaX(0);
