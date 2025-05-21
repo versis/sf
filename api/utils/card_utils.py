@@ -84,8 +84,8 @@ async def generate_card_image_bytes(
         debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
     # Card dimensions (reduced for better file size)
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 900, 1800
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1800, 900
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
     bg_color_tuple = (0, 0, 0, 0) # Fully Transparent RGBA
 
     if orientation == "horizontal":
@@ -120,7 +120,7 @@ async def generate_card_image_bytes(
     pad_t = int(swatch_h * 0.02)
     pad_b = int(swatch_h * 0.08)
     
-    base_font_scale = swatch_w / (750 if swatch_w >= 900 else (450 if swatch_w >= 450 else 350))
+    base_font_scale = swatch_w / 750
     current_y = pad_t
 
     # Fonts (Final fine-tuning of base sizes)
