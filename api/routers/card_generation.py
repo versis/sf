@@ -19,6 +19,7 @@ from ..dependencies import verify_api_key
 from ..utils.card_utils import generate_card_image_bytes, generate_back_card_image_bytes
 from ..utils.color_utils import hex_to_rgb, rgb_to_cmyk
 from ..utils.ai_utils import generate_ai_card_details # Added import for AI function
+from ..utils.common_utils import generate_random_suffix # NEW IMPORT
 
 router = APIRouter()
 
@@ -173,9 +174,10 @@ async def finalize_card_generation(
                 orientation=orientation,
                 request_id=str(db_id) 
             )
+            random_suffix = generate_random_suffix()
             generated_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"card_{extended_id.replace(' ', '_')}_{orientation}.png",
+                "filename": f"card_front_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png",
                 "content_type": "image/png",
                 "orientation": orientation
             })
@@ -281,14 +283,15 @@ async def add_note_to_card(
         for orientation in orientations:
             img_bytes = await generate_back_card_image_bytes(
                 note_text=note_text,
-                hex_color_input=hex_color, # Corrected variable name
+                hex_color_input=hex_color, 
                 orientation=orientation,
-                created_at_iso_str=created_at_str, # Pass created_at for default back
+                created_at_iso_str=created_at_str, 
                 request_id=str(db_id)
             )
+            random_suffix = generate_random_suffix()
             back_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"card_back_{extended_id.replace(' ', '_')}_{orientation}.png",
+                "filename": f"card_back_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png",
                 "content_type": "image/png",
                 "orientation": orientation
             })

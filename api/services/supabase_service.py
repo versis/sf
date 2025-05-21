@@ -106,10 +106,22 @@ async def update_card_generation_status(
         )
         
         if response.data and len(response.data) > 0:
-            log(f"Successfully updated record ID {record_id}.")
-            return CardGenerationRecord.model_validate(response.data[0]) # Pydantic v2
+            log(f"Successfully updated record ID {record_id}. Refetching to ensure all data is current.")
+            # Re-fetch the record to get the most up-to-date version including all fields
+            refetch_response = db.table("card_generations").select("*").eq("id", record_id).single().execute()
+            if refetch_response.data:
+                log(f"Successfully re-fetched record ID {record_id}.")
+                return CardGenerationRecord.model_validate(refetch_response.data)
+            else:
+                error_msg_refetch = f"Failed to re-fetch record ID {record_id} after update."
+                if refetch_response.error:
+                    error_msg_refetch += f" Details: {refetch_response.error.message}"
+                error(error_msg_refetch)
+                # Fallback to original response data if refetch fails, though it might be incomplete or stale
+                log(f"Falling back to original response data for record ID {record_id} due to re-fetch failure.")
+                return CardGenerationRecord.model_validate(response.data[0])
         else:
-            error_msg = f"Failed to update record ID {record_id}."
+            error_msg = f"Failed to update record ID {record_id}. No data returned from update operation."
             if response.error:
                 error_msg += f" Details: {response.error.message}"
             error(error_msg)

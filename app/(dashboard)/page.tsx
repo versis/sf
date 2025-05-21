@@ -509,8 +509,8 @@ export default function HomePage() {
       const finalizeResult = await finalizeResponse.json();
       // console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DEBUG REMOVED
 
-      const horizontalUrl = finalizeResult.horizontal_image_url;
-      const verticalUrl = finalizeResult.vertical_image_url;
+      const horizontalUrl = finalizeResult.front_horizontal_image_url;
+      const verticalUrl = finalizeResult.front_vertical_image_url;
       // console.log('Frontend: Extracted horizontalUrl:', horizontalUrl); // DEBUG REMOVED
       // console.log('Frontend: Extracted verticalUrl:', verticalUrl); // DEBUG REMOVED
 
@@ -1336,8 +1336,8 @@ export default function HomePage() {
           {/* New Section for Card Display - Outside/Below Wizard */}
           <CardDisplay
             isVisible={!!(isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl))}
-            generatedHorizontalImageUrl={generatedHorizontalImageUrl}
-            generatedVerticalImageUrl={generatedVerticalImageUrl}
+            frontHorizontalImageUrl={generatedHorizontalImageUrl}
+            frontVerticalImageUrl={generatedVerticalImageUrl}
             currentDisplayOrientation={currentDisplayOrientation}
             setCurrentDisplayOrientation={(orientation: 'horizontal' | 'vertical') => setCurrentDisplayOrientation(orientation)}
             handleShare={handleShare}
