@@ -90,9 +90,9 @@ export default function ColorCardPage() {
           setError(null);
           // Scroll to card display after data is loaded and orientation set
           // Ensure this happens after the DOM has a chance to update with the CardDisplay component
-          setTimeout(() => {
-            cardDisplaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 150); // Small delay
+          // setTimeout(() => {
+          //   cardDisplaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // }, 150); // Small delay - REMOVED
 
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -226,6 +226,7 @@ export default function ColorCardPage() {
               generatedExtendedId={id}
               shareFeedback={shareFeedback}
               copyUrlFeedback={copyUrlFeedback}
+              disableScrollOnLoad={true}
             />
           </div>
           

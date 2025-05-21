@@ -18,6 +18,7 @@ interface CardDisplayProps {
   shareFeedback?: string;
   copyUrlFeedback?: string;
   isVisible: boolean;
+  disableScrollOnLoad?: boolean;
 }
 
 // Define known dimensions (assuming these are correct, adjust if needed)
@@ -41,12 +42,13 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   shareFeedback,
   copyUrlFeedback,
   isVisible,
+  disableScrollOnLoad,
 }) => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isVisible && cardDisplayControlsRef?.current) {
+    if (!disableScrollOnLoad && isVisible && cardDisplayControlsRef?.current) {
       setTimeout(() => {
         cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -72,7 +74,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   const commonButtonStyles = "px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2";
   const dropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const activeDropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-blue-700 bg-blue-50 font-semibold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
-  const createNewButtonStyles = "text-blue-700 hover:text-blue-800 font-semibold underline flex items-center justify-center gap-2 mt-4 sm:mt-0";
+  const createNewButtonStyles = "text-base text-blue-700 hover:text-blue-800 underline flex items-center justify-center gap-2 mt-4 sm:mt-0";
 
   const downloadButtonText = () => {
     let text = "Download";
@@ -89,7 +91,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
             <img src={generatedHorizontalImageUrl} alt="Generated horizontal card" className="max-w-full rounded-md md:max-w-2xl lg:max-w-4xl h-auto" />
           ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-            <img src={generatedVerticalImageUrl} alt="Generated vertical card" className="max-w-full rounded-md md:max-w-sm lg:max-w-md max-h-[70vh] sm:max-h-[80vh] h-auto" />
+            <img src={generatedVerticalImageUrl} alt="Generated vertical card" className="max-w-full rounded-md md:max-w-sm lg:max-w-md max-h-[85vh] h-auto" />
           ) : (
             <div className="flex justify-center items-center w-full aspect-[16/9] md:aspect-[4/3] lg:aspect-[3/2] bg-muted rounded-md">
               <p className="text-muted-foreground text-center p-4">Image not available or selected orientation has no image.</p>
@@ -97,11 +99,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6 w-full">
+        <div className="flex flex-col justify-center items-center gap-4 mt-6 w-full">
           <div className="relative" ref={actionsMenuRef}>
             <button
               onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-              className={`${commonButtonStyles} w-32`}
+              className={`${commonButtonStyles} w-40`}
               title="More actions"
             >
               <MoreHorizontal size={20} />
