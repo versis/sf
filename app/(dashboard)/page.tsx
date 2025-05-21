@@ -3,11 +3,12 @@
 import ImageUpload from '@/components/ImageUpload';
 import ColorTools from '@/components/ColorTools';
 import WizardStep from '@/components/WizardStep';
-import CardDisplay from '@/components/CardDisplay';
 import { useState, useRef, useEffect } from 'react';
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
+import { useRouter } from 'next/navigation';
+import { Save, SkipForward, PenSquare } from 'lucide-react';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -40,6 +41,7 @@ const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
 const SWIPE_THRESHOLD = 50;
 
 export default function HomePage() {
+  const router = useRouter();
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
   const [selectedHexColor, setSelectedHexColor] = useState<string>('#000000');
@@ -75,6 +77,8 @@ export default function HomePage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedImageSrc, setDisplayedImageSrc] = useState<string>('');
   
+  const [currentDbId, setCurrentDbId] = useState<number | null>(null);
+  
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
     intervalId: NodeJS.Timeout | null;
@@ -93,6 +97,14 @@ export default function HomePage() {
   const [heroCardsLoading, setHeroCardsLoading] = useState<boolean>(true);
   const [fetchedHeroCards, setFetchedHeroCards] = useState<Array<{ id: string; v: string | null; h: string | null }>>([]);
   
+  // New states for note feature
+  const [noteText, setNoteText] = useState<string>("");
+  const [isNoteStepActive, setIsNoteStepActive] = useState<boolean>(false);
+  const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
+  const [noteSubmissionError, setNoteSubmissionError] = useState<string | null>(null);
+  
+  const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
+
   // Scroll to the active step or results
   useEffect(() => {
     if (currentWizardStep === 'results') {
@@ -284,6 +296,13 @@ export default function HomePage() {
     setIsColorStepCompleted(false);
     setIsResultsStepCompleted(false);
     
+    // Reset note states as well
+    setNoteText("");
+    setCurrentDbId(null);
+    setIsNoteStepActive(false);
+    setIsSubmittingNote(false);
+    setNoteSubmissionError(null);
+
     setIsHeroVisible(false);
 
     // Revoke URLs
@@ -405,7 +424,6 @@ export default function HomePage() {
     }, progressIntervalTime);
     // ---- END: Restore smooth progress bar ----
     
-    const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
     if (!internalApiKey) {
       console.error('Internal API Key is not defined in frontend environment variables.');
       setGenerationError('Client-side configuration error: API key missing.');
@@ -440,6 +458,7 @@ export default function HomePage() {
       dbId = initiateResult.db_id;
       const extendedIdFromServer = initiateResult.extended_id;
       setGeneratedExtendedId(extendedIdFromServer);
+      setCurrentDbId(dbId);
       console.log(`Frontend: Initiation successful. DB ID: ${dbId}, Extended ID: ${extendedIdFromServer}`);
       // setGenerationProgress(30); // REMOVE discrete progress update
 
@@ -490,8 +509,8 @@ export default function HomePage() {
       const finalizeResult = await finalizeResponse.json();
       // console.log('Frontend: Parsed finalizeResult:', JSON.stringify(finalizeResult, null, 2)); // DEBUG REMOVED
 
-      const horizontalUrl = finalizeResult.horizontal_image_url;
-      const verticalUrl = finalizeResult.vertical_image_url;
+      const horizontalUrl = finalizeResult.front_horizontal_image_url;
+      const verticalUrl = finalizeResult.front_vertical_image_url;
       // console.log('Frontend: Extracted horizontalUrl:', horizontalUrl); // DEBUG REMOVED
       // console.log('Frontend: Extracted verticalUrl:', verticalUrl); // DEBUG REMOVED
 
@@ -550,6 +569,12 @@ export default function HomePage() {
       // setGenerationProgress(100); // REMOVE discrete progress update, handled by interval or finally block
       clearInterval(progressInterval); // Ensure interval is cleared on successful completion
       setGenerationProgress(100); // Explicitly set to 100 on success
+      
+      // Activate the note input step instead of immediately redirecting
+      setIsNoteStepActive(true);
+      // Scroll to the note input section (we might need a ref for this later)
+      // For now, the card display controls ref might be close enough or we adjust scroll target later.
+      cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
 
     } catch (error) {
       // Ensure we log a string message from the error object for console
@@ -826,6 +851,46 @@ export default function HomePage() {
     triggerImageChangeAnimation(direction, index);
   };
 
+  // New function to handle note submission
+  const handleNoteSubmission = async (currentNoteText?: string) => {
+    if (!generatedExtendedId || !currentDbId) { // Use currentDbId from state
+      setNoteSubmissionError("Card ID not found. Cannot submit note.");
+      return;
+    }
+
+    setIsSubmittingNote(true);
+    setNoteSubmissionError(null);
+
+    try {
+      const response = await fetch(`/api/cards/${currentDbId}/add-note`, { // Use currentDbId
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-API-Key': internalApiKey!,
+        },
+        body: JSON.stringify({ note_text: currentNoteText ? currentNoteText.trim() : null }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || `Failed to submit note: ${response.status}`);
+      }
+
+      // Successfully submitted note or skipped
+      setIsNoteStepActive(false);
+      const slug = result.extended_id?.replace(/\s+/g, '-').toLowerCase() || generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
+      router.push(`/color/${slug}`);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred while submitting the note.";
+      setNoteSubmissionError(message);
+      console.error("Note submission error:", error);
+    } finally {
+      setIsSubmittingNote(false);
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
       <style jsx global>{`
@@ -925,7 +990,7 @@ export default function HomePage() {
               aria-label="Remind me what this page is about"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              <span>Remind me what is shadefreude about</span>
+              <span>Remind me what shadefreude is about</span>
             </button>
           </div>
         )}
@@ -1056,7 +1121,7 @@ export default function HomePage() {
           <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
         </div>
 
-        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
+        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
               title="1: Begin with an Image"
@@ -1157,47 +1222,35 @@ export default function HomePage() {
                         let lineToDisplay: string | undefined;
                         let currentMessageContent: string | undefined;
                         let showCursor = false;
-                        // Use a fixed height matching text-xs and leading-tight to prevent layout shifts
                         const pClassName = "m-0 p-0 leading-tight";
-
                         if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
-                          // Waiting for new line delay: display the *previous* fully typed line.
                           const prevLineIdx = logic.lineIdx - 1;
                           currentMessageContent = DUMMY_MESSAGES[prevLineIdx];
-                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent; // Should be fully typed.
-                          // Show cursor on the completed line during the pause.
+                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent;
                           if (lineToDisplay && lineToDisplay.length === (currentMessageContent?.length || 0)) {
                             showCursor = true;
                           }
                         } else {
-                          // Actively typing the current line, or just about to start it.
                           currentMessageContent = DUMMY_MESSAGES[logic.lineIdx];
                           lineToDisplay = typedLines[logic.lineIdx] || "";
-
                           if (logic.lineIdx < DUMMY_MESSAGES.length) {
-                            // Show cursor if actively typing OR if the line is empty and we have content to type.
                             if (lineToDisplay.length < (currentMessageContent?.length || 0)) {
                                 showCursor = true;
                             } else if (lineToDisplay === "" && currentMessageContent) {
-                                // About to type the first character of the current line.
                                 showCursor = true;
                             }
                           }
                         }
-                        
-                        // Defensive: If all messages are done but interval is somehow still active (e.g. timing edge case)
                         if (logic.lineIdx >= DUMMY_MESSAGES.length && logic.intervalId && DUMMY_MESSAGES.length > 0) {
                             const lastMessageIndex = DUMMY_MESSAGES.length - 1;
                             const lastTypedLine = typedLines[lastMessageIndex];
                             const lastDummyMessage = DUMMY_MESSAGES[lastMessageIndex];
                             if (lastTypedLine && lastDummyMessage && lastTypedLine.length === lastDummyMessage.length) {
                                 lineToDisplay = lastTypedLine;
-                                showCursor = true; // Keep cursor on very last line.
+                                showCursor = true; 
                             }
                         }
-
-                        // Render logic
-                        if (lineToDisplay !== undefined) { // lineToDisplay could be an empty string ""
+                        if (lineToDisplay !== undefined) { 
                           return (
                             <p className={pClassName}>
                               {lineToDisplay}
@@ -1205,7 +1258,6 @@ export default function HomePage() {
                             </p>
                           );
                         } 
-                        // Fallback for initial state: cursor on empty line if messages exist and generation started.
                         else if (isGenerating && logic.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && typedLines.length > 0 && typedLines[0] === "") {
                            return (
                             <p className={pClassName}>
@@ -1213,7 +1265,6 @@ export default function HomePage() {
                             </p>
                            );
                         }
-                        // Default empty state to maintain height if no line to display.
                         return <p className={pClassName}>&nbsp;</p>;
                       })()}
                     </div>
@@ -1229,37 +1280,84 @@ export default function HomePage() {
                   <div className="p-4 text-center">
                     <p
                       className="text-base text-red-500 mb-4"
-                      dangerouslySetInnerHTML={{
-                        __html: (typeof generationError === 'string' ? 
-                                 generationError : 
-                                 (generationError as any).message || 'An unexpected error occurred'
-                                ).replace(/<br\s*\/?b?>/gi, '<br />')
-                      }}
+                      dangerouslySetInnerHTML={{ __html: (typeof generationError === 'string' ? generationError : (generationError as any).message || 'An unexpected error occurred').replace(/<br\s*\/?b?>/gi, '<br />') }}
                     />
                     <div className="flex justify-center w-full mt-2">
-                      <button
-                        type="button"
-                        onClick={handleGenerateImageClick}
-                        className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center 
-                          ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`}
-                        disabled={isGenerating}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="23 4 23 10 17 10"></polyline>
-                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                        </svg>
+                      <button type="button" onClick={handleGenerateImageClick} className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`} disabled={isGenerating}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                         Retry Generation
                       </button>
                     </div>
                   </div>
                 )}
-                {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
-                  <div className="p-2 text-center">
-                    <p className="text-base">Your unique shadefreude card is ready.</p>
-                    <p className="text-base">Now with its own story.</p>
-                  </div>
+
+                {/* Conditional Block for Note Input (or Success Message) */}
+                {!isGenerating && !generationError && isResultsStepCompleted && currentWizardStep === 'results' && (
+                  <>
+                    {isNoteStepActive && currentDbId ? (
+                      // If Note Step is Active: Show Card Front + Note Form
+                      <div className="w-full p-1 md:p-2 space-y-4">
+                        <div ref={cardDisplayControlsRef} className="w-full mx-auto mb-4">
+                          {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
+                            <img src={generatedHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-auto object-contain rounded-md aspect-[2/1]" />
+                          ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
+                            <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2] max-h-[70vh]" />
+                          ) : (
+                            <div className="w-full aspect-[2/1] flex justify-center items-center bg-muted rounded-md">
+                              <p className="text-muted-foreground">Front image not available.</p>
+                            </div>
+                          )}
+                        </div>
+                        {/* New wrapper for textarea and char counter */}
+                        <div> 
+                          <textarea
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            placeholder="Add your personal note here (optional, max 500 characters)..."
+                            maxLength={500}
+                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground text-foreground text-sm resize"
+                            aria-label="Note for the back of the card"
+                          />
+                          <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
+                            <p className="text-xs text-muted-foreground">
+                              {noteText.length}/500 characters
+                            </p>
+                          </div>
+                        </div>
+                        {noteSubmissionError && (
+                          <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
+                        )}
+                        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                          <button
+                            onClick={() => handleNoteSubmission(noteText)}
+                            disabled={isSubmittingNote || noteText.length > 500}
+                            className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                          >
+                            <PenSquare size={20} className="mr-2" />
+                            Save The Note
+                          </button>
+                          <button
+                            onClick={() => handleNoteSubmission()} 
+                            disabled={isSubmittingNote}
+                            className="px-6 py-3 font-semibold bg-background text-foreground border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none sm:w-auto"
+                          >
+                            <SkipForward size={20} className="mr-2" />
+                            Skip
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // If Note Step is NOT Active (but results are complete and no error)
+                      <div className="p-2 text-center">
+                        <p className="text-base">Your unique shadefreude card is ready.</p>
+                        <p className="text-base">Now with its own story.</p>
+                      </div>
+                    )}
+                  </>
                 )}
-                 {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
+
+                {/* Message for when color step is done, but results not yet generated */}
+                {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
                   <div className="p-4 text-center">
                     <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
                   </div>
@@ -1267,24 +1365,18 @@ export default function HomePage() {
               </WizardStep>
             )}
           </section>
-
-          {/* New Section for Card Display - Outside/Below Wizard */}
-          <CardDisplay
-            isVisible={!!(isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl))}
-            generatedHorizontalImageUrl={generatedHorizontalImageUrl}
-            generatedVerticalImageUrl={generatedVerticalImageUrl}
-            currentDisplayOrientation={currentDisplayOrientation}
-            setCurrentDisplayOrientation={(orientation: 'horizontal' | 'vertical') => setCurrentDisplayOrientation(orientation)}
-            handleShare={handleShare}
-            handleCopyGeneratedUrl={handleCopyGeneratedUrl}
-            handleDownloadImage={handleDownloadImage}
-            handleCreateNew={resetWizard}
-            isGenerating={isGenerating}
-            generatedExtendedId={generatedExtendedId}
-            cardDisplayControlsRef={cardDisplayControlsRef}
-            shareFeedback={shareFeedback}
-            copyUrlFeedback={copyUrlFeedback}
-          />
+          {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
+          {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
+            <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
+              <button
+                onClick={resetWizard}
+                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
+                title="Create New Card"
+              >
+                + Create New Card
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </main>

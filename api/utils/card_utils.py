@@ -2,26 +2,61 @@ import io
 import base64
 from typing import Tuple, Dict, Any, Optional
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from datetime import datetime
+import os # Added for path joining
 
-from api.utils.logger import log, debug # Added debug import
-from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk
+from api.utils.logger import log, debug, error # Ensure error is imported if used
+from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
 # Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
 # and assets folder is at the project root (sf/assets)
 ASSETS_BASE_PATH = "assets"
-# If running from root, this would be "assets"
-# If api/index.py is in /api, this path is relative to /api which becomes sf/assets
+# Define project root for robust path construction, assuming 'api' is a top-level dir or similar
+# This might need adjustment based on actual execution context.
+# For now, we\'ll construct the logo path directly.
+# PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+# LOGO_PATH = os.path.join(PROJECT_ROOT, "public", "sf-icon.png")
+# Simpler approach for now, assuming execution context allows relative path from project root:
+LOGO_PATH = "public/sf-icon.png"
 
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
     import os # Keep os import here as it might check paths
     font_style_suffix = "Italic" if style.lower() == "italic" else ""
     pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
 
+    font_path = ""
     if font_family == "Mono":
         ibm_plex_weight = "Light" if weight == "Light" else ("Medium" if weight in ["Medium", "Bold", "SemiBold"] else "Regular")
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "mono", f"IBMPlexMono-{ibm_plex_weight}.ttf")
-    else:
+    elif font_family == "Caveat":
+        font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "caveat", f"Caveat-{weight}.ttf") 
+        font_style_suffix = "" # Caveat is naturally cursive
+    elif font_family == "Inter":
+        # Prioritize direct Inter Italic font names if style is italic
+        inter_font_filename = ""
+        if style.lower() == "italic":
+            # Try specific italic files first (e.g., Inter-Italic.ttf, Inter-MediumItalic.ttf)
+            # This covers cases where pt_suffix might not be part of the filename for some italic fonts
+            specific_italic_variations = [
+                f"Inter-{weight}Italic.ttf", # Inter-BoldItalic.ttf
+                f"Inter-Italic.ttf", # Generic Italic, often Regular weight
+                f"Inter_{pt_suffix}-{weight}Italic.ttf", # Inter_18pt-BoldItalic.ttf
+                f"Inter_{pt_suffix}-Italic.ttf" # Inter_18pt-Italic.ttf
+            ]
+            for fname_candidate in specific_italic_variations:
+                potential_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", fname_candidate)
+                if os.path.exists(potential_path):
+                    inter_font_filename = fname_candidate
+                    debug(f"Found specific Inter Italic font: {inter_font_filename}", request_id=request_id)
+                    break
+            if not inter_font_filename: # Fallback to original pattern if specific not found
+                inter_font_filename = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
+        else: # Non-italic Inter
+            inter_font_filename = f"Inter_{pt_suffix}-{weight}.ttf" # Removed font_style_suffix for non-italic
+        
+        font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", inter_font_filename)
+    else: # Default to Inter if family is unknown, or use a truly generic fallback
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf")
 
     try:
@@ -30,13 +65,15 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         return loaded_font
     except IOError as e:
         log(f"Failed to load font {font_path}: {e}. Falling back to default.", level="WARNING", request_id=request_id)
-        try: # Fallback to Inter Regular if specified font fails, then to default
-            if font_family != "Inter" or weight != "Regular" or style != "Normal":
-                fallback_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", f"Inter_{pt_suffix}-Regular.ttf")
-                debug(f"Attempting fallback font: {fallback_path}", request_id=request_id)
-                return ImageFont.truetype(fallback_path, size)
+        # Try a more generic Inter fallback first
+        try:
+            generic_inter_fallback = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", "Inter-Regular.ttf")
+            if os.path.exists(generic_inter_fallback):
+                debug(f"Attempting generic Inter fallback: {generic_inter_fallback}", request_id=request_id)
+                return ImageFont.truetype(generic_inter_fallback, size)
         except IOError:
-            pass # If fallback also fails, load_default() is next
+            pass
+        # Fallback to Pillow's default if all else fails
         return ImageFont.load_default(size)
 
 # --- Helper Function for Font Measurements ---
@@ -260,4 +297,199 @@ async def generate_card_image_bytes(
     canvas.save(img_byte_arr, format='PNG', compress_level=2)
     image_bytes = img_byte_arr.getvalue()
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
+    return image_bytes 
+
+# --- Back Card Generation Logic ---
+async def generate_back_card_image_bytes(
+    note_text: Optional[str],
+    hex_color_input: str, 
+    orientation: str,
+    created_at_iso_str: Optional[str] = None, 
+    request_id: Optional[str] = None
+) -> bytes:
+    log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
+
+    base_rgb_for_back = hex_to_rgb(hex_color_input, request_id=request_id)
+    if not base_rgb_for_back:
+        log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
+        base_rgb_for_back = (200, 200, 200) 
+    
+    white_bg_rgb = (255, 255, 255)
+    opacity_for_original_color = 0.15
+
+    try:
+        r_orig, g_orig, b_orig = base_rgb_for_back
+        r_bg, g_bg, b_bg = white_bg_rgb
+        r_blend = round(r_orig * opacity_for_original_color + r_bg * (1 - opacity_for_original_color))
+        g_blend = round(g_orig * opacity_for_original_color + g_bg * (1 - opacity_for_original_color))
+        b_blend = round(b_orig * opacity_for_original_color + b_bg * (1 - opacity_for_original_color))
+        final_bg_rgb = (
+            max(0, min(255, r_blend)),
+            max(0, min(255, g_blend)),
+            max(0, min(255, b_blend))
+        )
+    except Exception as e:
+        log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
+        final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
+
+    bg_color_tuple = (*final_bg_rgb, 255)
+
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
+
+    if orientation == "horizontal":
+        card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+        note_font_size_val = 38
+        date_below_note_font_size_val = 26
+    else: # vertical
+        card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
+        note_font_size_val = 38 
+        date_below_note_font_size_val = 22
+    
+    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
+    draw = ImageDraw.Draw(canvas)
+    text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (245, 245, 245) 
+    
+    pad_x = int(card_w * 0.05) # Increased from 0.035 for more left padding
+    pad_y = int(card_h * 0.05)
+    
+    f_note = get_font(note_font_size_val, weight="Regular", style="Italic", font_family="Inter", request_id=request_id)
+    f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id) 
+
+    main_stamp_area_size = int(min(card_w, card_h) * 0.20)
+    main_stamp_padding = int(main_stamp_area_size * 0.1)
+    main_stamp_x_start = card_w - pad_x - main_stamp_area_size # Re-evaluate this based on new pad_x
+    main_stamp_y_start = pad_y
+    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004))
+    scallop_step = max(1, int(scallop_circle_radius * 4.5));
+
+    s_edges = [
+        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),
+        (main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, True),
+        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, False),
+        (main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, False)
+    ]
+    for x1_s, y1_s, x2_s, y2_s, is_horizontal_edge in s_edges:
+        current_pos_val = 0; length_val = x2_s - x1_s if is_horizontal_edge else y2_s - y1_s
+        if length_val <= 0: continue
+        while current_pos_val <= length_val:
+            px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
+            py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
+            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=text_color)
+            current_pos_val += scallop_step
+        px_end = x2_s if is_horizontal_edge else x1_s
+        py_end = y2_s if not is_horizontal_edge else y1_s
+        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=text_color)
+
+    try:
+        logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
+        logo_max_dim_main = main_stamp_area_size - (2 * main_stamp_padding)
+        logo_img_main = logo_img_original.copy(); logo_img_main.thumbnail((logo_max_dim_main, logo_max_dim_main), Image.Resampling.LANCZOS)
+        logo_main_x = main_stamp_x_start + main_stamp_padding + (logo_max_dim_main - logo_img_main.width) // 2
+        logo_main_y = main_stamp_y_start + main_stamp_padding + (logo_max_dim_main - logo_img_main.height) // 2
+        canvas.paste(logo_img_main, (logo_main_x, logo_main_y), logo_img_main)
+    except Exception as e: log(f"Error with main stamp logo: {e}", level="ERROR", request_id=request_id)
+
+    # Define available width for note text more directly
+    # Text area starts at pad_x and ends at main_stamp_x_start - pad_x (to have padding before stamp)
+    note_text_area_start_x = pad_x
+    note_text_area_end_x = main_stamp_x_start - pad_x 
+    available_width_for_note = note_text_area_end_x - note_text_area_start_x
+
+    actual_max_text_w = available_width_for_note 
+    text_block_x_start = pad_x 
+
+    lines = []
+    if note_text and note_text.strip():
+        note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.2
+        words = note_text.split(' ')
+        current_line_for_note = ""
+        for word in words:
+            word_width, _ = get_text_dimensions(word, f_note)
+            if current_line_for_note == "" and word_width > actual_max_text_w: 
+                lines.append(word) 
+                current_line_for_note = "" 
+            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= actual_max_text_w:
+                current_line_for_note += word + " "
+            else:
+                lines.append(current_line_for_note.strip())
+                current_line_for_note = word + " "
+        if current_line_for_note.strip():
+            lines.append(current_line_for_note.strip())
+        lines = [line for line in lines if line] 
+
+        # Center the entire block of text (left-aligned lines within the centered block)
+        if lines:
+            max_actual_line_width = 0
+            for line_in_block in lines:
+                line_width, _ = get_text_dimensions(line_in_block, f_note)
+                if line_width > max_actual_line_width:
+                    max_actual_line_width = line_width
+            
+            text_block_x_start = pad_x + max(0, (available_width_for_note - max_actual_line_width) // 2)
+            log(f"Note Block Centered. MaxLineWidth: {max_actual_line_width}, X-start: {text_block_x_start}", request_id=request_id)
+        else: # No lines, reset to default padding
+             text_block_x_start = pad_x
+
+    total_note_block_height = 0
+    if lines:
+        total_note_block_height = (len(lines) * note_line_h) - (note_line_h * 0.2) # No extra space after last line
+    
+    available_height_for_elements = card_h - pad_y - pad_y 
+    current_elements_y = pad_y # Start Y for drawing note/date block
+
+    # Vertical centering of the note block itself
+    if lines:
+        if total_note_block_height < available_height_for_elements:
+            current_elements_y = pad_y + (available_height_for_elements - total_note_block_height) / 2
+        current_elements_y = max(pad_y, current_elements_y) # Ensure it doesn't go above top padding
+        
+        # Render note lines (they are individually left-aligned starting at text_block_x_start)
+        temp_note_y = current_elements_y
+        for line_idx, line in enumerate(lines):
+            if temp_note_y + note_line_h <= card_h - pad_y + (note_line_h*0.2): # Check if it fits
+                draw.text((text_block_x_start, temp_note_y), line, font=f_note, fill=text_color)
+                temp_note_y += note_line_h
+            else:
+                log(f"Note text truncated at line {line_idx + 1}", request_id=request_id); break
+        current_elements_y = temp_note_y # Update Y to be after the note block
+    else: # If no note text, position date in vertical center of the card (left of stamp)
+        date_placeholder_h = get_text_dimensions("Tg", f_date_below_note)[1]
+        current_elements_y = pad_y + (available_height_for_elements - date_placeholder_h) / 2
+        current_elements_y = max(pad_y, current_elements_y)
+
+    # Render Date (New Positioning Logic)
+    if created_at_iso_str:
+        try:
+            dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
+            date_str = dt_object.strftime('%B %d, %Y')
+            date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
+            
+            # Y position: Just below the stamp
+            gap_below_stamp = int(card_h * 0.03) # Increased from 0.015 for more margin above date
+            date_y = main_stamp_y_start + main_stamp_area_size + gap_below_stamp
+            
+            # X position: Centered under the stamp
+            date_x = main_stamp_x_start + (main_stamp_area_size - date_w) // 2
+            # Ensure it doesn't go left of the initial left padding (safety, though unlikely for centered date under stamp)
+            date_x = max(pad_x, date_x) 
+
+            if date_y + date_h < card_h - pad_y: # Check if date fits vertically on card
+                 draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
+            else:
+                 log(f"Date does not fit on card at new position below stamp. Y: {date_y}", request_id=request_id)
+        except ValueError:
+            log(f"Could not parse date for date string: {created_at_iso_str}", level="WARNING", request_id=request_id)
+
+    radius = 40
+    mask = Image.new('L', (card_w * 2, card_h * 2), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
+    mask = mask.resize((card_w, card_h), Image.Resampling.LANCZOS)
+    canvas.putalpha(mask)
+    debug("Applied rounded corners to back card", request_id=request_id)
+
+    img_byte_arr = io.BytesIO()
+    canvas.save(img_byte_arr, format='PNG', compress_level=2)
+    image_bytes = img_byte_arr.getvalue()
+    log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 

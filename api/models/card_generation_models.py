@@ -21,8 +21,12 @@ class CardGenerationRecord(BaseModel):
     hex_color: str = Field(..., description="The hex color of the card.")
     status: str = Field(..., description="Current status of the card generation process.")
     metadata: Optional[Dict[str, Any]] = Field(None, description="JSON metadata for the card.")
-    horizontal_image_url: Optional[str] = Field(None, description="URL of the generated horizontal card image.")
-    vertical_image_url: Optional[str] = Field(None, description="URL of the generated vertical card image.")
+    front_horizontal_image_url: Optional[str] = Field(None, description="URL of the generated front horizontal card image.")
+    front_vertical_image_url: Optional[str] = Field(None, description="URL of the generated front vertical card image.")
+    note_text: Optional[str] = Field(None, description="User's note for the back of the card.")
+    has_note: bool = Field(False, description="Flag indicating if a note is present.")
+    back_horizontal_image_url: Optional[str] = Field(None, description="URL of the generated back horizontal card image.")
+    back_vertical_image_url: Optional[str] = Field(None, description="URL of the generated back vertical card image.")
     created_at: Optional[Any] = Field(None, description="Timestamp of creation.") # Supabase provides this
     updated_at: Optional[Any] = Field(None, description="Timestamp of last update.") # Supabase provides this
 

@@ -4,21 +4,30 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import Link from 'next/link'; // Re-added Link import for the header
 import CardDisplay from '@/components/CardDisplay'; // Import the new component
+import { useSwipeable, type SwipeableHandlers } from 'react-swipeable'; // Added SwipeableHandlers type
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 
 interface CardDetails {
-  // Define structure based on what your API will return
-  extendedId?: string;
-  hexColor?: string;
-  colorName?: string;
-  description?: string;
-  phoneticName?: string;
-  article?: string;
-  horizontalImageUrl?: string;
-  verticalImageUrl?: string;
-  // Add other fields as necessary
+  // API sends snake_case for these due to direct DB mapping or Pydantic alias behavior with by_alias=True in some contexts
+  // However, the FastAPI response_model_by_alias=False means it uses Pydantic model field names (camelCase)
+  extendedId?: string;        // FastAPI CardDetailsResponse uses extendedId (model field name)
+  hexColor?: string;          // FastAPI CardDetailsResponse uses hexColor
+  card_name?: string;         // This is constructed in the FastAPI route, using this key name
+  status?: string;            // FastAPI CardDetailsResponse uses status
+  frontHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses frontHorizontalImageUrl
+  frontVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses frontVerticalImageUrl
+  noteText?: string;                // FastAPI CardDetailsResponse uses noteText
+  hasNote?: boolean;                // FastAPI CardDetailsResponse uses hasNote
+  backHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses backHorizontalImageUrl
+  backVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses backVerticalImageUrl
+  aiName?: string;                  // FastAPI CardDetailsResponse uses aiName
+  aiPhonetic?: string;              // FastAPI CardDetailsResponse uses aiPhonetic
+  aiArticle?: string;               // FastAPI CardDetailsResponse uses aiArticle
+  aiDescription?: string;           // FastAPI CardDetailsResponse uses aiDescription
+  createdAt?: string;               // FastAPI CardDetailsResponse uses createdAt
+  updatedAt?: string;               // FastAPI CardDetailsResponse uses updatedAt
 }
 
 export default function ColorCardPage() {
@@ -35,7 +44,35 @@ export default function ColorCardPage() {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
   const cardDisplaySectionRef = useRef<HTMLDivElement>(null); // Ref for scrolling to the card display
+  const [isFlipped, setIsFlipped] = useState(false); // Added for card flip state
 
+  const handleFlip = () => {
+    if (cardDetails?.hasNote === false || cardDetails?.backHorizontalImageUrl || cardDetails?.backVerticalImageUrl) {
+      setIsFlipped(!isFlipped);
+    }
+  };
+
+  const swipeableElementRef = useRef<HTMLDivElement>(null);
+
+  // Get all handlers from useSwipeable, including its ref callback
+  const allSwipeableHandlers: SwipeableHandlers = useSwipeable({
+    onSwipedLeft: () => handleFlip(),
+    onSwipedRight: () => handleFlip(),
+    preventScrollOnSwipe: true,
+    trackMouse: true,
+  });
+
+  // Separate the ref callback from the other event handlers
+  const { ref: swipeableHookRef, ...eventHandlersToSpread } = allSwipeableHandlers;
+
+  // Custom ref callback to assign the node to both our local ref and react-swipeable's ref
+  const combinedRefCallback = (node: HTMLDivElement | null) => {
+    if (typeof swipeableHookRef === 'function') {
+      swipeableHookRef(node);
+    }
+    (swipeableElementRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+  
   // Detect if user is on mobile for initial orientation
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -63,7 +100,7 @@ export default function ColorCardPage() {
   useEffect(() => {
     if (id && loading) {
       const fetchCardDetails = async () => {
-        setLoading(true); // Ensure loading is true at the start of fetch
+        setLoading(true);
         try {
           const response = await fetch(`/api/retrieve-card-by-extended-id/${id}`);
           if (!response.ok) {
@@ -75,16 +112,14 @@ export default function ColorCardPage() {
             throw new Error(errorMsg);
           }
           const data: CardDetails = await response.json();
-          // CRUCIAL LOG: Inspect the raw data object here
-          console.log("RAW DATA FROM API (response.json()):", JSON.stringify(data, null, 2)); 
           setCardDetails(data);
           
           let initialOrientation: 'horizontal' | 'vertical';
-          if (isMobile && data.verticalImageUrl) {
+          if (isMobile && data.frontVerticalImageUrl) {
             initialOrientation = 'vertical';
-          } else if (data.horizontalImageUrl) {
+          } else if (data.frontHorizontalImageUrl) {
             initialOrientation = 'horizontal';
-          } else if (data.verticalImageUrl) {
+          } else if (data.frontVerticalImageUrl) {
             initialOrientation = 'vertical';
           } else {
             initialOrientation = 'horizontal'; // Default
@@ -93,9 +128,9 @@ export default function ColorCardPage() {
           setError(null);
           // Scroll to card display after data is loaded and orientation set
           // Ensure this happens after the DOM has a chance to update with the CardDisplay component
-          // setTimeout(() => {
-          //   cardDisplaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // }, 150); // Small delay - REMOVED
+          setTimeout(() => {
+            swipeableElementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150); // Adjusted delay slightly
 
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -106,17 +141,17 @@ export default function ColorCardPage() {
       };
       fetchCardDetails();
     }
-  }, [id, loading, isMobile]);
+  }, [id, isMobile, loading]);
 
   // handleDownload function to be passed to CardDisplay
   const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
     const imageUrl = orientation === 'horizontal' 
-      ? cardDetails?.horizontalImageUrl 
-      : cardDetails?.verticalImageUrl;
+      ? cardDetails?.frontHorizontalImageUrl 
+      : cardDetails?.frontVerticalImageUrl;
     
     if (!imageUrl || !cardDetails) return;
 
-    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.colorName?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
+    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.card_name?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
     const downloadApiUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
     window.location.href = downloadApiUrl;
   };
@@ -131,7 +166,7 @@ export default function ColorCardPage() {
     const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`;
     const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
     const shareData = {
-      title: cardDetails?.colorName ? `Shadefreude: ${cardDetails.colorName}` : 'Shadefreude Color Card',
+      title: cardDetails?.card_name ? `Shadefreude: ${cardDetails.card_name}` : 'Shadefreude Color Card',
       text: shareMessage,
       url: shareUrl,
     };
@@ -207,11 +242,22 @@ export default function ColorCardPage() {
         
         {/* Use a flex container with explicit order to ensure consistent layout */}
         <div className="flex flex-col items-center w-full mt-6">
-          <div ref={cardDisplaySectionRef} className="w-full flex flex-col items-center justify-center order-1">
+          <div 
+            ref={combinedRefCallback} // Use our combined ref callback
+            {...eventHandlersToSpread} // Spread only the event handlers
+            className="w-full flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing"
+          >
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
-              generatedHorizontalImageUrl={cardDetails.horizontalImageUrl || null}
-              generatedVerticalImageUrl={cardDetails.verticalImageUrl || null}
+              frontHorizontalImageUrl={cardDetails?.frontHorizontalImageUrl || null}
+              frontVerticalImageUrl={cardDetails?.frontVerticalImageUrl || null}
+              backHorizontalImageUrl={cardDetails?.backHorizontalImageUrl || null}
+              backVerticalImageUrl={cardDetails?.backVerticalImageUrl || null}
+              noteText={cardDetails?.noteText || null}
+              hasNote={cardDetails?.hasNote || false}
+              isFlippable={true}
+              isFlipped={isFlipped}
+              onFlip={handleFlip}
               currentDisplayOrientation={currentDisplayOrientation}
               setCurrentDisplayOrientation={setCurrentDisplayOrientation}
               handleShare={handleShareAction} 
@@ -234,9 +280,9 @@ export default function ColorCardPage() {
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
                   You&apos;ve landed on a unique shadefreude creation
-                  {cardDetails && (cardDetails.colorName || cardDetails.hexColor) && (
+                  {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono text-xs">
-                      {' '}({cardDetails.colorName ? `${cardDetails.colorName}, ` : ''}{cardDetails.hexColor || 'N/A'})
+                      {' '}({cardDetails.card_name ? `${cardDetails.card_name}, ` : ''}{cardDetails.hexColor || 'N/A'})
                     </span>
                   )}
                   , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!

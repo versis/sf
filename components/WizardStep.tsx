@@ -10,6 +10,7 @@ interface WizardStepProps {
   onHeaderClick?: () => void;
   children: React.ReactNode;
   isFutureStep?: boolean;
+  contentClassName?: string;
 }
 
 const WizardStep: React.FC<WizardStepProps> = ({
@@ -20,6 +21,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
   onHeaderClick,
   children,
   isFutureStep,
+  contentClassName,
 }) => {
   // Add state to track expanded/collapsed state
   const [isExpanded, setIsExpanded] = useState(isActive);
@@ -73,7 +75,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
         
         {onHeaderClick && !isFutureStep && (isExpanded ? '[-]' : '[+]')}
       </h3>
-      {isExpanded && <div className="p-4 md:p-6 space-y-6 bg-card">{children}</div>}
+      {isExpanded && <div className={contentClassName || "p-4 md:p-6 space-y-6 bg-card"}>{children}</div>}
     </div>
   );
 };
