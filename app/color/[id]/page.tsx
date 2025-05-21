@@ -9,22 +9,24 @@ import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 
 interface CardDetails {
-  extendedId?: string;
-  hexColor?: string;
-  card_name?: string;
-  status?: string;
-  front_horizontal_image_url?: string;
-  front_vertical_image_url?: string;
-  note_text?: string;
-  has_note?: boolean;
-  back_horizontal_image_url?: string;
-  back_vertical_image_url?: string;
-  ai_name?: string;
-  ai_phonetic?: string;
-  ai_article?: string;
-  ai_description?: string;
-  created_at?: string;
-  updated_at?: string;
+  // API sends snake_case for these due to direct DB mapping or Pydantic alias behavior with by_alias=True in some contexts
+  // However, the FastAPI response_model_by_alias=False means it uses Pydantic model field names (camelCase)
+  extendedId?: string;        // FastAPI CardDetailsResponse uses extendedId (model field name)
+  hexColor?: string;          // FastAPI CardDetailsResponse uses hexColor
+  card_name?: string;         // This is constructed in the FastAPI route, using this key name
+  status?: string;            // FastAPI CardDetailsResponse uses status
+  frontHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses frontHorizontalImageUrl
+  frontVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses frontVerticalImageUrl
+  noteText?: string;                // FastAPI CardDetailsResponse uses noteText
+  hasNote?: boolean;                // FastAPI CardDetailsResponse uses hasNote
+  backHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses backHorizontalImageUrl
+  backVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses backVerticalImageUrl
+  aiName?: string;                  // FastAPI CardDetailsResponse uses aiName
+  aiPhonetic?: string;              // FastAPI CardDetailsResponse uses aiPhonetic
+  aiArticle?: string;               // FastAPI CardDetailsResponse uses aiArticle
+  aiDescription?: string;           // FastAPI CardDetailsResponse uses aiDescription
+  createdAt?: string;               // FastAPI CardDetailsResponse uses createdAt
+  updatedAt?: string;               // FastAPI CardDetailsResponse uses updatedAt
 }
 
 export default function ColorCardPage() {
@@ -86,11 +88,11 @@ export default function ColorCardPage() {
           setCardDetails(data);
           
           let initialOrientation: 'horizontal' | 'vertical';
-          if (isMobile && data.front_vertical_image_url) {
+          if (isMobile && data.frontVerticalImageUrl) {
             initialOrientation = 'vertical';
-          } else if (data.front_horizontal_image_url) {
+          } else if (data.frontHorizontalImageUrl) {
             initialOrientation = 'horizontal';
-          } else if (data.front_vertical_image_url) {
+          } else if (data.frontVerticalImageUrl) {
             initialOrientation = 'vertical';
           } else {
             initialOrientation = 'horizontal'; // Default
@@ -117,8 +119,8 @@ export default function ColorCardPage() {
   // handleDownload function to be passed to CardDisplay
   const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
     const imageUrl = orientation === 'horizontal' 
-      ? cardDetails?.front_horizontal_image_url 
-      : cardDetails?.front_vertical_image_url;
+      ? cardDetails?.frontHorizontalImageUrl 
+      : cardDetails?.frontVerticalImageUrl;
     
     if (!imageUrl || !cardDetails) return;
 
@@ -216,12 +218,12 @@ export default function ColorCardPage() {
           <div ref={cardDisplaySectionRef} className="w-full flex flex-col items-center justify-center order-1">
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
-              frontHorizontalImageUrl={cardDetails.front_horizontal_image_url || null}
-              frontVerticalImageUrl={cardDetails.front_vertical_image_url || null}
-              backHorizontalImageUrl={cardDetails.back_horizontal_image_url || null}
-              backVerticalImageUrl={cardDetails.back_vertical_image_url || null}
-              noteText={cardDetails.note_text || null}
-              hasNote={cardDetails.has_note || false}
+              frontHorizontalImageUrl={cardDetails?.frontHorizontalImageUrl || null}
+              frontVerticalImageUrl={cardDetails?.frontVerticalImageUrl || null}
+              backHorizontalImageUrl={cardDetails?.backHorizontalImageUrl || null}
+              backVerticalImageUrl={cardDetails?.backVerticalImageUrl || null}
+              noteText={cardDetails?.noteText || null}
+              hasNote={cardDetails?.hasNote || false}
               isFlippable={true}
               currentDisplayOrientation={currentDisplayOrientation}
               setCurrentDisplayOrientation={setCurrentDisplayOrientation}

@@ -56,6 +56,16 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   isVisible,
   disableScrollOnLoad,
 }) => {
+  // RE-ADD DEBUG LOGS FOR PROPS
+  console.log("[CardDisplay Props] isVisible:", isVisible);
+  console.log("[CardDisplay Props] currentDisplayOrientation:", currentDisplayOrientation);
+  console.log("[CardDisplay Props] frontHorizontalImageUrl:", frontHorizontalImageUrl);
+  console.log("[CardDisplay Props] frontVerticalImageUrl:", frontVerticalImageUrl);
+  console.log("[CardDisplay Props] backHorizontalImageUrl:", backHorizontalImageUrl);
+  console.log("[CardDisplay Props] backVerticalImageUrl:", backVerticalImageUrl);
+  console.log("[CardDisplay Props] isFlippable:", isFlippable);
+  console.log("[CardDisplay Props] hasNote:", hasNote);
+
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);

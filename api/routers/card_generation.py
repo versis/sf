@@ -175,6 +175,16 @@ async def finalize_card_generation(
                 request_id=str(db_id) 
             )
             random_suffix = generate_random_suffix()
+            
+            # DEBUG: Save image locally before upload
+            debug_filename = f"debug_front_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png"
+            try:
+                with open(debug_filename, "wb") as f:
+                    f.write(img_bytes)
+                log(f"DEBUG: Saved front image locally to {debug_filename}, size: {len(img_bytes)} bytes")
+            except Exception as e_save:
+                error(f"DEBUG: Failed to save front image locally {debug_filename}: {e_save}")
+            
             generated_images_for_blob.append({
                 "data": img_bytes,
                 "filename": f"card_front_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png",
@@ -207,6 +217,8 @@ async def finalize_card_generation(
             update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]
         if uploaded_image_info.get("vertical", {}).get("url"):
             update_payload["front_vertical_image_url"] = uploaded_image_info["vertical"]["url"]
+
+        log(f"[DEBUG Finalize] Update payload for DB ID {db_id}: {update_payload}") # NEW DEBUG LOG
 
         # Update Supabase record with image URLs, metadata, and set status to completed
         final_record = await update_card_generation_status(
