@@ -187,7 +187,7 @@ async def finalize_card_generation(
             
             generated_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"card_front_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png",
+                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{random_suffix}.png",
                 "content_type": "image/png",
                 "orientation": orientation
             })
@@ -301,7 +301,7 @@ async def add_note_to_card(
             random_suffix = generate_random_suffix()
             back_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"card_back_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png",
+                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{random_suffix}.png",
                 "content_type": "image/png",
                 "orientation": orientation
             })

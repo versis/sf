@@ -6,7 +6,7 @@ from datetime import datetime
 import os # Added for path joining
 
 from api.utils.logger import log, debug, error # Ensure error is imported if used
-from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls, blend_with_background
+from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
 # Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
@@ -302,7 +302,7 @@ async def generate_card_image_bytes(
 # --- Back Card Generation Logic ---
 async def generate_back_card_image_bytes(
     note_text: Optional[str],
-    hex_color_input: str, # Will be used for the background variations
+    hex_color_input: str, 
     orientation: str,
     created_at_iso_str: Optional[str] = None, 
     request_id: Optional[str] = None
@@ -312,18 +312,25 @@ async def generate_back_card_image_bytes(
     base_rgb_for_back = hex_to_rgb(hex_color_input, request_id=request_id)
     if not base_rgb_for_back:
         log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
-        base_rgb_for_back = (200, 200, 200) # Fallback grey for the original color if invalid
+        base_rgb_for_back = (200, 200, 200) 
     
-    # New background logic: Original color at 20% opacity over a white background
     white_bg_rgb = (255, 255, 255)
-    opacity_for_original_color = 0.20 # 20% opacity for the original color
+    opacity_for_original_color = 0.15 # Changed from 0.10 to 0.15 (15% opacity for more desaturated hue)
 
     try:
-        final_bg_rgb = blend_with_background(base_rgb_for_back, white_bg_rgb, opacity_for_original_color)
+        r_orig, g_orig, b_orig = base_rgb_for_back
+        r_bg, g_bg, b_bg = white_bg_rgb
+        r_blend = round(r_orig * opacity_for_original_color + r_bg * (1 - opacity_for_original_color))
+        g_blend = round(g_orig * opacity_for_original_color + g_bg * (1 - opacity_for_original_color))
+        b_blend = round(b_orig * opacity_for_original_color + b_bg * (1 - opacity_for_original_color))
+        final_bg_rgb = (
+            max(0, min(255, r_blend)),
+            max(0, min(255, g_blend)),
+            max(0, min(255, b_blend))
+        )
     except Exception as e:
         log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
-        # Fallback to a simple desaturated version if blending fails for any reason
-        final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15) # Previous fallback
+        final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
 
     bg_color_tuple = (*final_bg_rgb, 255)
 
@@ -332,37 +339,29 @@ async def generate_back_card_image_bytes(
 
     if orientation == "horizontal":
         card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
-        # 2. Increase font sizes -> 4. Use same font size for horizontal as vertical
-        note_font_size_val = 38 # Changed from 48 to match vertical
-        date_below_note_font_size_val = 26 # Increased from 22
+        note_font_size_val = 38
+        date_below_note_font_size_val = 26
     else: # vertical
         card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
-        # 2. Increase font sizes
         note_font_size_val = 38 
-        date_below_note_font_size_val = 22 # Increased from 18
+        date_below_note_font_size_val = 22
     
     canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
-    # Determine text color based on the *final* background lightness
     text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (245, 245, 245) 
     
-    pad_x = int(card_w * 0.05)
+    pad_x = int(card_w * 0.035) # Reduced from 0.05 to increase available width for text
     pad_y = int(card_h * 0.05)
     
-    # Note text font: Inter Italic (already set)
     f_note = get_font(note_font_size_val, weight="Regular", style="Italic", font_family="Inter", request_id=request_id)
-    # 1. Date font: Smaller, thinner, AND ITALIC
     f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id) 
 
-    # --- Main Logo Stamp (Top-Right) - No date here anymore --
-    # 2. Make post stamp border smaller (closer to the page logo)
-    main_stamp_area_size = int(min(card_w, card_h) * 0.20) # Reduced from 0.25
+    main_stamp_area_size = int(min(card_w, card_h) * 0.20)
     main_stamp_padding = int(main_stamp_area_size * 0.1)
-    main_stamp_x_start = card_w - pad_x - main_stamp_area_size
+    main_stamp_x_start = card_w - pad_x - main_stamp_area_size # Re-evaluate this based on new pad_x
     main_stamp_y_start = pad_y
-    # 3. Make scalloped border very thin and pattern more rare
-    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004)) # Reduced from 0.005 (was 0.010 before that)
-    scallop_step = max(1, int(scallop_circle_radius * 4.5)); # Increased multiplier from 3.5 (was 2.0 originally)
+    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004))
+    scallop_step = max(1, int(scallop_circle_radius * 4.5));
 
     s_edges = [
         (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),
@@ -370,15 +369,18 @@ async def generate_back_card_image_bytes(
         (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, False),
         (main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, False)
     ]
-    for x1, y1, x2, y2, is_horizontal in s_edges:
-        current_pos_val = 0; length_val = x2 - x1 if is_horizontal else y2 - y1
-        if length_val < 0: continue
+    for x1_s, y1_s, x2_s, y2_s, is_horizontal_edge in s_edges:
+        current_pos_val = 0; length_val = x2_s - x1_s if is_horizontal_edge else y2_s - y1_s
+        if length_val <= 0: continue
         while current_pos_val <= length_val:
-            px_val = x1 + current_pos_val if is_horizontal else x1; py_val = y1 + current_pos_val if not is_horizontal else y1
+            px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
+            py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
             draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=text_color)
             current_pos_val += scallop_step
-        draw.ellipse([(x2 - scallop_circle_radius, y2 - scallop_circle_radius) if is_horizontal else (x1-scallop_circle_radius,y1+length_val-scallop_circle_radius), 
-                      (x2 + scallop_circle_radius, y2 + scallop_circle_radius) if is_horizontal else (x1+scallop_circle_radius,y1+length_val+scallop_circle_radius)], fill=text_color)
+        px_end = x2_s if is_horizontal_edge else x1_s
+        py_end = y2_s if not is_horizontal_edge else y1_s
+        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=text_color)
+
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
         logo_max_dim_main = main_stamp_area_size - (2 * main_stamp_padding)
@@ -388,103 +390,97 @@ async def generate_back_card_image_bytes(
         canvas.paste(logo_img_main, (logo_main_x, logo_main_y), logo_img_main)
     except Exception as e: log(f"Error with main stamp logo: {e}", level="ERROR", request_id=request_id)
 
-    # --- Note Rendering & Date Below Note ---
-    note_area_start_y = pad_y 
-    note_area_max_x = main_stamp_x_start - pad_x # Max x for note text before stamp area
-    available_width_for_note_default = note_area_max_x - pad_x
+    # Define available width for note text more directly
+    # Text area starts at pad_x and ends at main_stamp_x_start - pad_x (to have padding before stamp)
+    note_text_area_start_x = pad_x
+    note_text_area_end_x = main_stamp_x_start - pad_x 
+    available_width_for_note = note_text_area_end_x - note_text_area_start_x
 
-    actual_max_text_w = available_width_for_note_default
-    text_block_x_start = pad_x # Default left-alignment
+    actual_max_text_w = available_width_for_note 
+    text_block_x_start = pad_x 
 
     lines = []
     if note_text and note_text.strip():
-        # 3. Enhanced Text Wrapping/Placement (3 Tiers)
-        char_count = len(note_text)
-        if char_count < 50: # T1: Very Short
-            if orientation == "vertical":
-                # 3. You still wrap too early on vertical card.
-                actual_max_text_w = int(available_width_for_note_default * 0.85) # Increased from 0.75
-            else:
-                actual_max_text_w = int(available_width_for_note_default * 0.50)
-            # For horizontal centering of the text block itself
-            text_block_x_start = pad_x + (available_width_for_note_default - actual_max_text_w) // 2 
-            log(f"T1 Note detected ({char_count} chars). Width: {actual_max_text_w}, X-start: {text_block_x_start}", request_id=request_id)
-        elif char_count < 150: # T2: Medium
-            if orientation == "vertical":
-                # 3. You still wrap too early on vertical card.
-                actual_max_text_w = int(available_width_for_note_default * 0.95) # Increased from 0.90
-            else:
-                actual_max_text_w = int(available_width_for_note_default * 0.75)
-            text_block_x_start = pad_x + (available_width_for_note_default - actual_max_text_w) // 2
-            log(f"T2 Note detected ({char_count} chars). Width: {actual_max_text_w}, X-start: {text_block_x_start}", request_id=request_id)
-        # else T3 (Long): use actual_max_text_w = available_width_for_note_default and text_block_x_start = pad_x
-        else:
-            log(f"T3 Note detected ({char_count} chars). Full width used.", request_id=request_id)
-
         note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.2
         words = note_text.split(' ')
         current_line_for_note = ""
         for word in words:
-            if get_text_dimensions(current_line_for_note + word, f_note)[0] <= actual_max_text_w:
+            word_width, _ = get_text_dimensions(word, f_note)
+            if current_line_for_note == "" and word_width > actual_max_text_w: 
+                lines.append(word) 
+                current_line_for_note = "" 
+            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= actual_max_text_w:
                 current_line_for_note += word + " "
             else:
                 lines.append(current_line_for_note.strip())
                 current_line_for_note = word + " "
-        lines.append(current_line_for_note.strip())
-        lines = [line for line in lines if line] # Clean empty lines
-    
+        if current_line_for_note.strip():
+            lines.append(current_line_for_note.strip())
+        lines = [line for line in lines if line] 
+
+        # Center the entire block of text (left-aligned lines within the centered block)
+        if lines:
+            max_actual_line_width = 0
+            for line_in_block in lines:
+                line_width, _ = get_text_dimensions(line_in_block, f_note)
+                if line_width > max_actual_line_width:
+                    max_actual_line_width = line_width
+            
+            text_block_x_start = pad_x + max(0, (available_width_for_note - max_actual_line_width) // 2)
+            log(f"Note Block Centered. MaxLineWidth: {max_actual_line_width}, X-start: {text_block_x_start}", request_id=request_id)
+        else: # No lines, reset to default padding
+             text_block_x_start = pad_x
+
     total_note_block_height = 0
     if lines:
         total_note_block_height = (len(lines) * note_line_h) - (note_line_h * 0.2) # No extra space after last line
     
-    # Vertical positioning for the note block
-    available_height_for_elements = card_h - pad_y - pad_y # Total usable vertical space
-    current_elements_y = pad_y
+    available_height_for_elements = card_h - pad_y - pad_y 
+    current_elements_y = pad_y # Start Y for drawing note/date block
 
+    # Vertical centering of the note block itself
     if lines:
         if total_note_block_height < available_height_for_elements:
             current_elements_y = pad_y + (available_height_for_elements - total_note_block_height) / 2
-        # Ensure it doesn't go above top_pad if centering makes it so
-        current_elements_y = max(pad_y, current_elements_y)
+        current_elements_y = max(pad_y, current_elements_y) # Ensure it doesn't go above top padding
         
-        # Render note lines
+        # Render note lines (they are individually left-aligned starting at text_block_x_start)
         temp_note_y = current_elements_y
         for line_idx, line in enumerate(lines):
-            if temp_note_y + note_line_h <= card_h - pad_y + (note_line_h*0.2):
+            if temp_note_y + note_line_h <= card_h - pad_y + (note_line_h*0.2): # Check if it fits
                 draw.text((text_block_x_start, temp_note_y), line, font=f_note, fill=text_color)
                 temp_note_y += note_line_h
             else:
                 log(f"Note text truncated at line {line_idx + 1}", request_id=request_id); break
         current_elements_y = temp_note_y # Update Y to be after the note block
-    else:
-        # If no note, position date in vertical center of the card (left of stamp)
+    else: # If no note text, position date in vertical center of the card (left of stamp)
         date_placeholder_h = get_text_dimensions("Tg", f_date_below_note)[1]
         current_elements_y = pad_y + (available_height_for_elements - date_placeholder_h) / 2
         current_elements_y = max(pad_y, current_elements_y)
 
-    # Render Date below note (or centered if no note)
+    # Render Date
     if created_at_iso_str:
         try:
             dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
-            date_str = dt_object.strftime('%B %d, %Y') # Format: August 28, 2024
+            date_str = dt_object.strftime('%B %d, %Y')
             date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
             
-            # Date horizontal alignment based on note tier
-            date_x = text_block_x_start # Align with note block by default for T3
-            if not lines: # No note text, center date in the available width left of stamp
-                 date_x = pad_x + (available_width_for_note_default - date_w) // 2
-            elif len(note_text) < 150 : # T1 & T2, center date relative to the overall available width for notes
-                 date_x = pad_x + (available_width_for_note_default - date_w) // 2
+            # Date positioning: further from text, and more to the right
+            vertical_gap_after_note = int(note_line_h * 0.8 if lines else 0) + (20 if lines else 0)
+            date_y = current_elements_y + vertical_gap_after_note
+            
+            # Position date towards the right of the available note area
+            date_right_padding = int(card_w * 0.01) # Reduced from 0.02 to move date further right
+            date_x = pad_x + available_width_for_note - date_w - date_right_padding
+            date_x = max(pad_x, date_x) # Ensure it doesn't go left of the left padding
 
-            date_y = current_elements_y + int(note_line_h * 0.2 if lines else 0) # Add small gap if after notes
-            if date_y + date_h < card_h - pad_y : # Check if date fits
+            if date_y + date_h < card_h - pad_y: # Check if date fits vertically
                  draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
             else:
-                 log("Date does not fit below note text.", request_id=request_id)
+                 log("Date does not fit below note text / at new position.", request_id=request_id)
         except ValueError:
             log(f"Could not parse date for below note: {created_at_iso_str}", level="WARNING", request_id=request_id)
 
-    # Rounded corners 
     radius = 40
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
     ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
