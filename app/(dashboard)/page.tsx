@@ -751,6 +751,12 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Inserted Title and HR */}
+        <div className="w-full flex flex-col items-start my-4">
+          <hr className="w-full border-b border-foreground mb-2" />
+          <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
+        </div>
+
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
             <WizardStep 
