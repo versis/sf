@@ -3,7 +3,6 @@
 import ImageUpload from '@/components/ImageUpload';
 import ColorTools from '@/components/ColorTools';
 import WizardStep from '@/components/WizardStep';
-import CardDisplay from '@/components/CardDisplay';
 import { useState, useRef, useEffect } from 'react';
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
@@ -1122,7 +1121,7 @@ export default function HomePage() {
           <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
         </div>
 
-        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
+        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
               title="1: Begin with an Image"
