@@ -37,12 +37,6 @@ const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
 ];
 const SWIPE_THRESHOLD = 50;
 
-const EXAMPLE_CARDS = [
-  { v: "/example-card-v-1.png", h: "/example-card-h-1.png" },
-  { v: "/example-card-v-2.png", h: "/example-card-h-2.png" },
-  { v: "/example-card-v-3.png", h: "/example-card-h-3.png" },
-];
-
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
@@ -453,7 +447,7 @@ export default function HomePage() {
       const imageFile = new File([blob], selectedFileName || 'user_image.png', { type: blob.type });
 
       // STEP 2: Finalize Card Generation
-      const cardNameToSend = colorNameInput.trim() === '' ? 'Untitled Shade' : colorNameInput;
+      const cardNameToSend = colorNameInput.trim() === '' ? 'Untitled Shade' : colorInput;
       console.log(`Frontend: Finalizing card generation for DB ID: ${dbId} with name: ${cardNameToSend}`);
       const formData = new FormData();
       formData.append('user_image', imageFile);
