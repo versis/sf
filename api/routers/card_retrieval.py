@@ -22,17 +22,30 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class CardDetailsResponse(BaseModel):
+    id: Optional[int] = None
     extendedId: Optional[str] = Field(None, alias="extended_id")
     hexColor: Optional[str] = Field(None, alias="hex_color")
-    colorName: Optional[str] = None
-    description: Optional[str] = None
-    phoneticName: Optional[str] = None
-    article: Optional[str] = None
-    horizontalImageUrl: Optional[str] = Field(None, alias="horizontal_image_url")
-    verticalImageUrl: Optional[str] = Field(None, alias="vertical_image_url")
+    status: Optional[str] = None
+    card_name: Optional[str] = None
+    
+    frontHorizontalImageUrl: Optional[str] = Field(None, alias="front_horizontal_image_url")
+    frontVerticalImageUrl: Optional[str] = Field(None, alias="front_vertical_image_url")
+    
+    noteText: Optional[str] = Field(None, alias="note_text")
+    hasNote: Optional[bool] = Field(None, alias="has_note")
+    backHorizontalImageUrl: Optional[str] = Field(None, alias="back_horizontal_image_url")
+    backVerticalImageUrl: Optional[str] = Field(None, alias="back_vertical_image_url")
+    
+    aiName: Optional[str] = Field(None, alias="ai_name")
+    aiPhonetic: Optional[str] = Field(None, alias="ai_phonetic")
+    aiArticle: Optional[str] = Field(None, alias="ai_article")
+    aiDescription: Optional[str] = Field(None, alias="ai_description")
+
+    createdAt: Optional[str] = Field(None, alias="created_at")
+    updatedAt: Optional[str] = Field(None, alias="updated_at")
 
     class Config:
-        populate_by_name = True # Allows using alias for field names from DB
+        populate_by_name = True
 
 @router.get("/generations", response_model=List[CardGenerationRecord])
 async def get_generations(limit: int = 30, offset: int = 0):
@@ -44,7 +57,7 @@ async def get_generations(limit: int = 30, offset: int = 0):
     try:
         db_response = (
             supabase_client.table("card_generations")
-            .select("id, extended_id, hex_color, status, metadata, horizontal_image_url, vertical_image_url, created_at, updated_at")
+            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
             .order("created_at", desc=True)
             .limit(limit)
             .offset(offset)
@@ -83,7 +96,7 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
     try:
         db_response = (
             supabase_client.table("card_generations")
-            .select("hex_color, horizontal_image_url, vertical_image_url, extended_id, metadata")
+            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
             .eq("extended_id", original_extended_id) # Query directly on extended_id
             .single()
             .execute()
@@ -95,17 +108,29 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
         
         card_data = db_response.data
         metadata = card_data.get("metadata", {})
-        image_gen_details = metadata.get("image_generation_details", {})
+        # Determine card_name from metadata (consistent with Next.js API route)
+        db_card_name = metadata.get("card_name") # From finalize step
+        ai_card_name = metadata.get("ai_info", {}).get("colorName") # From AI
+        final_card_name = db_card_name or ai_card_name or "Color Card"
 
         response_data = CardDetailsResponse(
+            id=card_data.get("id"),
             extended_id=card_data.get("extended_id"),
             hex_color=card_data.get("hex_color"),
-            colorName=image_gen_details.get("colorName"),
-            description=image_gen_details.get("description"),
-            phoneticName=image_gen_details.get("phoneticName"),
-            article=image_gen_details.get("article"),
-            horizontal_image_url=card_data.get("horizontal_image_url"),
-            vertical_image_url=card_data.get("vertical_image_url")
+            status=card_data.get("status"),
+            card_name=final_card_name,
+            front_horizontal_image_url=card_data.get("front_horizontal_image_url"),
+            front_vertical_image_url=card_data.get("front_vertical_image_url"),
+            note_text=card_data.get("note_text"),
+            has_note=card_data.get("has_note"),
+            back_horizontal_image_url=card_data.get("back_horizontal_image_url"),
+            back_vertical_image_url=card_data.get("back_vertical_image_url"),
+            ai_name=metadata.get("ai_info", {}).get("colorName"), 
+            ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
+            ai_article=metadata.get("ai_info", {}).get("article"),
+            ai_description=metadata.get("ai_info", {}).get("description"),
+            created_at=card_data.get("created_at"),
+            updated_at=card_data.get("updated_at")
         )
         
         info(f"Card found for original_extended_id: {original_extended_id}. Prepared data: {response_data.model_dump(by_alias=True)}")
