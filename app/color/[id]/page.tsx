@@ -185,7 +185,7 @@ export default function ColorCardPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-6xl">
         <header className="py-6 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
             <Link href="/" className="flex items-center justify-center cursor-pointer">
