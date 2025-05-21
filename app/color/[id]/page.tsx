@@ -229,7 +229,7 @@ export default function ColorCardPage() {
           <hr className="w-full border-t-2 border-foreground my-6 order-3" />
 
           <div className="w-full order-4 mt-4">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-2xl mx-auto">
               <h3 className="text-xl font-semibold mb-3 text-left">What is it?</h3>
               <div className="text-md text-muted-foreground space-y-3">
                 <p>

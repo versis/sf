@@ -31,8 +31,8 @@ const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
 // User-provided IDs (ensure these are correct and exist in your DB)
 const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
-  "000000113 FE F",
-  "000000114 FE F",
+  "000000098 FE F",
+  "000000109 FE F",
   // Add more valid extended_ids from your database here
 ];
 const SWIPE_THRESHOLD = 50;
@@ -447,7 +447,7 @@ export default function HomePage() {
       const imageFile = new File([blob], selectedFileName || 'user_image.png', { type: blob.type });
 
       // STEP 2: Finalize Card Generation
-      const cardNameToSend = colorNameInput.trim() === '' ? 'Untitled Shade' : colorInput;
+      const cardNameToSend = colorNameInput.trim() === '' ? 'Untitled Shade' : colorNameInput;
       console.log(`Frontend: Finalizing card generation for DB ID: ${dbId} with name: ${cardNameToSend}`);
       const formData = new FormData();
       formData.append('user_image', imageFile);
@@ -759,24 +759,58 @@ export default function HomePage() {
     }
 
     pendingImageChangeRef.current = { direction, newIndex };
-    const imagePath = isMobile ? EXAMPLE_CARDS[newIndex].v : EXAMPLE_CARDS[newIndex].h;
-    setNextImageToLoad(imagePath);
+    
+    // Ensure we have card data for the newIndex
+    const card = fetchedHeroCards[newIndex];
+    if (!card) {
+      console.error(`[Hero Animation] Card data not found for newIndex: ${newIndex}. Available cards: ${fetchedHeroCards.length}`);
+      setIsAnimating(false);
+      setNextImageToLoad(null);
+      setAnimationClass('');
+      setSwipeDeltaX(0);
+      pendingImageChangeRef.current = null;
+      return;
+    }
 
-    console.log("[Hero Animation] Triggering. Next image to load:", imagePath);
+    const primaryImagePath = isMobile ? card.v : card.h;
+    const fallbackImagePath = isMobile ? card.h : card.v;
+    let finalImagePathToLoad: string | null = null;
 
-    // Start slide-out animation for the current image
-    if (direction === 'next') {
-      setAnimationClass('slide-out-left-animation');
+    if (primaryImagePath) {
+      finalImagePathToLoad = primaryImagePath;
+    } else if (fallbackImagePath) {
+      console.warn(`[Hero Animation] No image for preferred orientation (newIndex: ${newIndex}, mobile: ${isMobile}). Using fallback.`);
+      finalImagePathToLoad = fallbackImagePath;
     } else {
-      setAnimationClass('slide-out-right-animation');
+      console.error(`[Hero Animation] No image path for either orientation for card at newIndex: ${newIndex}`);
+      setIsAnimating(false);
+      setNextImageToLoad(null);
+      setAnimationClass('');
+      setSwipeDeltaX(0);
+      pendingImageChangeRef.current = null;
+      return;
+    }
+    
+    setNextImageToLoad(finalImagePathToLoad);
+
+    console.log("[Hero Animation] Triggering. Next image to load:", finalImagePathToLoad);
+
+    // If, after all checks, finalImagePathToLoad is null, we shouldn't proceed to new Image()
+    if (finalImagePathToLoad === null) {
+        console.error("[Hero Animation] Critical error: finalImagePathToLoad is null before new Image(). This shouldn't happen.");
+        setIsAnimating(false);
+        // Reset relevant states if necessary
+        return;
     }
 
     const img = new Image();
     img.onload = () => {
-      console.log("[Hero Animation] New image loaded:", imagePath);
-      if (pendingImageChangeRef.current && pendingImageChangeRef.current.newIndex === newIndex) {
-        setDisplayedImageSrc(imagePath); // Set the new image src
-        setCurrentExampleCardIndex(newIndex); // Update the index
+      console.log("[Hero Animation] New image loaded:", finalImagePathToLoad);
+      if (pendingImageChangeRef.current && 
+          pendingImageChangeRef.current.newIndex === newIndex && 
+          nextImageToLoad === finalImagePathToLoad) { // finalImagePathToLoad is implicitly a string here due to img.onload
+        setDisplayedImageSrc(finalImagePathToLoad); 
+        setCurrentExampleCardIndex(newIndex); 
         setSwipeDeltaX(0); // Reset swipe delta before slide-in
         
         // Determine slide-in direction based on the original intended direction
@@ -795,15 +829,16 @@ export default function HomePage() {
       setIsAnimating(true); // Keep isAnimating true until slide-in finishes
     };
     img.onerror = () => {
-      console.error("[Hero Animation] Failed to load image:", imagePath);
-      // Handle error: maybe revert, show placeholder, or just stop animation
-      setNextImageToLoad(null);
-      setAnimationClass(''); // Clear any slide-out animation
-      setIsAnimating(false);
-      setSwipeDeltaX(0);
-      pendingImageChangeRef.current = null;
+      console.error("[Hero Animation] Failed to load image:", finalImagePathToLoad);
+      if (nextImageToLoad === finalImagePathToLoad) { 
+        setNextImageToLoad(null);
+        setAnimationClass(''); 
+        setIsAnimating(false);
+        setSwipeDeltaX(0);
+        pendingImageChangeRef.current = null; 
+      }
     };
-    img.src = imagePath;
+    img.src = finalImagePathToLoad; // finalImagePathToLoad is confirmed not null here by the check above
 
   };
 
