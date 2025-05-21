@@ -86,6 +86,9 @@ importers:
       react-markdown:
         specifier: ^9.0.1
         version: 9.1.0(@types/react@18.2.7)(react@18.2.0)
+      react-swipeable:
+        specifier: ^7.0.2
+        version: 7.0.2(react@18.2.0)
       remark-gfm:
         specifier: ^4.0.0
         version: 4.0.1
@@ -1953,6 +1956,11 @@ packages:
       '@types/react': '>=18'
       react: '>=18'
 
+  react-swipeable@7.0.2:
+    resolution: {integrity: sha512-v1Qx1l+aC2fdxKa9aKJiaU/ZxmJ5o98RMoFwUqAAzVWUcxgfHFXDDruCKXhw6zIYXm6V64JiHgP9f6mlME5l8w==}
+    peerDependencies:
+      react: ^16.8.3 || ^17 || ^18 || ^19.0.0 || ^19.0.0-rc
+
   react@18.2.0:
     resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
     engines: {node: '>=0.10.0'}
@@ -3340,7 +3348,7 @@ snapshots:
       eslint: 8.41.0
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.31.0(eslint@8.41.0))(eslint@8.41.0)
-      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1)(eslint@8.41.0)
+      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0(eslint@8.41.0))(eslint@8.41.0))(eslint@8.41.0)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.41.0)
       eslint-plugin-react: 7.37.5(eslint@8.41.0)
       eslint-plugin-react-hooks: 4.6.2(eslint@8.41.0)
@@ -3370,7 +3378,7 @@ snapshots:
       tinyglobby: 0.2.13
       unrs-resolver: 1.7.2
     optionalDependencies:
-      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1)(eslint@8.41.0)
+      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0(eslint@8.41.0))(eslint@8.41.0))(eslint@8.41.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -3385,7 +3393,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1)(eslint@8.41.0):
+  eslint-plugin-import@2.31.0(@typescript-eslint/parser@5.62.0(eslint@8.41.0)(typescript@5.0.4))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0(eslint@8.41.0))(eslint@8.41.0))(eslint@8.41.0):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.8
@@ -4632,6 +4640,10 @@ snapshots:
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
+
+  react-swipeable@7.0.2(react@18.2.0):
+    dependencies:
+      react: 18.2.0
 
   react@18.2.0:
     dependencies:

@@ -12,8 +12,10 @@ interface CardDisplayProps {
   backHorizontalImageUrl?: string | null;
   backVerticalImageUrl?: string | null;
   noteText?: string | null;
-  hasNote?: boolean;
+  hasNote?: boolean | null;
   isFlippable?: boolean;
+  isFlipped: boolean;
+  onFlip: () => void;
   currentDisplayOrientation: 'horizontal' | 'vertical';
   setCurrentDisplayOrientation: (orientation: 'horizontal' | 'vertical') => void;
   handleShare: () => Promise<void>;
@@ -42,7 +44,9 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   backVerticalImageUrl,
   noteText,
   hasNote,
-  isFlippable,
+  isFlippable = false,
+  isFlipped,
+  onFlip,
   currentDisplayOrientation,
   setCurrentDisplayOrientation,
   handleShare,
@@ -59,11 +63,28 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 }) => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
-  const [isFlipped, setIsFlipped] = useState<boolean>(false);
+  const [currentOrientation, setCurrentOrientation] = useState<"horizontal" | "vertical">(currentDisplayOrientation);
 
   const flipperBaseClasses = "card-flipper";
-  const flipperAspectRatio = currentDisplayOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
-  const verticalMaxHeightClass = currentDisplayOrientation === 'vertical' ? 'max-h-[85vh]' : '';
+  const flipperAspectRatio = currentOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
+  const verticalMaxHeightClass = currentOrientation === 'vertical' ? 'max-h-[80vh]' : '';
+
+  const cardImageUrl = currentOrientation === "horizontal" ? frontHorizontalImageUrl : frontVerticalImageUrl;
+  const backCardImageUrl = currentOrientation === "horizontal" ? backHorizontalImageUrl : backVerticalImageUrl;
+
+  const handleSetOrientation = (newOrientation: "horizontal" | "vertical") => {
+    setCurrentOrientation(newOrientation);
+    if (isFlipped) {
+      onFlip();
+    }
+    setIsActionsMenuOpen(false);
+  };
+
+  const handleFlipCard = () => {
+    if (isFlippable) {
+      onFlip();
+    }
+  };
 
   useEffect(() => {
     if (!disableScrollOnLoad && isVisible && cardDisplayControlsRef?.current) {
@@ -71,7 +92,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     }
-  }, [currentDisplayOrientation, isVisible, cardDisplayControlsRef, frontHorizontalImageUrl, frontVerticalImageUrl]);
+  }, [currentOrientation, isVisible, cardDisplayControlsRef, frontHorizontalImageUrl, frontVerticalImageUrl]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,6 +105,12 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isFlippable && isFlipped) {
+      onFlip();
+    }
+  }, [isFlippable, isFlipped, onFlip]);
 
   if (!isVisible) {
     return null;
@@ -98,7 +125,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
   const downloadButtonText = () => {
     let text = "Download";
-    const dimensions = KNOWN_DIMENSIONS[currentDisplayOrientation];
+    const dimensions = KNOWN_DIMENSIONS[currentOrientation];
     text += ` (${dimensions.width}x${dimensions.height}px)`;
     return text;
   };
@@ -163,10 +190,10 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${verticalMaxHeightClass} ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
-              {(currentDisplayOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
-                <img src={frontHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
-              ) : (currentDisplayOrientation === 'vertical' && frontVerticalImageUrl) ? (
-                <img src={frontVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+              {(currentOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
+                <img src={frontHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
+              ) : (currentOrientation === 'vertical' && frontVerticalImageUrl) ? (
+                <img src={frontVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
               ) : (
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Image not available or selected orientation has no image.</p>
@@ -176,10 +203,10 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
             {/* BACK OF CARD */}
             <div className="card-face card-back">
-              {(currentDisplayOrientation === 'horizontal' && backHorizontalImageUrl) ? (
-                <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
-              ) : (currentDisplayOrientation === 'vertical' && backVerticalImageUrl) ? (
-                <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+              {(currentOrientation === 'horizontal' && backHorizontalImageUrl) ? (
+                <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
+              ) : (currentOrientation === 'vertical' && backVerticalImageUrl) ? (
+                <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
               ) : (
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Card back not available.</p>
@@ -190,11 +217,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         </div>
 
         <div className="flex flex-col justify-center items-center gap-4 mt-6 w-full">
-          {isFlippable && (backHorizontalImageUrl || backVerticalImageUrl) && (
+          {isFlippable && (backCardImageUrl || (hasNote === false)) && (
             <div className="flex flex-col items-center mb-2">
               <div className="flex items-center justify-center gap-4">
                 <button
-                  onClick={() => setIsFlipped(!isFlipped)}
+                  onClick={handleFlipCard}
                   className={revealButtonStyle}
                   title={isFlipped ? "Go Back" : "Reveal the Note"}
                 >
@@ -213,16 +240,16 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                   {isActionsMenuOpen && (
                     <div className="absolute top-full mt-2 right-0 bg-card border-2 border-foreground shadow-lg rounded-md py-1 z-10 flex flex-col min-w-[240px]">
                       <button
-                        onClick={() => { setCurrentDisplayOrientation('horizontal'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
+                        onClick={() => handleSetOrientation('horizontal')}
                         disabled={!frontHorizontalImageUrl}
-                        className={currentDisplayOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
+                        className={currentOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
                       >
                         <RectangleHorizontal size={16} /> View Horizontal
                       </button>
                       <button
-                        onClick={() => { setCurrentDisplayOrientation('vertical'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
+                        onClick={() => handleSetOrientation('vertical')}
                         disabled={!frontVerticalImageUrl}
-                        className={currentDisplayOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
+                        className={currentOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
                       >
                         <RectangleVertical size={16} /> View Vertical
                       </button>
@@ -242,8 +269,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                         <Link2 size={16} /> Copy URL
                       </button>
                       <button
-                        onClick={() => { handleDownloadImage(currentDisplayOrientation); setIsActionsMenuOpen(false); }}
-                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !frontHorizontalImageUrl : !frontVerticalImageUrl)}
+                        onClick={() => { handleDownloadImage(currentOrientation); setIsActionsMenuOpen(false); }}
+                        disabled={isGenerating || (currentOrientation === 'horizontal' ? !frontHorizontalImageUrl : !frontVerticalImageUrl)}
                         className={dropdownItemStyles}
                       >
                         <Download size={16} /> {downloadButtonText()}

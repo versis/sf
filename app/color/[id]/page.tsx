@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import Link from 'next/link'; // Re-added Link import for the header
 import CardDisplay from '@/components/CardDisplay'; // Import the new component
+import { useSwipeable, type SwipeableHandlers } from 'react-swipeable'; // Added SwipeableHandlers type
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
@@ -46,7 +47,35 @@ export default function ColorCardPage() {
   const [colorVariations, setColorVariations] = useState<Array<{name: string, hex: string}>>([]);
   const [variationsLoading, setVariationsLoading] = useState<boolean>(false);
   const [variationsError, setVariationsError] = useState<string | null>(null);
+  const [isFlipped, setIsFlipped] = useState(false); // Added for card flip state
 
+  const handleFlip = () => {
+    if (cardDetails?.hasNote === false || cardDetails?.backHorizontalImageUrl || cardDetails?.backVerticalImageUrl) {
+      setIsFlipped(!isFlipped);
+    }
+  };
+
+  const swipeableElementRef = useRef<HTMLDivElement>(null);
+
+  // Get all handlers from useSwipeable, including its ref callback
+  const allSwipeableHandlers: SwipeableHandlers = useSwipeable({
+    onSwipedLeft: () => handleFlip(),
+    onSwipedRight: () => handleFlip(),
+    preventScrollOnSwipe: true,
+    trackMouse: true,
+  });
+
+  // Separate the ref callback from the other event handlers
+  const { ref: swipeableHookRef, ...eventHandlersToSpread } = allSwipeableHandlers;
+
+  // Custom ref callback to assign the node to both our local ref and react-swipeable's ref
+  const combinedRefCallback = (node: HTMLDivElement | null) => {
+    if (typeof swipeableHookRef === 'function') {
+      swipeableHookRef(node);
+    }
+    (swipeableElementRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+  
   // Detect if user is on mobile for initial orientation
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -75,7 +104,7 @@ export default function ColorCardPage() {
     if (id && loading) {
       const fetchCardDetails = async () => {
         setLoading(true); 
-        setVariationsLoading(true); // Also set variations loading true initially
+        setVariationsLoading(true);
         setVariationsError(null);
         setColorVariations([]);
         try {
@@ -128,9 +157,9 @@ export default function ColorCardPage() {
           setError(null);
           // Scroll to card display after data is loaded and orientation set
           // Ensure this happens after the DOM has a chance to update with the CardDisplay component
-          // setTimeout(() => {
-          //   cardDisplaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // }, 150); // Small delay - REMOVED
+          setTimeout(() => {
+            swipeableElementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150); // Adjusted delay slightly
 
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -245,7 +274,11 @@ export default function ColorCardPage() {
         
         {/* Use a flex container with explicit order to ensure consistent layout */}
         <div className="flex flex-col items-center w-full mt-6">
-          <div ref={cardDisplaySectionRef} className="w-full flex flex-col items-center justify-center order-1">
+          <div 
+            ref={combinedRefCallback} // Use our combined ref callback
+            {...eventHandlersToSpread} // Spread only the event handlers
+            className="w-full flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing"
+          >
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
               frontHorizontalImageUrl={cardDetails?.frontHorizontalImageUrl || null}
@@ -255,6 +288,8 @@ export default function ColorCardPage() {
               noteText={cardDetails?.noteText || null}
               hasNote={cardDetails?.hasNote || false}
               isFlippable={true}
+              isFlipped={isFlipped}
+              onFlip={handleFlip}
               currentDisplayOrientation={currentDisplayOrientation}
               setCurrentDisplayOrientation={setCurrentDisplayOrientation}
               handleShare={handleShareAction} 

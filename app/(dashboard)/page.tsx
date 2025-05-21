@@ -8,7 +8,7 @@ import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
-import { Save, SkipForward } from 'lucide-react';
+import { Save, SkipForward, PenSquare } from 'lucide-react';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -1333,7 +1333,7 @@ export default function HomePage() {
                             disabled={isSubmittingNote || noteText.length > 500}
                             className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                           >
-                            <Save size={20} className="mr-2" />
+                            <PenSquare size={20} className="mr-2" />
                             Save The Note On The Back
                           </button>
                           <button
