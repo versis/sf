@@ -686,12 +686,10 @@ export default function HomePage() {
   const handleAnimationEnd = () => {
     console.log(`[Hero] Animation ended: ${animationClass}`);
     
-    // Only when a slide-in animation finishes, we reset the animation state
-    if (animationClass.includes('slide-in')) {
-      console.log(`[Hero] Slide-in animation completed, resetting state`);
-      setAnimationClass('');
-      setIsAnimating(false);
-      setSwipeDeltaX(0);
+    // Only handle slide-out animations ending here
+    if (animationClass.includes('slide-out')) {
+      // Animation end is handled via setTimeout in triggerImageChangeAnimation
+      console.log(`[Hero] Slide-out animation completed`);
     } else if (animationClass === 'snap-back-animation') {
       // Handle snap-back for swipe that didn't reach threshold
       console.log(`[Hero] Snap-back animation completed`);
@@ -699,8 +697,16 @@ export default function HomePage() {
       setIsAnimating(false);
       setSwipeDeltaX(0);
     }
-    // We don't need to handle slide-out completion since the timeouts in 
-    // triggerImageChangeAnimation take care of that coordination
+  };
+
+  // For the CSS transitions (slide-from-left/right), we need to handle transitionend events
+  const handleTransitionEnd = () => {
+    if (animationClass === 'slide-from-left' || animationClass === 'slide-from-right') {
+      console.log(`[Hero] Slide-in transition completed`);
+      setAnimationClass(''); // Remove transition class after complete
+      setIsAnimating(false);
+      setSwipeDeltaX(0);
+    }
   };
 
   const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
@@ -753,26 +759,34 @@ export default function HomePage() {
     img.onload = () => {
       console.log(`[Hero] Next image loaded: ${imageUrl}`);
       
-      // Use a coordinated approach for a smoother transition:
-      // 1. Wait for slide-out animation to finish
-      // 2. Change the image while keeping it invisible 
-      // 3. Apply the slide-in animation
-      setTimeout(() => {
-        // Set the animation class that will position the new image off-screen but ready to slide in
-        const slideInClass = direction === 'next' ? 'slide-in-from-right-animation' : 'slide-in-from-left-animation';
-        
-        // Change DOM in a single batch to avoid flashing
-        // This applies the position-only class first without animation to place the new image off-screen
-        setAnimationClass('position-only-' + slideInClass);
+      // We'll use a completely different approach with CSS transitions instead of animations
+    // This gives us more control over the timing and prevents double-loading appearance
+    
+    // First, wait for the slide-out animation to complete
+    setTimeout(() => {
+      // Prepare for the immediate transition on next render
+      if (direction === 'next') {
+        // No animation class - just update the image, which will be initially invisible
+        setAnimationClass('prepare-from-right');
         setDisplayedImageSrc(imageUrl);
         setCurrentExampleCardIndex(newIndex);
         
-        // Force a layout reflow to ensure the new position takes effect before animating
-        requestAnimationFrame(() => {
-          // Now apply the actual animation to slide it in
-          setAnimationClass(slideInClass);
-        });
-      }, 300); // Match this to the slide-out animation duration in CSS
+        // Force browser to process the above changes before starting animation
+        setTimeout(() => {
+          // Now trigger the slide-in with CSS transition
+          setAnimationClass('slide-from-right');
+        }, 20);
+      } else {
+        // Same flow for previous direction
+        setAnimationClass('prepare-from-left');
+        setDisplayedImageSrc(imageUrl);
+        setCurrentExampleCardIndex(newIndex);
+        
+        setTimeout(() => {
+          setAnimationClass('slide-from-left');
+        }, 20);
+      }
+    }, 300); // Match this to the slide-out animation duration in CSS
     };
     
     img.onerror = () => {
@@ -834,18 +848,12 @@ export default function HomePage() {
         .scroll-target-with-offset {
           scroll-margin-top: 2rem; /* Adjust this value as needed */
         }
+        /* We'll use animations for slide-out only */
         @keyframes slideOutLeftKf {
           to { transform: translateX(-100%); opacity: 0; }
         }
         .slide-out-left-animation {
           animation: slideOutLeftKf 0.3s ease-out forwards;
-        }
-        @keyframes slideInFromRightKf {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0%); opacity: 1; }
-        }
-        .slide-in-from-right-animation {
-          animation: slideInFromRightKf 0.3s ease-out forwards;
         }
         @keyframes slideOutRightKf {
           to { transform: translateX(100%); opacity: 0; }
@@ -853,21 +861,25 @@ export default function HomePage() {
         .slide-out-right-animation {
           animation: slideOutRightKf 0.3s ease-out forwards;
         }
-        @keyframes slideInFromLeftKf {
-          from { transform: translateX(-100%); opacity: 0; }
-          to { transform: translateX(0%); opacity: 1; }
-        }
-        .slide-in-from-left-animation {
-          animation: slideInFromLeftKf 0.3s ease-out forwards;
-        }
-        /* Position-only classes for smooth transitions (no animation) */
-        .position-only-slide-in-from-right-animation {
+
+        /* And transitions for slide-in for better control */
+        /* Initial positions before transitions */
+        .prepare-from-right {
           transform: translateX(100%);
           opacity: 0;
+          transition: none; /* No transition when setting up */
         }
-        .position-only-slide-in-from-left-animation {
+        .prepare-from-left {
           transform: translateX(-100%);
           opacity: 0;
+          transition: none; /* No transition when setting up */
+        }
+        
+        /* Actual transitions */
+        .slide-from-right, .slide-from-left {
+          transform: translateX(0%);
+          opacity: 1;
+          transition: transform 0.3s ease-out, opacity 0.3s ease-out;
         }
         .example-card-image-container {
             overflow: hidden; /* Ensure images don't overflow during animations */
@@ -961,6 +973,7 @@ export default function HomePage() {
                     style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
                     draggable="false"
                     onAnimationEnd={handleAnimationEnd}
+                    onTransitionEnd={handleTransitionEnd}
                     onError={(e) => { 
                         console.error("[Hero Image Error] Failed to load displayedImageSrc:", displayedImageSrc, e);
                         // Optionally set to a placeholder if an image fails to load, e.g.:
