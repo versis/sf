@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { copyTextToClipboard } from '@/lib/clipboardUtils';
 
 interface Generation {
   id: number;
@@ -52,6 +54,7 @@ export default function ReviewPage() {
   const [offset, setOffset] = useState(0);
   const observer = useRef<IntersectionObserver | null>(null);
   const [itemOrientations, setItemOrientations] = useState<ItemOrientations>({});
+  const [copyIdFeedback, setCopyIdFeedback] = useState<{ id: number | null; message: string }>({ id: null, message: '' });
 
   const fetchGenerations = useCallback(async (currentOffset: number) => {
     if (isLoading || !hasMore) return;
@@ -181,6 +184,37 @@ export default function ReviewPage() {
                       Vertical
                     </button>
                   </div>
+
+                  {gen.extended_id && (
+                    <div className="mt-3 space-y-2">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Card ID: </span>
+                        <span className="text-sm text-gray-600 font-mono mr-2">{gen.extended_id}</span>
+                        <button 
+                          onClick={async () => {
+                            await copyTextToClipboard(gen.extended_id!, {
+                              onSuccess: (msg) => setCopyIdFeedback({ id: gen.id, message: msg }),
+                              onError: (msg) => setCopyIdFeedback({ id: gen.id, message: msg }),
+                            });
+                            setTimeout(() => setCopyIdFeedback({ id: null, message: '' }), 2000);
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline focus:outline-none"
+                        >
+                          Copy ID
+                        </button>
+                        {copyIdFeedback.id === gen.id && copyIdFeedback.message && (
+                          <span className="ml-2 text-xs text-blue-600">{copyIdFeedback.message}</span>
+                        )}
+                      </div>
+                      <div>
+                        <Link href={`/color/${gen.extended_id}`} legacyBehavior>
+                          <a className="text-sm text-blue-600 hover:text-blue-800 underline">
+                            View Full Card Details
+                          </a>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Image Area - DOM second, order-1 on medium+ (left side) */}

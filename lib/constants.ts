@@ -1,0 +1,1 @@
+export const COPY_SUCCESS_MESSAGE = "Link to your shade's story, copied! Go on, spread the freude."; 
