@@ -63,6 +63,10 @@ export default function HomePage() {
   const [generatedExtendedId, setGeneratedExtendedId] = useState<string | null>(null);
   const [currentExampleCardIndex, setCurrentExampleCardIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [swipeDeltaX, setSwipeDeltaX] = useState(0);
+  const [animationClass, setAnimationClass] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const pendingImageChangeRef = useRef<{ direction: 'next' | 'prev'; newIndex: number } | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
@@ -201,6 +205,12 @@ export default function HomePage() {
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
     console.log('Wizard reset.');
+
+    // Reset new animation states if necessary, though they are mostly transient
+    setSwipeDeltaX(0);
+    setAnimationClass('');
+    setIsAnimating(false);
+    pendingImageChangeRef.current = null;
   };
 
   const handleImageSelectedForUpload = (file: File) => {
@@ -617,12 +627,75 @@ export default function HomePage() {
     setShareFeedback(''); // Clear share feedback if copy is used
   };
 
+  const handleAnimationEnd = () => {
+    if (animationClass.includes('slide-out')) {
+      if (pendingImageChangeRef.current) {
+        setCurrentExampleCardIndex(pendingImageChangeRef.current.newIndex);
+        setSwipeDeltaX(0); // Reset transform before slide-in for the new image
+        if (pendingImageChangeRef.current.direction === 'next') {
+          setAnimationClass('slide-in-from-right-animation');
+        } else {
+          setAnimationClass('slide-in-from-left-animation');
+        }
+        pendingImageChangeRef.current = null;
+      }
+    } else if (animationClass.includes('slide-in')) {
+      setAnimationClass('');
+      setIsAnimating(false);
+    }
+  };
+
+  const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSwipeDeltaX(0); // Ensure no residual transform from a previous partial swipe
+
+    let newIndex: number;
+    if (targetIndex !== undefined) {
+        newIndex = targetIndex;
+    } else {
+        newIndex = direction === 'next'
+        ? (currentExampleCardIndex + 1) % EXAMPLE_CARDS.length
+        : (currentExampleCardIndex - 1 + EXAMPLE_CARDS.length) % EXAMPLE_CARDS.length;
+    }
+
+    if (newIndex === currentExampleCardIndex) {
+        setIsAnimating(false); // No change, so stop animation process
+        return;
+    }
+
+    pendingImageChangeRef.current = { direction, newIndex };
+
+    if (direction === 'next') {
+      setAnimationClass('slide-out-left-animation');
+    } else {
+      setAnimationClass('slide-out-right-animation');
+    }
+  };
+
   const handleNextExampleCard = () => {
-    setCurrentExampleCardIndex((prevIndex) => (prevIndex + 1) % EXAMPLE_CARDS.length);
+    triggerImageChangeAnimation('next');
   };
 
   const handlePrevExampleCard = () => {
-    setCurrentExampleCardIndex((prevIndex) => (prevIndex - 1 + EXAMPLE_CARDS.length) % EXAMPLE_CARDS.length);
+    triggerImageChangeAnimation('prev');
+  };
+
+  const handleDotClick = (index: number) => {
+    if (isAnimating || index === currentExampleCardIndex) return;
+    const direction = index > currentExampleCardIndex ? 'next' : 'prev'; // Simplistic, assumes not wrapping around for direction
+                                                                    // More robust: check if it's shorter to go next or prev for wrapping
+    // A more robust way to determine direction for dots when wrapping is needed:
+    // const numCards = EXAMPLE_CARDS.length;
+    // const diff = index - currentExampleCardIndex;
+    // let determinedDirection: 'next' | 'prev' = 'next';
+    // if (diff < 0) { // Target is "before" current
+    //    determinedDirection = (Math.abs(diff) < numCards / 2) ? 'prev' : 'next'; // Go prev if shorter, else wrap next
+    // } else { // Target is "after" current
+    //    determinedDirection = (diff < numCards / 2) ? 'next' : 'prev'; // Go next if shorter, else wrap prev
+    // }
+    // For simplicity, let's stick to the basic direction for now as clicks are usually direct.
+    triggerImageChangeAnimation(direction, index);
   };
 
   return (
@@ -649,6 +722,39 @@ export default function HomePage() {
         }
         .scroll-target-with-offset {
           scroll-margin-top: 2rem; /* Adjust this value as needed */
+        }
+        @keyframes slideOutLeftKf {
+          to { transform: translateX(-100%); opacity: 0.3; }
+        }
+        .slide-out-left-animation {
+          animation: slideOutLeftKf 0.3s ease-out forwards;
+        }
+        @keyframes slideInFromRightKf {
+          from { transform: translateX(100%); opacity: 0.3; }
+          to { transform: translateX(0%); opacity: 1; }
+        }
+        .slide-in-from-right-animation {
+          animation: slideInFromRightKf 0.3s ease-out forwards;
+        }
+        @keyframes slideOutRightKf {
+          to { transform: translateX(100%); opacity: 0.3; }
+        }
+        .slide-out-right-animation {
+          animation: slideOutRightKf 0.3s ease-out forwards;
+        }
+        @keyframes slideInFromLeftKf {
+          from { transform: translateX(-100%); opacity: 0.3; }
+          to { transform: translateX(0%); opacity: 1; }
+        }
+        .slide-in-from-left-animation {
+          animation: slideInFromLeftKf 0.3s ease-out forwards;
+        }
+        .example-card-image-container {
+            /* Add transition for the swipeDeltaX reset if needed, or rely on animation smoothness */
+            /* For swipeDeltaX reset (unsuccessful swipe), a direct transition on the image itself: */
+        }
+        .example-card-image.transitioning {
+            transition: transform 0.3s ease-out;
         }
       `}</style>
       
@@ -685,54 +791,70 @@ export default function HomePage() {
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
             <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
-              {/* Image Container - Common for Mobile and Desktop Image Source */}
-              <div 
-                className={`relative w-full mb-2 cursor-grab active:cursor-grabbing 
-                            ${isMobile ? 'max-w-xl aspect-[2/3] mx-auto' : 'max-w-xl aspect-video mx-auto'}`}
-                onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
-                onTouchMove={(e) => { /* Visual feedback */ }}
+              <div
+                className={'relative w-full mb-2 cursor-grab active:cursor-grabbing overflow-hidden example-card-image-container'}
+                onTouchStart={(e) => {
+                  if (isAnimating) return;
+                  setTouchStartX(e.touches[0].clientX);
+                  setAnimationClass('');
+                  setSwipeDeltaX(0); // Reset delta for direct interaction on image
+                }}
+                onTouchMove={(e) => {
+                  if (touchStartX === null || isAnimating) return;
+                  const currentX = e.touches[0].clientX;
+                  const delta = currentX - touchStartX;
+                  setSwipeDeltaX(delta);
+                }}
                 onTouchEnd={(e) => {
-                  if (touchStartX === null) return;
-                  const touchEndX = e.changedTouches[0].clientX;
-                  const deltaX = touchEndX - touchStartX;
-                  if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
-                    if (deltaX > 0) { handlePrevExampleCard(); }
-                    else { handleNextExampleCard(); }
+                  if (touchStartX === null || isAnimating) return;
+                  if (Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
+                    setIsAnimating(true);
+                    if (swipeDeltaX < 0) {
+                      triggerImageChangeAnimation('next');
+                    } else {
+                      triggerImageChangeAnimation('prev');
+                    }
+                  } else {
+                    setSwipeDeltaX(0);
                   }
                   setTouchStartX(null);
                 }}
               >
-                <img 
+                <img
                   src={isMobile ? EXAMPLE_CARDS[currentExampleCardIndex].v : EXAMPLE_CARDS[currentExampleCardIndex].h}
                   alt={`Example Shadefreude Card ${currentExampleCardIndex + 1}`}
-                  className="w-full h-full rounded-lg object-contain"
+                  className={`w-full h-full rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'}`}
+                  style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
                   draggable="false"
+                  onAnimationEnd={handleAnimationEnd}
                 />
-
-                {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
-                {!isMobile && (
-                  <>
-                    {currentExampleCardIndex > 0 && (
-                      <button 
-                        onClick={handlePrevExampleCard} 
-                        className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                        aria-label="Previous example card"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                      </button>
-                    )}
-                    {currentExampleCardIndex < EXAMPLE_CARDS.length - 1 && (
-                      <button 
-                        onClick={handleNextExampleCard} 
-                        className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                        aria-label="Next example card"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                      </button>
-                    )}
-                  </>
-                )}
               </div>
+
+              {/* Desktop Overlay/Side Buttons - Hidden on Mobile - MOVED HERE */}
+              {!isMobile && (
+                <>
+                  {currentExampleCardIndex > 0 && (
+                    <button
+                      onClick={handlePrevExampleCard}
+                      className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                      aria-label="Previous example card"
+                      disabled={isAnimating}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                  )}
+                  {currentExampleCardIndex < EXAMPLE_CARDS.length - 1 && (
+                    <button
+                      onClick={handleNextExampleCard}
+                      className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                      aria-label="Next example card"
+                      disabled={isAnimating}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                  )}
+                </>
+              )}
 
               {/* Mobile Dot Indicators - Hidden on Desktop */}
               {isMobile && (
@@ -740,7 +862,7 @@ export default function HomePage() {
                     {EXAMPLE_CARDS.map((_, index) => (
                         <button
                         key={index}
-                        onClick={() => setCurrentExampleCardIndex(index)}
+                        onClick={() => handleDotClick(index)}
                         className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-gray-300 hover:bg-gray-400'}`}
                         aria-label={`Go to example card ${index + 1}`}
                         />
