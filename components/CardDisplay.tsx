@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { 
-  MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical
+  MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical,
+  Undo2, BookOpenText
 } from 'lucide-react';
 
 interface CardDisplayProps {
@@ -56,21 +57,13 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   isVisible,
   disableScrollOnLoad,
 }) => {
-  // RE-ADD DEBUG LOGS FOR PROPS (Assuming these were intended to be kept from a previous step)
-  console.log("[CardDisplay Props] isVisible:", isVisible);
-  console.log("[CardDisplay Props] currentDisplayOrientation:", currentDisplayOrientation);
-  console.log("[CardDisplay Props] frontHorizontalImageUrl:", frontHorizontalImageUrl);
-  console.log("[CardDisplay Props] frontVerticalImageUrl:", frontVerticalImageUrl);
-  console.log("[CardDisplay Props] backHorizontalImageUrl:", backHorizontalImageUrl);
-  console.log("[CardDisplay Props] backVerticalImageUrl:", backVerticalImageUrl);
-  console.log("[CardDisplay Props] isFlippable:", isFlippable);
-  console.log("[CardDisplay Props] hasNote:", hasNote);
-
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
 
+  const flipperBaseClasses = "card-flipper";
   const flipperAspectRatio = currentDisplayOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
+  const verticalMaxHeightClass = currentDisplayOrientation === 'vertical' ? 'max-h-[85vh]' : '';
 
   useEffect(() => {
     if (!disableScrollOnLoad && isVisible && cardDisplayControlsRef?.current) {
@@ -96,7 +89,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     return null;
   }
 
-  const commonButtonStyles = "px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center gap-2";
+  const commonButtonStyles = "px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center";
   const dropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const activeDropdownItemStyles = "w-full px-4 py-2 text-left text-sm text-blue-700 bg-blue-50 font-semibold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const createNewButtonStyles = "text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 mt-4 sm:mt-0";
@@ -166,7 +159,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
-          <div className={`card-flipper ${flipperAspectRatio} ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
+          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${verticalMaxHeightClass} ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
               {(currentDisplayOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
@@ -197,64 +190,69 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
         <div className="flex flex-col justify-center items-center gap-4 mt-6 w-full">
           {isFlippable && (backHorizontalImageUrl || backVerticalImageUrl) && (
-             <button
-                onClick={() => setIsFlipped(!isFlipped)}
-                className={`${commonButtonStyles} mb-2`}
-                title={isFlipped ? "Show Front" : "Reveal Note"}
-              >
-                {isFlipped ? "Show Front" : (hasNote ? "Reveal Note" : "Show Back")}
-              </button>
-          )}
-          <div className="relative" ref={actionsMenuRef}>
-            <button
-              onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-              className={`${commonButtonStyles}`}
-              title="More actions"
-            >
-              <MoreHorizontal size={20} />
-              <span className="ml-2">More Actions</span>
-            </button>
-            {isActionsMenuOpen && (
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border-2 border-foreground shadow-lg rounded-md py-1 w-auto z-10 whitespace-nowrap">
-                 <button
-                  onClick={() => { setCurrentDisplayOrientation('horizontal'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
-                  disabled={!frontHorizontalImageUrl}
-                  className={currentDisplayOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
-                >
-                  <RectangleHorizontal size={16} className="mr-2" /> View Horizontal
-                </button>
+            <div className="flex flex-col items-center mb-2">
+              <div className="flex items-center justify-center gap-4">
                 <button
-                  onClick={() => { setCurrentDisplayOrientation('vertical'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
-                  disabled={!frontVerticalImageUrl}
-                  className={currentDisplayOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
+                  onClick={() => setIsFlipped(!isFlipped)}
+                  className={`${commonButtonStyles}`}
+                  title={isFlipped ? "Go Back" : "Reveal the Note"}
                 >
-                  <RectangleVertical size={16} className="mr-2" /> View Vertical
+                  {isFlipped ? <Undo2 size={20} className="mr-1.5" /> : <BookOpenText size={20} className="mr-1.5" />}
+                  <span className="text-sm">{isFlipped ? "Go Back" : "Reveal the Note"}</span>
                 </button>
-                <div className="h-px bg-border my-1 mx-2"></div>
-                <button
-                  onClick={() => { handleShare(); setIsActionsMenuOpen(false); }}
-                  disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
-                  className={dropdownItemStyles}
-                >
-                  <Share2 size={16} className="mr-2" /> Share
-                </button>
-                <button
-                  onClick={() => { handleCopyGeneratedUrl(); setIsActionsMenuOpen(false); }}
-                  disabled={isGenerating || !generatedExtendedId}
-                  className={dropdownItemStyles}
-                >
-                  <Link2 size={16} className="mr-2" /> Copy URL
-                </button>
-                <button
-                  onClick={() => { handleDownloadImage(currentDisplayOrientation); setIsActionsMenuOpen(false); }}
-                  disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !frontHorizontalImageUrl : !frontVerticalImageUrl)}
-                  className={dropdownItemStyles}
-                >
-                  <Download size={16} className="mr-2" /> {downloadButtonText()}
-                </button>
+
+                <div className="relative" ref={actionsMenuRef}>
+                  <button
+                    onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                    className={`${commonButtonStyles}`}
+                    title="More actions"
+                  >
+                    <MoreHorizontal size={20} />
+                  </button>
+                  {isActionsMenuOpen && (
+                    <div className="absolute top-full mt-2 right-0 md:left-1/2 md:-translate-x-1/2 bg-card border-2 border-foreground shadow-lg rounded-md py-1 w-auto z-10 whitespace-nowrap">
+                      <button
+                        onClick={() => { setCurrentDisplayOrientation('horizontal'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
+                        disabled={!frontHorizontalImageUrl}
+                        className={currentDisplayOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
+                      >
+                        <RectangleHorizontal size={16} className="mr-2" /> View Horizontal
+                      </button>
+                      <button
+                        onClick={() => { setCurrentDisplayOrientation('vertical'); setIsActionsMenuOpen(false); setIsFlipped(false); }}
+                        disabled={!frontVerticalImageUrl}
+                        className={currentDisplayOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
+                      >
+                        <RectangleVertical size={16} className="mr-2" /> View Vertical
+                      </button>
+                      <div className="h-px bg-border my-1 mx-2"></div>
+                      <button
+                        onClick={() => { handleShare(); setIsActionsMenuOpen(false); }}
+                        disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
+                        className={dropdownItemStyles}
+                      >
+                        <Share2 size={16} className="mr-2" /> Share
+                      </button>
+                      <button
+                        onClick={() => { handleCopyGeneratedUrl(); setIsActionsMenuOpen(false); }}
+                        disabled={isGenerating || !generatedExtendedId}
+                        className={dropdownItemStyles}
+                      >
+                        <Link2 size={16} className="mr-2" /> Copy URL
+                      </button>
+                      <button
+                        onClick={() => { handleDownloadImage(currentDisplayOrientation); setIsActionsMenuOpen(false); }}
+                        disabled={isGenerating || (currentDisplayOrientation === 'horizontal' ? !frontHorizontalImageUrl : !frontVerticalImageUrl)}
+                        className={dropdownItemStyles}
+                      >
+                        <Download size={16} className="mr-2" /> {downloadButtonText()}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {handleCreateNew && (
             <button
