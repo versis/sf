@@ -22,8 +22,8 @@ interface CardDisplayProps {
 
 // Define known dimensions (assuming these are correct, adjust if needed)
 const KNOWN_DIMENSIONS = {
-  horizontal: { width: 1200, height: 800 },
-  vertical: { width: 800, height: 1200 },
+  horizontal: { width: 1400, height: 700 },
+  vertical: { width: 700, height: 1400 },
 };
 
 const CardDisplay: React.FC<CardDisplayProps> = ({
