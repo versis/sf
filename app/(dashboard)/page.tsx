@@ -1101,10 +1101,10 @@ export default function HomePage() {
             handleShare={handleShare}
             handleCopyGeneratedUrl={handleCopyGeneratedUrl}
             handleDownloadImage={handleDownloadImage}
-            resetWizard={resetWizard}
+            handleCreateNew={resetWizard}
             isGenerating={isGenerating}
             generatedExtendedId={generatedExtendedId}
-            cardDisplayControlsRef={cardDisplayControlsRef} // Pass the existing ref
+            cardDisplayControlsRef={cardDisplayControlsRef}
             shareFeedback={shareFeedback}
             copyUrlFeedback={copyUrlFeedback}
           />
