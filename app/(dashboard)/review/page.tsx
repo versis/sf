@@ -158,7 +158,11 @@ export default function ReviewPage() {
           }
 
           const itemContent = (
-            <article key={gen.id} className="py-6">
+            <article 
+              key={gen.id} 
+              className="py-6"
+              ref={index === generations.length - 1 ? lastElementRef : null}
+            >
               {/* Main flex container: column on small, row on medium+ */}
               <div className="flex flex-col md:flex-row md:items-start">
                 
