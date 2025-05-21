@@ -350,7 +350,7 @@ async def generate_back_card_image_bytes(
     draw = ImageDraw.Draw(canvas)
     text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (245, 245, 245) 
     
-    pad_x = int(card_w * 0.035) # Reduced from 0.05 to increase available width for text
+    pad_x = int(card_w * 0.05) # Increased from 0.035 for more left padding
     pad_y = int(card_h * 0.05)
     
     f_note = get_font(note_font_size_val, weight="Regular", style="Italic", font_family="Inter", request_id=request_id)
@@ -468,10 +468,9 @@ async def generate_back_card_image_bytes(
             vertical_gap_after_note = int(note_line_h * 1.0 if lines else 0) + (30 if lines else 0)
             date_y = current_elements_y + vertical_gap_after_note
             
-            # New date X positioning: Center the date string on the entire card width.
-            date_x = (card_w - date_w) // 2
-            # Ensure it doesn't go left of the initial left padding (safety, though unlikely for centered date)
-            date_x = max(pad_x, date_x) 
+            # Date X positioning: Align end of date string with the right card padding.
+            date_x = card_w - date_w - 4 * pad_x
+            date_x = max(pad_x, date_x) # Ensure it doesn't go left of the left padding
 
             if date_y + date_h < card_h - pad_y: 
                  draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
