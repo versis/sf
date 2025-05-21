@@ -56,9 +56,21 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   isVisible,
   disableScrollOnLoad,
 }) => {
+  // RE-ADD DEBUG LOGS FOR PROPS (Assuming these were intended to be kept from a previous step)
+  console.log("[CardDisplay Props] isVisible:", isVisible);
+  console.log("[CardDisplay Props] currentDisplayOrientation:", currentDisplayOrientation);
+  console.log("[CardDisplay Props] frontHorizontalImageUrl:", frontHorizontalImageUrl);
+  console.log("[CardDisplay Props] frontVerticalImageUrl:", frontVerticalImageUrl);
+  console.log("[CardDisplay Props] backHorizontalImageUrl:", backHorizontalImageUrl);
+  console.log("[CardDisplay Props] backVerticalImageUrl:", backVerticalImageUrl);
+  console.log("[CardDisplay Props] isFlippable:", isFlippable);
+  console.log("[CardDisplay Props] hasNote:", hasNote);
+
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
+
+  const flipperAspectRatio = currentDisplayOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
 
   useEffect(() => {
     if (!disableScrollOnLoad && isVisible && cardDisplayControlsRef?.current) {
@@ -99,17 +111,70 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
   return (
     <section ref={cardDisplayControlsRef} className="w-full px-1 py-2 md:px-2 md:py-2 mt-0 flex flex-col items-center scroll-target-with-offset">
+      <style jsx global>{`
+        .perspective-container {
+          perspective: 1200px; /* Increased perspective for a more pronounced 3D effect */
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%; /* Ensure it takes width for aspect ratio calculation */
+        }
+
+        /* This is the div that will have the dynamic Tailwind aspect ratio class */
+        .flippable-card-wrapper .card-flipper {
+          position: relative; /* Children will be absolute to this */
+          width: 100%; /* Takes full width of its column in the grid/flex parent */
+          /* Height will be determined by Tailwind's aspect-ratio class (e.g., aspect-[2/1]) */
+          transform-style: preserve-3d;
+          transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smoother, slightly bouncy flip */
+        }
+
+        .flippable-card-wrapper .card-flipper.is-flipped {
+          transform: rotateY(180deg);
+        }
+
+        .flippable-card-wrapper .card-face {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          display: flex; /* For aligning content (like placeholders) within the face */
+          justify-content: center;
+          align-items: center;
+          overflow: hidden; /* Prevent content spill, especially from rotated children */
+          border-radius: inherit; /* Inherit border-radius from parent if any */
+        }
+
+        .flippable-card-wrapper .card-face img {
+          display: block; /* Remove extra space below image */
+          width: 100%;    /* Make image fill the face */
+          height: 100%;   /* Make image fill the face */
+          object-fit: contain; /* Or 'cover'; 'contain' ensures whole image is visible */
+          border-radius: inherit; /* Ensure image corners match face corners if rounded */
+        }
+        
+        .flippable-card-wrapper .card-front {
+          /* z-index: 2; /* Usually not needed with backface-visibility */
+        }
+
+        .flippable-card-wrapper .card-back {
+          transform: rotateY(180deg);
+        }
+      `}</style>
+
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
-          <div className={`card-flipper ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
+          <div className={`card-flipper ${flipperAspectRatio} ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
               {(currentDisplayOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
-                <img src={frontHorizontalImageUrl} alt="Generated horizontal card (front)" className="max-w-full rounded-md md:max-w-2xl lg:max-w-4xl h-auto cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+                <img src={frontHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
               ) : (currentDisplayOrientation === 'vertical' && frontVerticalImageUrl) ? (
-                <img src={frontVerticalImageUrl} alt="Generated vertical card (front)" className="max-w-full rounded-md md:max-w-sm lg:max-w-md max-h-[85vh] h-auto cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+                <img src={frontVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
               ) : (
-                <div className="flex justify-center items-center w-full aspect-[16/9] md:aspect-[4/3] lg:aspect-[3/2] bg-muted rounded-md">
+                <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Image not available or selected orientation has no image.</p>
                 </div>
               )}
@@ -118,11 +183,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
             {/* BACK OF CARD */}
             <div className="card-face card-back">
               {(currentDisplayOrientation === 'horizontal' && backHorizontalImageUrl) ? (
-                <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="max-w-full rounded-md md:max-w-2xl lg:max-w-4xl h-auto cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+                <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
               ) : (currentDisplayOrientation === 'vertical' && backVerticalImageUrl) ? (
-                <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="max-w-full rounded-md md:max-w-sm lg:max-w-md max-h-[85vh] h-auto cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
+                <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={() => isFlippable && setIsFlipped(!isFlipped)} />
               ) : (
-                <div className="flex justify-center items-center w-full aspect-[16/9] md:aspect-[4/3] lg:aspect-[3/2] bg-muted rounded-md">
+                <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Card back not available.</p>
                 </div>
               )}
