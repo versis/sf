@@ -724,26 +724,26 @@ export default function HomePage() {
           scroll-margin-top: 2rem; /* Adjust this value as needed */
         }
         @keyframes slideOutLeftKf {
-          to { transform: translateX(-100%); opacity: 0.3; }
+          to { transform: translateX(-100%); opacity: 0; }
         }
         .slide-out-left-animation {
           animation: slideOutLeftKf 0.3s ease-out forwards;
         }
         @keyframes slideInFromRightKf {
-          from { transform: translateX(100%); opacity: 0.3; }
+          from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0%); opacity: 1; }
         }
         .slide-in-from-right-animation {
           animation: slideInFromRightKf 0.3s ease-out forwards;
         }
         @keyframes slideOutRightKf {
-          to { transform: translateX(100%); opacity: 0.3; }
+          to { transform: translateX(100%); opacity: 0; }
         }
         .slide-out-right-animation {
           animation: slideOutRightKf 0.3s ease-out forwards;
         }
         @keyframes slideInFromLeftKf {
-          from { transform: translateX(-100%); opacity: 0.3; }
+          from { transform: translateX(-100%); opacity: 0; }
           to { transform: translateX(0%); opacity: 1; }
         }
         .slide-in-from-left-animation {
