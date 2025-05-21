@@ -767,7 +767,7 @@ export default function HomePage() {
     if (!card) {
       console.error(`[Hero Animation] Card data not found for newIndex: ${newIndex}. Available cards: ${fetchedHeroCards.length}`);
       setIsAnimating(false);
-      setNextImageToLoad(null);
+      setNextImageToLoad(() => null); // Functional update
       setAnimationClass('');
       setSwipeDeltaX(0);
       pendingImageChangeRef.current = null;
@@ -786,7 +786,7 @@ export default function HomePage() {
     } else {
       console.error(`[Hero Animation] No image path for either orientation for card at newIndex: ${newIndex}`);
       setIsAnimating(false);
-      setNextImageToLoad(null);
+      setNextImageToLoad(() => null); // Functional update
       setAnimationClass('');
       setSwipeDeltaX(0);
       pendingImageChangeRef.current = null;
@@ -811,7 +811,8 @@ export default function HomePage() {
       if (pendingImageChangeRef.current && 
           pendingImageChangeRef.current.newIndex === newIndex && 
           nextImageToLoad === finalImagePathToLoad) { // finalImagePathToLoad is implicitly a string here due to img.onload
-        setDisplayedImageSrc(finalImagePathToLoad); 
+        // At this point, finalImagePathToLoad can't be null since we checked before creating the Image
+        setDisplayedImageSrc(finalImagePathToLoad as string); 
         setCurrentExampleCardIndex(newIndex); 
         setSwipeDeltaX(0); // Reset swipe delta before slide-in
         
@@ -823,7 +824,7 @@ export default function HomePage() {
         } else {
           setAnimationClass('slide-in-from-left-animation');
         }
-        setNextImageToLoad(null);
+        setNextImageToLoad(() => null); // Functional update
         // pendingImageChangeRef.current is cleared in handleAnimationEnd after slide-in
       } else {
         console.log("[Hero Animation] Loaded image does not match pending image. Likely a rapid new swipe. Current pending:", pendingImageChangeRef.current);
@@ -833,7 +834,7 @@ export default function HomePage() {
     img.onerror = () => {
       console.error("[Hero Animation] Failed to load image:", finalImagePathToLoad);
       if (nextImageToLoad === finalImagePathToLoad) { 
-        setNextImageToLoad(null);
+        setNextImageToLoad(() => null); // Functional update
         setAnimationClass(''); 
         setIsAnimating(false);
         setSwipeDeltaX(0);
@@ -1293,7 +1294,7 @@ export default function HomePage() {
             generatedHorizontalImageUrl={generatedHorizontalImageUrl}
             generatedVerticalImageUrl={generatedVerticalImageUrl}
             currentDisplayOrientation={currentDisplayOrientation}
-            setCurrentDisplayOrientation={setCurrentDisplayOrientation}
+            setCurrentDisplayOrientation={(orientation: 'horizontal' | 'vertical') => setCurrentDisplayOrientation(orientation)}
             handleShare={handleShare}
             handleCopyGeneratedUrl={handleCopyGeneratedUrl}
             handleDownloadImage={handleDownloadImage}
