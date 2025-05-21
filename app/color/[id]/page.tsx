@@ -232,7 +232,7 @@ export default function ColorCardPage() {
             </Link>
           </div>
 
-          <hr className="w-full border-t-2 border-foreground order-3 mt-6 mb-4" />
+          <hr className="w-full border-t-2 border-foreground my-6 order-3" />
 
           <div className="w-full text-left order-4 mt-4">
             <div className="text-md text-muted-foreground max-w-2xl mx-auto space-y-3">

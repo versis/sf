@@ -200,7 +200,7 @@ export default function ReviewPage() {
           return (
             <React.Fragment key={gen.id}>
               {itemContent}
-              {index < generations.length - 1 && <hr className="w-full border-t border-foreground my-6" />}
+              {index < generations.length - 1 && <hr className="w-full border-t-2 border-foreground my-6" />}
             </React.Fragment>
           );
         })}
