@@ -89,12 +89,12 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     return null;
   }
 
-  const commonButtonStyles = "px-4 py-2 md:px-6 md:py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center";
+  const commonButtonStyles = "px-6 py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center";
   const dropdownItemStyles = "w-full px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center justify-start gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const activeDropdownItemStyles = "w-full px-4 py-2 text-sm text-blue-700 bg-blue-50 font-semibold flex items-center justify-start gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const createNewButtonStyles = "text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2";
 
-  const revealButtonStyle = "px-4 py-2 md:px-6 md:py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
+  const revealButtonStyle = "px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
 
   const downloadButtonText = () => {
     let text = "Download";
