@@ -909,7 +909,7 @@ export default function HomePage() {
                 <img
                   src={displayedImageSrc}
                   alt={`Example Shadefreude Card ${currentExampleCardIndex + 1}`}
-                  className={`w-full h-full rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'}`}
+                  className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
                   style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
                   draggable="false"
                   onAnimationEnd={handleAnimationEnd}
