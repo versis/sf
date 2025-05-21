@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical } from 'lucide-react';
+import { 
+  MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical
+} from 'lucide-react';
 
 interface CardDisplayProps {
   generatedHorizontalImageUrl: string | null;
@@ -100,13 +102,16 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         </div>
 
         <div className="flex flex-col justify-center items-center gap-4 mt-6 w-full">
+          {/* Temporary Icon Showcase was here - Removed */}
+          
           <div className="relative" ref={actionsMenuRef}>
             <button
               onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-              className={`${commonButtonStyles} w-48`}
+              className={`${commonButtonStyles}`}
               title="More actions"
             >
               <MoreHorizontal size={20} />
+              <span className="ml-2">More Actions</span>
             </button>
             {isActionsMenuOpen && (
               <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border-2 border-foreground shadow-lg rounded-md py-1 w-auto z-10 whitespace-nowrap">
