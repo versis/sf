@@ -60,6 +60,7 @@ export async function GET(
 
   try {
     // console.log(`Fetching card with extended_id: ${extended_id}`);
+
     const { data, error } = await supabase
       .from('card_generations') // Your table name
       .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
