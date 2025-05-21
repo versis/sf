@@ -967,7 +967,7 @@ export default function HomePage() {
         </div>
 
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12'}>
-          <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col md:order-1">
+          <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
               title="1: Begin with an Image"
               stepNumber={1} 
@@ -1165,7 +1165,7 @@ export default function HomePage() {
                 )}
                 {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
                   <div className="p-2 text-center">
-                    <p className="text-base">Your unique hue, now with its own story.</p>
+                    <p className="text-base">Your unique shade, now with its own story.</p>
                   </div>
                 )}
                  {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
