@@ -225,10 +225,10 @@ export default function ColorCardPage() {
           <div className="w-full flex justify-center order-2 mt-6">
             <Link
               href="/"
-              className="text-blue-700 font-semibold underline flex items-center justify-center gap-2"
+              className="text-blue-700 hover:text-blue-800 font-semibold underline flex items-center justify-center gap-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Create Your Own Unique Card
+              Create Your Own Card
             </Link>
           </div>
 
@@ -236,7 +236,7 @@ export default function ColorCardPage() {
 
           <div className="w-full order-4 mt-4">
             <div className="max-w-4xl mx-auto">
-              <h3 className="text-2xl font-semibold mb-3 text-left">What is it?</h3>
+              <h3 className="text-xl font-semibold mb-3 text-left">What is it?</h3>
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
                   You&apos;ve landed on a unique shadefreude creation
