@@ -93,7 +93,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         <div className="relative flex flex-col sm:flex-row justify-center items-center gap-4 mt-6 w-full" ref={actionsMenuRef}>
           <button
             onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-            className={`${commonButtonStyles} sm:w-auto`}
+            className={`${commonButtonStyles} w-32`}
             title="More actions"
           >
             <MoreHorizontal size={20} />
