@@ -753,17 +753,26 @@ export default function HomePage() {
     img.onload = () => {
       console.log(`[Hero] Next image loaded: ${imageUrl}`);
       
-      // Use a timeout matching the slide-out animation duration to coordinate the transition
+      // Use a coordinated approach for a smoother transition:
+      // 1. Wait for slide-out animation to finish
+      // 2. Change the image while keeping it invisible 
+      // 3. Apply the slide-in animation
       setTimeout(() => {
-        // Set the new image and index
+        // Set the animation class that will position the new image off-screen but ready to slide in
+        const slideInClass = direction === 'next' ? 'slide-in-from-right-animation' : 'slide-in-from-left-animation';
+        
+        // Change DOM in a single batch to avoid flashing
+        // This applies the position-only class first without animation to place the new image off-screen
+        setAnimationClass('position-only-' + slideInClass);
         setDisplayedImageSrc(imageUrl);
         setCurrentExampleCardIndex(newIndex);
         
-        // Apply the slide-in animation
-        setTimeout(() => {
-          setAnimationClass(direction === 'next' ? 'slide-in-from-right-animation' : 'slide-in-from-left-animation');
-        }, 50); // Small delay to ensure the DOM updates with the new image before animation starts
-      }, 300); // Match this to the animation duration in CSS
+        // Force a layout reflow to ensure the new position takes effect before animating
+        requestAnimationFrame(() => {
+          // Now apply the actual animation to slide it in
+          setAnimationClass(slideInClass);
+        });
+      }, 300); // Match this to the slide-out animation duration in CSS
     };
     
     img.onerror = () => {
@@ -851,9 +860,17 @@ export default function HomePage() {
         .slide-in-from-left-animation {
           animation: slideInFromLeftKf 0.3s ease-out forwards;
         }
+        /* Position-only classes for smooth transitions (no animation) */
+        .position-only-slide-in-from-right-animation {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        .position-only-slide-in-from-left-animation {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
         .example-card-image-container {
-            /* Add transition for the swipeDeltaX reset if needed, or rely on animation smoothness */
-            /* For swipeDeltaX reset (unsuccessful swipe), a direct transition on the image itself: */
+            overflow: hidden; /* Ensure images don't overflow during animations */
         }
         .example-card-image.transitioning {
             transition: transform 0.3s ease-out;
