@@ -1236,7 +1236,8 @@ export default function HomePage() {
                 )}
                 {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
                   <div className="p-2 text-center">
-                    <p className="text-base">Your unique shade, now with its own story.</p>
+                    <p className="text-base">Your unique shadefreude card is ready.</p>
+                    <p className="text-base">Now with its own story.</p>
                   </div>
                 )}
                  {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
