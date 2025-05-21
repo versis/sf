@@ -10,15 +10,15 @@ import { useState, useRef, useEffect } from 'react';
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
 
 const DUMMY_MESSAGES = [
-  "Waking the muses of color for your special hue...",
   "My AI assistant is 'tinkering' with its poetic potential...",
-  "Consulting the chromatic soul of your image...",
   "Now for its exclusive identity: assigning a unique serial number...",
   "It\'ll look like #000000XXX – each one is one-of-a-kind!...",
   "Then, it gets the special 'FE F' stamp...",
   "The 'FE' stands for 'First Edition'!",
   "And the 'F'? That means this creation is entirely 'Free' for you.",
   "The AI is distilling its essence, crafting a unique name and tale...",
+  "Consulting the chromatic soul of your image...",
+  "Waking the muses of color for your special hue...",
   "It's taking a final look... (it\'s a bit of a perfectionist!)",
   "Polishing your unique color artifact...",
   "Get ready! Your personal shadefreude is about to debut."
