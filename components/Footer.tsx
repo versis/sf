@@ -22,11 +22,11 @@ const Footer = () => {
   };
 
   return (
-    <footer className="text-center py-4 text-sm mt-8">
-      <div className="w-full max-w-6xl mx-auto px-6 md:px-12">
+    <footer className="text-center py-4 text-sm mt-8 px-6 md:px-12">
+      <div className="w-full max-w-6xl mx-auto">
         <div className="border-t-2 border-foreground" />
       </div>
-      <div className="mt-4 flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-2">
+      <div className="w-full max-w-6xl mx-auto mt-4 flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-2">
         <span>
           &copy; {new Date().getFullYear()} <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="hover:underline">tinker.institute</a>
         </span>
