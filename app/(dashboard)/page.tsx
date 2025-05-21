@@ -9,6 +9,7 @@ import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
+import { Save, SkipForward } from 'lucide-react';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -1222,47 +1223,35 @@ export default function HomePage() {
                         let lineToDisplay: string | undefined;
                         let currentMessageContent: string | undefined;
                         let showCursor = false;
-                        // Use a fixed height matching text-xs and leading-tight to prevent layout shifts
                         const pClassName = "m-0 p-0 leading-tight";
-
                         if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
-                          // Waiting for new line delay: display the *previous* fully typed line.
                           const prevLineIdx = logic.lineIdx - 1;
                           currentMessageContent = DUMMY_MESSAGES[prevLineIdx];
-                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent; // Should be fully typed.
-                          // Show cursor on the completed line during the pause.
+                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent;
                           if (lineToDisplay && lineToDisplay.length === (currentMessageContent?.length || 0)) {
                             showCursor = true;
                           }
                         } else {
-                          // Actively typing the current line, or just about to start it.
                           currentMessageContent = DUMMY_MESSAGES[logic.lineIdx];
                           lineToDisplay = typedLines[logic.lineIdx] || "";
-
                           if (logic.lineIdx < DUMMY_MESSAGES.length) {
-                            // Show cursor if actively typing OR if the line is empty and we have content to type.
                             if (lineToDisplay.length < (currentMessageContent?.length || 0)) {
                                 showCursor = true;
                             } else if (lineToDisplay === "" && currentMessageContent) {
-                                // About to type the first character of the current line.
                                 showCursor = true;
                             }
                           }
                         }
-                        
-                        // Defensive: If all messages are done but interval is somehow still active (e.g. timing edge case)
                         if (logic.lineIdx >= DUMMY_MESSAGES.length && logic.intervalId && DUMMY_MESSAGES.length > 0) {
                             const lastMessageIndex = DUMMY_MESSAGES.length - 1;
                             const lastTypedLine = typedLines[lastMessageIndex];
                             const lastDummyMessage = DUMMY_MESSAGES[lastMessageIndex];
                             if (lastTypedLine && lastDummyMessage && lastTypedLine.length === lastDummyMessage.length) {
                                 lineToDisplay = lastTypedLine;
-                                showCursor = true; // Keep cursor on very last line.
+                                showCursor = true; 
                             }
                         }
-
-                        // Render logic
-                        if (lineToDisplay !== undefined) { // lineToDisplay could be an empty string ""
+                        if (lineToDisplay !== undefined) { 
                           return (
                             <p className={pClassName}>
                               {lineToDisplay}
@@ -1270,7 +1259,6 @@ export default function HomePage() {
                             </p>
                           );
                         } 
-                        // Fallback for initial state: cursor on empty line if messages exist and generation started.
                         else if (isGenerating && logic.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && typedLines.length > 0 && typedLines[0] === "") {
                            return (
                             <p className={pClassName}>
@@ -1278,7 +1266,6 @@ export default function HomePage() {
                             </p>
                            );
                         }
-                        // Default empty state to maintain height if no line to display.
                         return <p className={pClassName}>&nbsp;</p>;
                       })()}
                     </div>
@@ -1294,37 +1281,84 @@ export default function HomePage() {
                   <div className="p-4 text-center">
                     <p
                       className="text-base text-red-500 mb-4"
-                      dangerouslySetInnerHTML={{
-                        __html: (typeof generationError === 'string' ? 
-                                 generationError : 
-                                 (generationError as any).message || 'An unexpected error occurred'
-                                ).replace(/<br\s*\/?b?>/gi, '<br />')
-                      }}
+                      dangerouslySetInnerHTML={{ __html: (typeof generationError === 'string' ? generationError : (generationError as any).message || 'An unexpected error occurred').replace(/<br\s*\/?b?>/gi, '<br />') }}
                     />
                     <div className="flex justify-center w-full mt-2">
-                      <button
-                        type="button"
-                        onClick={handleGenerateImageClick}
-                        className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center 
-                          ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`}
-                        disabled={isGenerating}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="23 4 23 10 17 10"></polyline>
-                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                        </svg>
+                      <button type="button" onClick={handleGenerateImageClick} className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`} disabled={isGenerating}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                         Retry Generation
                       </button>
                     </div>
                   </div>
                 )}
-                {!isGenerating && isResultsStepCompleted && !generationError && currentWizardStep === 'results' && (
-                  <div className="p-2 text-center">
-                    <p className="text-base">Your unique shadefreude card is ready.</p>
-                    <p className="text-base">Now with its own story.</p>
-                  </div>
+
+                {/* Conditional Block for Note Input (or Success Message) */}
+                {!isGenerating && !generationError && isResultsStepCompleted && currentWizardStep === 'results' && (
+                  <>
+                    {isNoteStepActive && currentDbId ? (
+                      // If Note Step is Active: Show Card Front + Note Form
+                      <div className="w-full p-1 md:p-2 space-y-4">
+                        <div ref={cardDisplayControlsRef} className="w-full mx-auto mb-4">
+                          {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
+                            <img src={generatedHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-auto object-contain rounded-md aspect-[2/1]" />
+                          ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
+                            <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2] max-h-[70vh]" />
+                          ) : (
+                            <div className="w-full aspect-[2/1] flex justify-center items-center bg-muted rounded-md">
+                              <p className="text-muted-foreground">Front image not available.</p>
+                            </div>
+                          )}
+                        </div>
+                        {/* New wrapper for textarea and char counter */}
+                        <div> 
+                          <textarea
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            placeholder="Add your personal note here (optional, max 500 characters)..."
+                            maxLength={500}
+                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground text-foreground text-sm resize"
+                            aria-label="Note for the back of the card"
+                          />
+                          <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
+                            <p className="text-xs text-muted-foreground">
+                              {noteText.length}/500 characters
+                            </p>
+                          </div>
+                        </div>
+                        {noteSubmissionError && (
+                          <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
+                        )}
+                        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                          <button
+                            onClick={() => handleNoteSubmission(noteText)}
+                            disabled={isSubmittingNote || noteText.length > 500}
+                            className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                          >
+                            <Save size={20} className="mr-2" />
+                            Save The Note On The Back
+                          </button>
+                          <button
+                            onClick={() => handleNoteSubmission()} 
+                            disabled={isSubmittingNote}
+                            className="px-6 py-3 font-semibold bg-background text-foreground border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none sm:w-auto"
+                          >
+                            <SkipForward size={20} className="mr-2" />
+                            Skip
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // If Note Step is NOT Active (but results are complete and no error)
+                      <div className="p-2 text-center">
+                        <p className="text-base">Your unique shadefreude card is ready.</p>
+                        <p className="text-base">Now with its own story.</p>
+                      </div>
+                    )}
+                  </>
                 )}
-                 {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
+
+                {/* Message for when color step is done, but results not yet generated */}
+                {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
                   <div className="p-4 text-center">
                     <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
                   </div>
@@ -1332,64 +1366,17 @@ export default function HomePage() {
               </WizardStep>
             )}
           </section>
-
-          {/* New Section for Card Display - Outside/Below Wizard */}
-          <CardDisplay
-            isVisible={!!(isResultsStepCompleted && !isGenerating && (generatedHorizontalImageUrl || generatedVerticalImageUrl))}
-            frontHorizontalImageUrl={generatedHorizontalImageUrl}
-            frontVerticalImageUrl={generatedVerticalImageUrl}
-            currentDisplayOrientation={currentDisplayOrientation}
-            setCurrentDisplayOrientation={(orientation: 'horizontal' | 'vertical') => setCurrentDisplayOrientation(orientation)}
-            handleShare={handleShare}
-            handleCopyGeneratedUrl={handleCopyGeneratedUrl}
-            handleDownloadImage={handleDownloadImage}
-            handleCreateNew={resetWizard}
-            isGenerating={isGenerating}
-            generatedExtendedId={generatedExtendedId}
-            cardDisplayControlsRef={cardDisplayControlsRef}
-            shareFeedback={shareFeedback}
-            copyUrlFeedback={copyUrlFeedback}
-          />
-
-          {/* === Section for Note Input === */}
+          {/* "+ Create New Card" button - MOVED HERE, below the wizard <section> */}
           {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
-            <section className="w-full mt-8 p-6 bg-card text-card-foreground border-2 border-foreground rounded-lg shadow-lg scroll-target-with-offset" id="note-input-section">
-              <h2 className="text-2xl font-semibold mb-4 text-center">Add a Personal Note (Optional)</h2>
-              <p className="text-sm text-muted-foreground mb-4 text-center">
-                Add a reflection, a memory, or a thought to the back of your card. Or, skip this step.
-              </p>
-              <textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Your note..."
-                className="w-full p-3 border border-input rounded-md min-h-[100px] focus:ring-2 focus:ring-blue-500 bg-background text-foreground placeholder-muted-foreground"
-                maxLength={500} // Example character limit
-              />
-              <p className="text-xs text-muted-foreground text-right mt-1 pr-1">{noteText.length} / 500</p>
-
-              {noteSubmissionError && (
-                <p className="text-sm text-red-500 mt-3 text-center">Error: {noteSubmissionError}</p>
-              )}
-
-              <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
-                <button
-                  type="button"
-                  onClick={() => handleNoteSubmission(noteText)}
-                  disabled={isSubmittingNote}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmittingNote && noteText.trim() ? 'Saving Note...' : isSubmittingNote ? 'Processing...' : 'Save Note & View Card'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNoteSubmission()} // Call with no argument for skip
-                  disabled={isSubmittingNote}
-                  className="px-6 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-md border border-border shadow-sm transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmittingNote && !noteText.trim() ? 'Processing...' : 'Skip & View Card'}
-                </button>
-              </div>
-            </section>
+            <div className="mt-3 flex justify-center"> {/* mt-6 changed to mt-3 */}
+              <button
+                onClick={resetWizard}
+                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
+                title="Create New Card"
+              >
+                + Create New Card
+              </button>
+            </div>
           )}
         </div>
       </div>
