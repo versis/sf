@@ -29,12 +29,19 @@ const DUMMY_MESSAGES = [
 const CHAR_TYPING_SPEED_MS = 30;
 const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
+// User-provided IDs (ensure these are correct and exist in your DB)
+const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
+  "000000113 FE F",
+  "000000114 FE F",
+  // Add more valid extended_ids from your database here
+];
+const SWIPE_THRESHOLD = 50;
+
 const EXAMPLE_CARDS = [
   { v: "/example-card-v-1.png", h: "/example-card-h-1.png" },
   { v: "/example-card-v-2.png", h: "/example-card-h-2.png" },
   { v: "/example-card-v-3.png", h: "/example-card-h-3.png" },
 ];
-const SWIPE_THRESHOLD = 50; // Minimum pixels for a swipe to be registered
 
 export default function HomePage() {
   const [uploadStepPreviewUrl, setUploadStepPreviewUrl] = useState<string | null>(null);
@@ -88,6 +95,9 @@ export default function HomePage() {
     isWaitingForNewLineDelay: false,
   });
   
+  const [heroCardsLoading, setHeroCardsLoading] = useState<boolean>(true);
+  const [fetchedHeroCards, setFetchedHeroCards] = useState<Array<{ id: string; v: string | null; h: string | null }>>([]);
+  
   // Scroll to the active step or results
   useEffect(() => {
     if (currentWizardStep === 'results') {
@@ -109,13 +119,78 @@ export default function HomePage() {
     };
   }, []);
 
-  // Initialize displayedImageSrc based on initial currentExampleCardIndex and isMobile
   useEffect(() => {
-    if (EXAMPLE_CARDS.length > 0) {
-      const initialImage = isMobile ? EXAMPLE_CARDS[currentExampleCardIndex].v : EXAMPLE_CARDS[currentExampleCardIndex].h;
-      setDisplayedImageSrc(initialImage);
+    const fetchAllHeroCards = async () => {
+      if (HERO_EXAMPLE_CARD_EXTENDED_IDS.length === 0) {
+        console.log("[Hero Data] No hero card IDs provided.");
+        setHeroCardsLoading(false);
+        setFetchedHeroCards([]);
+        return;
+      }
+      console.log("[Hero Data] Starting to fetch hero cards for IDs:", HERO_EXAMPLE_CARD_EXTENDED_IDS);
+      setHeroCardsLoading(true);
+      
+      const cardDataPromises = HERO_EXAMPLE_CARD_EXTENDED_IDS.map(async (extendedId) => {
+        try {
+          const encodedExtendedId = encodeURIComponent(extendedId);
+          const response = await fetch(`/api/retrieve-card-by-extended-id/${encodedExtendedId}`);
+          if (!response.ok) {
+            console.error(`[Hero Data] Failed to fetch hero card ${extendedId} (encoded: ${encodedExtendedId}): ${response.status} ${response.statusText}`);
+            return null; 
+          }
+          const data = await response.json();
+          return {
+            id: extendedId, // Store original ID for reference if needed
+            v: data.verticalImageUrl || null,
+            h: data.horizontalImageUrl || null,
+          };
+        } catch (error) {
+          console.error(`[Hero Data] Error fetching hero card ${extendedId}:`, error);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(cardDataPromises);
+      console.log("[Hero Data] Raw fetched results for all hero card IDs:", JSON.stringify(results, null, 2));
+      
+      const filteredResults = results.filter(card => card !== null && (card.v || card.h)) as Array<{ id: string; v: string | null; h: string | null }>;
+      console.log("[Hero Data] Filtered results (non-null with at least one image URL) being set to state:", JSON.stringify(filteredResults, null, 2));
+      
+      setFetchedHeroCards(filteredResults);
+      setHeroCardsLoading(false);
+    };
+
+    fetchAllHeroCards();
+  }, []); // Empty dependency array: Runs once on mount
+
+  // Initialize displayedImageSrc based on initial currentExampleCardIndex, isMobile, and fetchedHeroCards
+  useEffect(() => {
+    if (!heroCardsLoading && fetchedHeroCards.length > 0) {
+      const card = fetchedHeroCards[currentExampleCardIndex];
+      if (card) {
+        const initialImage = isMobile ? card.v : card.h;
+        if (initialImage) {
+          setDisplayedImageSrc(initialImage);
+          console.log("[Hero Init] Initial displayedImageSrc set to:", initialImage);
+        } else {
+          // Fallback if preferred orientation is missing for the first card
+          const fallbackImage = isMobile ? card.h : card.v;
+          if (fallbackImage) {
+            setDisplayedImageSrc(fallbackImage);
+            console.log("[Hero Init] Initial displayedImageSrc (fallback) set to:", fallbackImage);
+          } else {
+            console.warn(`[Hero Init] Card at index ${currentExampleCardIndex} has no image URLs.`);
+            // setDisplayedImageSrc('/placeholder-hero.png'); // Optional placeholder
+          }
+        }
+      } else {
+        console.warn(`[Hero Init] No card data found at currentExampleCardIndex: ${currentExampleCardIndex} after loading.`);
+      }
+    } else if (!heroCardsLoading && fetchedHeroCards.length === 0 && HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 0) {
+        console.warn("[Hero Init] Hero cards were fetched, but the resulting array is empty or all items filtered out.");
+        // setDisplayedImageSrc('/placeholder-hero.png'); // Optional placeholder
     }
-  }, [currentExampleCardIndex, isMobile]);
+  }, [currentExampleCardIndex, isMobile, fetchedHeroCards, heroCardsLoading]);
 
   useEffect(() => {
     const logic = typingLogicRef.current;
@@ -664,9 +739,18 @@ export default function HomePage() {
     if (targetIndex !== undefined) {
         newIndex = targetIndex;
     } else {
+        if (fetchedHeroCards.length === 0) { // Guard against empty array before modulo
+            setIsAnimating(false);
+            return;
+        }
         newIndex = direction === 'next'
-        ? (currentExampleCardIndex + 1) % EXAMPLE_CARDS.length
-        : (currentExampleCardIndex - 1 + EXAMPLE_CARDS.length) % EXAMPLE_CARDS.length;
+        ? (currentExampleCardIndex + 1) % fetchedHeroCards.length
+        : (currentExampleCardIndex - 1 + fetchedHeroCards.length) % fetchedHeroCards.length;
+    }
+
+    if (fetchedHeroCards.length === 0) {
+        setIsAnimating(false);
+        return;
     }
 
     if (newIndex === currentExampleCardIndex && !pendingImageChangeRef.current) {
@@ -884,18 +968,35 @@ export default function HomePage() {
                   setTouchStartX(null);
                 }}
               >
-                <img
-                  src={displayedImageSrc}
-                  alt={`Example Shadefreude Card ${currentExampleCardIndex + 1}`}
-                  className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
-                  style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
-                  draggable="false"
-                  onAnimationEnd={handleAnimationEnd}
-                />
+                {heroCardsLoading ? (
+                  <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
+                    <p className="text-muted-foreground">Loading examples...</p>
+                    {/* Optional: Add a spinner SVG icon here */}
+                  </div>
+                ) : fetchedHeroCards.length > 0 && displayedImageSrc ? (
+                  <img
+                    key={displayedImageSrc} // Add key for re-rendering on src change
+                    src={displayedImageSrc}
+                    alt={`Example Shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
+                    className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
+                    style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
+                    draggable="false"
+                    onAnimationEnd={handleAnimationEnd}
+                    onError={(e) => { 
+                        console.error("[Hero Image Error] Failed to load displayedImageSrc:", displayedImageSrc, e);
+                        // Optionally set to a placeholder if an image fails to load, e.g.:
+                        // setDisplayedImageSrc('/placeholder-error.png'); 
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
+                    <p className="text-muted-foreground">No example images available.</p>
+                  </div>
+                )}
               </div>
 
-              {/* Desktop Overlay/Side Buttons - Hidden on Mobile - MOVED HERE */}
-              {!isMobile && (
+              {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
+              {!isMobile && fetchedHeroCards.length > 1 && (
                 <>
                   {currentExampleCardIndex > 0 && (
                     <button
@@ -907,7 +1008,7 @@ export default function HomePage() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     </button>
                   )}
-                  {currentExampleCardIndex < EXAMPLE_CARDS.length - 1 && (
+                  {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
                     <button
                       onClick={handleNextExampleCard}
                       className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
@@ -921,11 +1022,11 @@ export default function HomePage() {
               )}
 
               {/* Mobile Dot Indicators - Hidden on Desktop */}
-              {isMobile && (
+              {isMobile && fetchedHeroCards.length > 1 && (
                 <div className="flex justify-center items-center space-x-2 mt-3">
-                    {EXAMPLE_CARDS.map((_, index) => (
+                    {fetchedHeroCards.map((card, index) => (
                         <button
-                        key={index}
+                        key={card.id || index} // Use card.id if available, otherwise index
                         onClick={() => handleDotClick(index)}
                         className={`w-2.5 h-2.5 rounded-full transition-colors ${currentExampleCardIndex === index ? 'bg-foreground' : 'bg-gray-300 hover:bg-gray-400'}`}
                         aria-label={`Go to example card ${index + 1}`}
