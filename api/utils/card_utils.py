@@ -315,7 +315,7 @@ async def generate_back_card_image_bytes(
         base_rgb_for_back = (200, 200, 200) 
     
     white_bg_rgb = (255, 255, 255)
-    opacity_for_original_color = 0.15 # Changed from 0.10 to 0.15 (15% opacity for more desaturated hue)
+    opacity_for_original_color = 0.07 # Changed from 0.15 to 0.07 (7% opacity for more desaturation)
 
     try:
         r_orig, g_orig, b_orig = base_rgb_for_back
@@ -465,16 +465,15 @@ async def generate_back_card_image_bytes(
             date_str = dt_object.strftime('%B %d, %Y')
             date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
             
-            # Date positioning: further from text, and more to the right
-            vertical_gap_after_note = int(note_line_h * 0.8 if lines else 0) + (20 if lines else 0)
+            vertical_gap_after_note = int(note_line_h * 1.0 if lines else 0) + (30 if lines else 0)
             date_y = current_elements_y + vertical_gap_after_note
             
-            # Position date towards the right of the available note area
-            date_right_padding = int(card_w * 0.01) # Reduced from 0.02 to move date further right
-            date_x = pad_x + available_width_for_note - date_w - date_right_padding
-            date_x = max(pad_x, date_x) # Ensure it doesn't go left of the left padding
+            # New date X positioning: Center the date string on the entire card width.
+            date_x = (card_w - date_w) // 2
+            # Ensure it doesn't go left of the initial left padding (safety, though unlikely for centered date)
+            date_x = max(pad_x, date_x) 
 
-            if date_y + date_h < card_h - pad_y: # Check if date fits vertically
+            if date_y + date_h < card_h - pad_y: 
                  draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
             else:
                  log("Date does not fit below note text / at new position.", request_id=request_id)
