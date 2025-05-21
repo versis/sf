@@ -103,7 +103,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           <div className="relative" ref={actionsMenuRef}>
             <button
               onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-              className={`${commonButtonStyles} w-40`}
+              className={`${commonButtonStyles} w-48`}
               title="More actions"
             >
               <MoreHorizontal size={20} />
