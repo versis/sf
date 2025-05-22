@@ -374,7 +374,7 @@ async def generate_back_card_image_bytes(
     available_width_for_note = note_text_area_end_x - note_text_area_start_x
 
     # 8. Prepare Note Text (Wrapping)
-    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.45 # Line height with spacing
+    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.65 # Increased from 1.45 for more spacing
     lines = []
     if note_text and note_text.strip():
         words = note_text.split(' ')
@@ -397,16 +397,7 @@ async def generate_back_card_image_bytes(
         lines = [line for line in lines if line] 
 
     # 9. Calculate Text Block Horizontal Start (for centering lines)
-    text_block_x_start = note_text_area_start_x # Default to left alignment
-    if lines:
-        max_actual_line_width = 0
-        for line_in_block in lines:
-            line_width, _ = get_text_dimensions(line_in_block, f_note)
-            if line_width > max_actual_line_width:
-                max_actual_line_width = line_width
-        if available_width_for_note > max_actual_line_width: # Only center if there's space
-            text_block_x_start = note_text_area_start_x + (available_width_for_note - max_actual_line_width) // 2
-        # If max_actual_line_width > available_width_for_note, it will be left-aligned and clipped by PIL
+    text_block_x_start = note_text_area_start_x # Always align to the start of the note area
 
     # 10. Calculate Vertical Positioning for the entire Note & Lines Block
     total_note_block_height = 0
@@ -426,9 +417,9 @@ async def generate_back_card_image_bytes(
 
     # 11. Define Rule Line Properties
     if text_color == (20, 20, 20): # Dark text
-        rule_line_color = (170, 170, 170)  # Darker grey lines, was (190,190,190)
+        rule_line_color = (80, 80, 80)  # Darker grey lines, was (190,190,190)
     else: # Light text (white)
-        rule_line_color = (100, 100, 100)  # Remains a darker grey for contrast on dark card backgrounds
+        rule_line_color = (210, 210, 210)  # Remains a darker grey for contrast on dark card backgrounds
     rule_line_thickness = 1
     rule_x_start = note_text_area_start_x 
     rule_x_end = note_text_area_end_x
