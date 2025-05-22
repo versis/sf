@@ -1028,9 +1028,9 @@ export default function HomePage() {
                   </>
                 )}
 
-                {/* Mobile Dot Indicators - Hidden on Desktop */}
+                {/* Mobile Dot Indicators - Hidden on Desktop - Now Vertical on the Side */}
                 {isMobile && fetchedHeroCards.length > 1 && (
-                  <div className="flex justify-center items-center space-x-2 mt-3">
+                  <div className="w-auto flex flex-col justify-center items-center space-y-2 absolute top-1/2 -translate-y-1/2 right-2 md:right-2 z-10">
                       {fetchedHeroCards.map((card, index) => (
                           <button
                           key={card.id || index} // Use card.id if available, otherwise index
