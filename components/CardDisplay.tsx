@@ -29,6 +29,7 @@ interface CardDisplayProps {
   copyUrlFeedback?: string;
   isVisible: boolean;
   disableScrollOnLoad?: boolean;
+  swipeDirection?: 'left' | 'right' | null;
 }
 
 // Define known dimensions (assuming these are correct, adjust if needed)
@@ -60,6 +61,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   copyUrlFeedback,
   isVisible,
   disableScrollOnLoad,
+  swipeDirection,
 }) => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smoother, slightly bouncy flip */
         }
 
-        .flippable-card-wrapper .card-flipper.is-flipped {
+        .flippable-card-wrapper .card-flipper.is-flipped.swipe-left {
+          transform: rotateY(-180deg);
+        }
+
+        .flippable-card-wrapper .card-flipper.is-flipped.swipe-right {
           transform: rotateY(180deg);
         }
 
@@ -187,7 +193,13 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
-          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${verticalMaxHeightClass} ${isFlippable && isFlipped ? 'is-flipped' : ''}`}>
+          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${verticalMaxHeightClass} ${
+            isFlippable && isFlipped
+              ? swipeDirection === 'left'
+                ? 'is-flipped swipe-left'
+                : 'is-flipped swipe-right'
+              : ''
+          }`}>
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
               {(currentOrientation === 'horizontal' && frontHorizontalImageUrl) ? (

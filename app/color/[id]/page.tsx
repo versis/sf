@@ -45,6 +45,7 @@ export default function ColorCardPage() {
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
   const cardDisplaySectionRef = useRef<HTMLDivElement>(null); // Ref for scrolling to the card display
   const [isFlipped, setIsFlipped] = useState(false); // Added for card flip state
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null); // Added for swipe direction
 
   const handleFlip = () => {
     if (cardDetails?.hasNote === false || cardDetails?.backHorizontalImageUrl || cardDetails?.backVerticalImageUrl) {
@@ -56,8 +57,14 @@ export default function ColorCardPage() {
 
   // Get all handlers from useSwipeable, including its ref callback
   const allSwipeableHandlers: SwipeableHandlers = useSwipeable({
-    onSwipedLeft: () => handleFlip(),
-    onSwipedRight: () => handleFlip(),
+    onSwipedLeft: () => {
+      setSwipeDirection('left');
+      handleFlip();
+    },
+    onSwipedRight: () => {
+      setSwipeDirection('right');
+      handleFlip();
+    },
     preventScrollOnSwipe: true,
     trackMouse: true,
   });
@@ -269,6 +276,7 @@ export default function ColorCardPage() {
               shareFeedback={shareFeedback}
               copyUrlFeedback={copyUrlFeedback}
               disableScrollOnLoad={true}
+              swipeDirection={swipeDirection}
             />
           </div>
           
