@@ -266,7 +266,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={handleFlipCard}
-                  className={`${revealButtonStyle} min-w-[180px]`}
+                  className={`${revealButtonStyle} min-w-[200px]`}
                   title={isFlipped ? "Show Front" : "Reveal the Note"}
                 >
                   {isFlipped ? <Undo2 size={20} className="mr-1.5" /> : <BookOpenText size={20} className="mr-1.5" />}

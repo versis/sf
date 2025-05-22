@@ -164,7 +164,7 @@ async def generate_card_image_bytes(
     f_title = get_font(int(40 * base_font_scale), "Bold", request_id=request_id)
     f_phonetic = get_font(int(30 * base_font_scale), "Light", "Italic", request_id=request_id)
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
-    f_desc = get_font(int(27 * base_font_scale), "Regular", request_id=request_id)
+    f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
     f_brand = get_font(int(64 * base_font_scale), "Bold", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
@@ -341,17 +341,17 @@ async def generate_back_card_image_bytes(
 
     if orientation == "horizontal":
         card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
-        note_font_size_val = 38
+        note_font_size_val = 34
         date_below_note_font_size_val = 26
     else: # vertical
         card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
-        note_font_size_val = 38 
+        note_font_size_val = 34
         date_below_note_font_size_val = 22
     
     canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
-    # 2. Text color: Use the same logic as the front of the card
-    text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (245, 245, 245) 
+    # 2. Text color: Use the same logic as the front of the card, but ensure light text is pure white
+    text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (255, 255, 255)
     
     pad_x = int(card_w * 0.05) # Increased from 0.035 for more left padding
     pad_y = int(card_h * 0.05)
@@ -479,7 +479,8 @@ async def generate_back_card_image_bytes(
             date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
             
             # Y position: Just below the stamp
-            gap_below_stamp = int(card_h * 0.03) # Increased from 0.015 for more margin above date
+            # Adjusted gap for vertical orientation to be proportionally similar to horizontal
+            gap_below_stamp = int(card_h * (0.015 if orientation == 'vertical' else 0.03)) 
             date_y = main_stamp_y_start + main_stamp_area_size + gap_below_stamp
             
             # X position: Centered under the stamp
