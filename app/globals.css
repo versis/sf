@@ -110,6 +110,61 @@
   overflow: hidden; /* This is important to clip the outgoing/incoming images */
 }
 
+/* Hero Card Flip Animations */
+.perspective-container {
+  perspective: 1200px;
+  display: flex; /* Added to help center flipper if its width is not 100% */
+  justify-content: center; /* Added */
+  align-items: center; /* Added */
+  width: 100%; /* Ensure it takes width for aspect ratio calculation */
+}
+
+.card-flipper {
+  position: relative;
+  width: 100%; /* Takes full width of its column in the grid/flex parent */
+  /* height will be determined by aspect-ratio inline style */
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card-flipper.is-flipped.swipe-left {
+  transform: rotateY(-180deg);
+}
+
+.card-flipper.is-flipped.swipe-right {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex; /* For aligning content (like placeholders) within the face */
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Prevent content spill */
+  /* border-radius: inherit; */ /* Hero images already have rounded-lg */
+}
+
+.card-face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* border-radius: inherit; */
+}
+
+.card-front {
+  /* z-index: 2; /* Usually not needed with backface-visibility */
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
 /* Animation for the current card sliding OUT to the TOP */
 .slide-out-to-top-animation {
   animation: slide-out-to-top 0.3s ease-in-out forwards;
