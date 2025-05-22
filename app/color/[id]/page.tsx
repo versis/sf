@@ -300,10 +300,8 @@ export default function ColorCardPage() {
                   It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
                 </p>
                 <p>
-                  shadefreude turns ordinary snaps into share-worthy mementos. Curious to create your own?
-                  <br />
                   <Link href="/" className="underline hover:text-foreground">
-                    Create your own postcard
+                    Create your own digital postcard here!
                   </Link>
                 </p>
               </div>
