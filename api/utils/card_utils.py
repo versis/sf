@@ -310,8 +310,6 @@ async def generate_back_card_image_bytes(
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
     # --- TOGGLE for background effect ---
-    # Set to True to apply the 60% opacity effect (blended with white).
-    # Set to False to use the raw original_rgb for the background.
     apply_60_percent_opacity_effect_to_back_bg = False 
     # --- END TOGGLE ---
 
@@ -320,70 +318,135 @@ async def generate_back_card_image_bytes(
         log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
         original_rgb = (200, 200, 200) 
     
-    # 1. Calculate the target solid background color
-    r_orig, g_orig, b_orig = original_rgb
-    
-    if apply_60_percent_opacity_effect_to_back_bg:
-        alpha_blend_factor = 0.60 # Blend with white at 60% opacity
-    else:
-        alpha_blend_factor = 1.0 # Use raw color (effectively 100% opacity of original_rgb)
-        
-    r_white, g_white, b_white = 255, 255, 255 # White background for blending reference
-
-    r_blended = round(r_orig * alpha_blend_factor + r_white * (1 - alpha_blend_factor))
-    g_blended = round(g_orig * alpha_blend_factor + g_white * (1 - alpha_blend_factor))
-    b_blended = round(b_orig * alpha_blend_factor + b_white * (1 - alpha_blend_factor))
-    
-    # Ensure blended values are within 0-255 range
-    solid_lightened_bg_rgb = (
-        max(0, min(255, r_blended)),
-        max(0, min(255, g_blended)),
-        max(0, min(255, b_blended))
-    )
-
-    # 2. Set Card Background: Use the calculated solid_lightened_bg_rgb with 100% opacity
-    bg_color_tuple = (*solid_lightened_bg_rgb, 255) # Alpha is 255 for solid
-
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
-
+    # 1. Determine card dimensions and base font sizes
     if orientation == "horizontal":
-        card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+        card_w, card_h = 1400, 700
         note_font_size_val = 32
         date_below_note_font_size_val = 26
     else: # vertical
-        card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
+        card_w, card_h = 700, 1400
         note_font_size_val = 32
         date_below_note_font_size_val = 22
+
+    # 2. Calculate effective background color
+    r_orig_bg, g_orig_bg, b_orig_bg = original_rgb
+    alpha_blend_factor_for_bg = 1.0
+    if apply_60_percent_opacity_effect_to_back_bg:
+        alpha_blend_factor_for_bg = 0.60
     
-    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple) # Use the new solid bg_color_tuple
+    r_white_blend, g_white_blend, b_white_blend = 255, 255, 255
+    r_blended_bg = round(r_orig_bg * alpha_blend_factor_for_bg + r_white_blend * (1 - alpha_blend_factor_for_bg))
+    g_blended_bg = round(g_orig_bg * alpha_blend_factor_for_bg + g_white_blend * (1 - alpha_blend_factor_for_bg))
+    b_blended_bg = round(b_orig_bg * alpha_blend_factor_for_bg + b_white_blend * (1 - alpha_blend_factor_for_bg))
+    
+    solid_lightened_bg_rgb = (
+        max(0, min(255, r_blended_bg)),
+        max(0, min(255, g_blended_bg)),
+        max(0, min(255, b_blended_bg))
+    )
+    bg_color_tuple = (*solid_lightened_bg_rgb, 255)
+
+    # 3. Initialize Canvas and Draw objects
+    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
-    # 3. Determine Text Color based on the new solid_lightened_bg_rgb
+
+    # 4. Determine Text Color (based on the final solid background)
     text_color = (20, 20, 20) if sum(solid_lightened_bg_rgb) > 384 else (255, 255, 255)
-    
+
+    # 5. Define Paddings and Font Objects
     pad_x = int(card_w * 0.05) 
     pad_y = int(card_h * 0.05)
     
-    f_note = get_font(note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id)
-    f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id) 
+    f_note = get_font(note_font_size_val, weight="Light", style="Italic", font_family="IBMPlexSerif", request_id=request_id)
+    # f_date_below_note will be defined just before date rendering
 
+    # 6. Define Stamp Area Dimensions (needed for note area calculation)
     main_stamp_area_size = int(min(card_w, card_h) * 0.20)
     main_stamp_padding = int(main_stamp_area_size * 0.1)
-    main_stamp_x_start = card_w - pad_x - main_stamp_area_size # Re-evaluate this based on new pad_x
+    main_stamp_x_start = card_w - pad_x - main_stamp_area_size
     main_stamp_y_start = pad_y
     scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004))
-    scallop_step = max(1, int(scallop_circle_radius * 4.5));
+    # scallop_step is used only in stamp drawing section
 
-    # 3. Post stamp background: Fill with light grey color
-    stamp_bg_color = (240, 240, 240) # Light grey #F0F0F0
-    # Draw a filled rectangle for the stamp background before drawing scallops and logo
-    # The rectangle should be slightly smaller than the main_stamp_area_size to be inside the scallops
+    # 7. Define Note Text Area Boundaries
+    note_text_area_start_x = pad_x
+    note_text_area_end_x = main_stamp_x_start - pad_x 
+    available_width_for_note = note_text_area_end_x - note_text_area_start_x
+
+    # 8. Prepare Note Text (Wrapping)
+    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.45 # Line height with spacing
+    lines = []
+    if note_text and note_text.strip():
+        words = note_text.split(' ')
+        current_line_for_note = ""
+        for word in words:
+            word_width, _ = get_text_dimensions(word, f_note)
+            # Check if word itself is wider than available space (edge case for very long words)
+            if current_line_for_note == "" and word_width > available_width_for_note:
+                # For simplicity, we'll append it and let it overflow or be clipped by PIL
+                # A more complex solution would hyphenate or break the word.
+                lines.append(word)
+                current_line_for_note = "" 
+            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= available_width_for_note:
+                current_line_for_note += word + " "
+            else:
+                lines.append(current_line_for_note.strip())
+                current_line_for_note = word + " "
+        if current_line_for_note.strip():
+            lines.append(current_line_for_note.strip())
+        lines = [line for line in lines if line] 
+
+    # 9. Calculate Text Block Horizontal Start (for centering lines)
+    text_block_x_start = note_text_area_start_x # Default to left alignment
+    if lines:
+        max_actual_line_width = 0
+        for line_in_block in lines:
+            line_width, _ = get_text_dimensions(line_in_block, f_note)
+            if line_width > max_actual_line_width:
+                max_actual_line_width = line_width
+        if available_width_for_note > max_actual_line_width: # Only center if there's space
+            text_block_x_start = note_text_area_start_x + (available_width_for_note - max_actual_line_width) // 2
+        # If max_actual_line_width > available_width_for_note, it will be left-aligned and clipped by PIL
+
+    # 10. Calculate Vertical Positioning for the entire Note & Lines Block
+    total_note_block_height = 0
+    if lines:
+        total_note_block_height = (len(lines) * note_line_h)
+    total_note_block_height += (2 * note_line_h) # Add height for the two extra rule lines
+    if total_note_block_height > 0 and lines: # Only adjust if there were text lines
+         total_note_block_height -= (note_line_h * 0.45) # Remove most of the leading from the last text line
+    elif total_note_block_height > 0 and not lines: # Only extra lines
+         total_note_block_height -= (note_line_h * 0.45) # Remove most of the leading from the first extra line
+
+    available_height_for_elements = card_h - pad_y - pad_y 
+    current_elements_y = pad_y # This is the top of the note/rule block
+    if total_note_block_height < available_height_for_elements:
+        current_elements_y = pad_y + (available_height_for_elements - total_note_block_height) / 2
+    current_elements_y = max(pad_y, current_elements_y) # Ensure it doesn't go above top padding
+
+    # 11. Define Rule Line Properties
+    if text_color == (20, 20, 20): # Dark text
+        rule_line_color = (170, 170, 170)  # Darker grey lines, was (190,190,190)
+    else: # Light text (white)
+        rule_line_color = (100, 100, 100)  # Remains a darker grey for contrast on dark card backgrounds
+    rule_line_thickness = 1
+    rule_x_start = note_text_area_start_x 
+    rule_x_end = note_text_area_end_x
+    
+    ascent, _ = f_note.getmetrics() 
+    y_cursor = current_elements_y # This is where the first line of text (or first rule) will be drawn from top
+
+    # --- DRAWING SECTION ---
+
+    # 12. Draw Stamp (Background, Border, Logo) - Moved here after canvas is ready
+    stamp_bg_color = (240, 240, 240)
     stamp_fill_x1 = main_stamp_x_start + scallop_circle_radius
     stamp_fill_y1 = main_stamp_y_start + scallop_circle_radius
     stamp_fill_x2 = main_stamp_x_start + main_stamp_area_size - scallop_circle_radius
     stamp_fill_y2 = main_stamp_y_start + main_stamp_area_size - scallop_circle_radius
     draw.rectangle([(stamp_fill_x1, stamp_fill_y1), (stamp_fill_x2, stamp_fill_y2)], fill=stamp_bg_color)
 
+    scallop_step = max(1, int(scallop_circle_radius * 4.5)) # Define scallop_step here
     s_edges = [
         (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),
         (main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, True),
@@ -396,12 +459,11 @@ async def generate_back_card_image_bytes(
         while current_pos_val <= length_val:
             px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
             py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
-            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=solid_lightened_bg_rgb) # 4. Post Stamp Border uses the new solid background color
+            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=solid_lightened_bg_rgb)
             current_pos_val += scallop_step
         px_end = x2_s if is_horizontal_edge else x1_s
         py_end = y2_s if not is_horizontal_edge else y1_s
-        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=solid_lightened_bg_rgb) # 4. Post Stamp Border uses the new solid background color
-
+        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=solid_lightened_bg_rgb)
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
         logo_max_dim_main = main_stamp_area_size - (2 * main_stamp_padding)
@@ -411,98 +473,51 @@ async def generate_back_card_image_bytes(
         canvas.paste(logo_img_main, (logo_main_x, logo_main_y), logo_img_main)
     except Exception as e: log(f"Error with main stamp logo: {e}", level="ERROR", request_id=request_id)
 
-    # Define available width for note text more directly
-    # Text area starts at pad_x and ends at main_stamp_x_start - pad_x (to have padding before stamp)
-    note_text_area_start_x = pad_x
-    note_text_area_end_x = main_stamp_x_start - pad_x 
-    available_width_for_note = note_text_area_end_x - note_text_area_start_x
-
-    actual_max_text_w = available_width_for_note 
-    text_block_x_start = pad_x 
-
-    lines = []
-    if note_text and note_text.strip():
-        note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.2
-        words = note_text.split(' ')
-        current_line_for_note = ""
-        for word in words:
-            word_width, _ = get_text_dimensions(word, f_note)
-            if current_line_for_note == "" and word_width > actual_max_text_w: 
-                lines.append(word) 
-                current_line_for_note = "" 
-            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= actual_max_text_w:
-                current_line_for_note += word + " "
-            else:
-                lines.append(current_line_for_note.strip())
-                current_line_for_note = word + " "
-        if current_line_for_note.strip():
-            lines.append(current_line_for_note.strip())
-        lines = [line for line in lines if line] 
-
-        # Center the entire block of text (left-aligned lines within the centered block)
-        if lines:
-            max_actual_line_width = 0
-            for line_in_block in lines:
-                line_width, _ = get_text_dimensions(line_in_block, f_note)
-                if line_width > max_actual_line_width:
-                    max_actual_line_width = line_width
-            
-            text_block_x_start = pad_x + max(0, (available_width_for_note - max_actual_line_width) // 2)
-            log(f"Note Block Centered. MaxLineWidth: {max_actual_line_width}, X-start: {text_block_x_start}", request_id=request_id)
-        else: # No lines, reset to default padding
-             text_block_x_start = pad_x
-
-    total_note_block_height = 0
+    # 13. Render Note Text and Ruled Lines
+    # y_cursor is already set from current_elements_y
     if lines:
-        total_note_block_height = (len(lines) * note_line_h) - (note_line_h * 0.2) # No extra space after last line
+        for line_idx, line_content in enumerate(lines):
+            if y_cursor + note_line_h <= card_h - pad_y: 
+                draw.text((text_block_x_start, y_cursor), line_content, font=f_note, fill=text_color)
+                rule_y_position = y_cursor + ascent + 3 
+                if rule_y_position < card_h - pad_y - 1:
+                     draw.line([(rule_x_start, rule_y_position), (rule_x_end, rule_y_position)], 
+                               fill=rule_line_color, width=rule_line_thickness)
+                y_cursor += note_line_h
+            else:
+                log(f"Note text and rules truncated at line {line_idx + 1}", request_id=request_id)
+                break
     
-    available_height_for_elements = card_h - pad_y - pad_y 
-    current_elements_y = pad_y # Start Y for drawing note/date block
+    # 14. Draw two additional Ruled Lines
+    for i in range(2):
+        rule_y_position = y_cursor + ascent + 3 
+        # Ensure the rule line itself fits, and also check against bottom card padding
+        if rule_y_position < (card_h - pad_y - rule_line_thickness): 
+            draw.line([(rule_x_start, rule_y_position), (rule_x_end, rule_y_position)], 
+                      fill=rule_line_color, width=rule_line_thickness)
+            y_cursor += note_line_h 
+        else:
+            break 
 
-    # Vertical centering of the note block itself
-    if lines:
-        if total_note_block_height < available_height_for_elements:
-            current_elements_y = pad_y + (available_height_for_elements - total_note_block_height) / 2
-        current_elements_y = max(pad_y, current_elements_y) # Ensure it doesn't go above top padding
-        
-        # Render note lines (they are individually left-aligned starting at text_block_x_start)
-        temp_note_y = current_elements_y
-        for line_idx, line in enumerate(lines):
-            if temp_note_y + note_line_h <= card_h - pad_y + (note_line_h*0.2): # Check if it fits
-                draw.text((text_block_x_start, temp_note_y), line, font=f_note, fill=text_color)
-                temp_note_y += note_line_h
-            else:
-                log(f"Note text truncated at line {line_idx + 1}", request_id=request_id); break
-        current_elements_y = temp_note_y # Update Y to be after the note block
-    else: # If no note text, position date in vertical center of the card (left of stamp)
-        date_placeholder_h = get_text_dimensions("Tg", f_date_below_note)[1]
-        current_elements_y = pad_y + (available_height_for_elements - date_placeholder_h) / 2
-        current_elements_y = max(pad_y, current_elements_y)
-
-    # Render Date (New Positioning Logic)
+    # 15. Render Date
     if created_at_iso_str:
+        f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id)
         try:
             dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
             date_str = dt_object.strftime('%B %d, %Y')
             date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
-            
-            # Y position: Just below the stamp
-            # Adjusted gap for vertical orientation to be proportionally similar to horizontal
             gap_below_stamp = int(card_h * (0.015 if orientation == 'vertical' else 0.03)) 
             date_y = main_stamp_y_start + main_stamp_area_size + gap_below_stamp
-            
-            # X position: Centered under the stamp
             date_x = main_stamp_x_start + (main_stamp_area_size - date_w) // 2
-            # Ensure it doesn't go left of the initial left padding (safety, though unlikely for centered date under stamp)
             date_x = max(pad_x, date_x) 
-
-            if date_y + date_h < card_h - pad_y: # Check if date fits vertically on card
+            if date_y + date_h < card_h - pad_y:
                  draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
             else:
                  log(f"Date does not fit on card at new position below stamp. Y: {date_y}", request_id=request_id)
         except ValueError:
             log(f"Could not parse date for date string: {created_at_iso_str}", level="WARNING", request_id=request_id)
 
+    # 16. Finalize Image (Rounded Corners, Save)
     radius = 40
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
     ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
