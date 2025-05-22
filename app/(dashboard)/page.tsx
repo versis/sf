@@ -1063,8 +1063,8 @@ export default function HomePage() {
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
-                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-1 ${isMobile ? 'flex-grow' : 'w-full'}` } 
-                    style={{ aspectRatio: isMobile ? '12/20' : '80/33' }}
+                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'flex-grow' : 'w-full'}` }
+                    style={{ aspectRatio: isMobile ? '3/4' : '80/33' }}
                   >
                     <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0 && swipeDeltaY === 0) handleHeroCardFlip(); }}>
                       <div 
