@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from datetime import datetime
 import os # Added for path joining
 import math # Import math for trigonometric functions if we attempt arced text later
+import random # Ensure random is imported
 
 from api.utils.logger import log, debug, error # Ensure error is imported if used
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
@@ -311,77 +312,6 @@ async def generate_card_image_bytes(
     log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
 
-def _draw_text_along_arc(draw, canvas, cx, cy, radius, text, font, fill, start_angle_degrees, arc_span_degrees, is_top_arc=True, request_id=None):
-    """
-    Draws text along a circular arc.
-    NOTE: This is a complex function and might require fine-tuning for perfect results.
-          Character rotation and precise baseline alignment on a curve are non-trivial with Pillow.
-    """
-    if not text:
-        return
-
-    text = text.upper() # Postmarks often use uppercase
-
-    # Convert angles to radians for math functions
-    start_angle_rad = math.radians(start_angle_degrees)
-    arc_span_rad = math.radians(arc_span_degrees)
-
-    # Estimate character widths and total text width to center the text within the arc_span
-    char_widths = [get_text_dimensions(char, font)[0] for char in text]
-    
-    # Reduce char_widths slightly to account for overlap/kerning effect on a curve
-    # This is an approximation; true curved kerning is very complex.
-    effective_char_widths = [w * 0.85 for w in char_widths] # Adjust 0.8 for tighter/looser spacing
-    total_text_angular_width_rad = sum([(w / radius) for w in effective_char_widths]) # Approximate angular width
-
-    # Adjust start_angle_rad so the text block is centered within arc_span_rad
-    angle_offset = (arc_span_rad - total_text_angular_width_rad) / 2
-    current_angle_rad = start_angle_rad + angle_offset
-    
-    if not is_top_arc: # For bottom arc, text reads inwards, adjust starting point if span is wide
-         current_angle_rad = start_angle_rad + arc_span_rad - angle_offset - total_text_angular_width_rad
-
-
-    for i, char_text in enumerate(text):
-        char_width, char_height = get_text_dimensions(char_text, font)
-        
-        # Angle for the center of the character
-        char_angular_width_rad = (effective_char_widths[i] / radius)
-        if is_top_arc:
-            angle_for_char_center = current_angle_rad + char_angular_width_rad / 2
-        else: # Bottom arc, text progresses in opposite angular direction relative to start
-            angle_for_char_center = current_angle_rad + char_angular_width_rad / 2
-
-
-        # Position of the character's baseline center on the arc
-        char_center_x = cx + radius * math.cos(angle_for_char_center)
-        char_center_y = cy + radius * math.sin(angle_for_char_center)
-
-        # Create a temporary image for the character to rotate it
-        char_img = Image.new('RGBA', (char_width, char_height), (255, 255, 255, 0))
-        char_draw = ImageDraw.Draw(char_img)
-        char_draw.text((0, 0), char_text, font=font, fill=fill)
-
-        # Rotation: characters should be upright relative to the tangent of the circle
-        # Angle for rotation is angle_for_char_center in radians, converted to degrees
-        # Add 90 degrees so the baseline is tangent, then adjust for top/bottom arc
-        rotation_degrees = math.degrees(angle_for_char_center) + 90
-        
-        if not is_top_arc: # For bottom arc, characters are "upside down" relative to circle center
-            rotation_degrees += 180 
-            # This makes them appear upright when viewed from outside the circle, reading along the concave curve.
-
-        rotated_char_img = char_img.rotate(rotation_degrees, expand=True, resample=Image.Resampling.BICUBIC)
-        
-        # Calculate top-left position to paste the rotated character
-        # This positions the original center of the character (before rotation) at (char_center_x, char_center_y)
-        paste_x = int(char_center_x - rotated_char_img.width / 2)
-        paste_y = int(char_center_y - rotated_char_img.height / 2)
-        
-        canvas.paste(rotated_char_img, (paste_x, paste_y), rotated_char_img)
-
-        current_angle_rad += char_angular_width_rad
-
 # --- Back Card Generation Logic ---
 async def generate_back_card_image_bytes(
     note_text: Optional[str],
@@ -405,11 +335,9 @@ async def generate_back_card_image_bytes(
     if orientation == "horizontal":
         card_w, card_h = 1400, 700
         note_font_size_val = 32
-        date_below_note_font_size_val = 26
     else: # vertical
         card_w, card_h = 700, 1400
         note_font_size_val = 32
-        date_below_note_font_size_val = 22
 
     # 2. Calculate effective background color
     r_orig_bg, g_orig_bg, b_orig_bg = original_rgb
@@ -441,178 +369,126 @@ async def generate_back_card_image_bytes(
     pad_y = int(card_h * 0.05)
     
     f_note = get_font(note_font_size_val, weight="Light", style="Italic", font_family="IBMPlexSerif", request_id=request_id)
-    # f_date_below_note will be defined just before date rendering
 
-    # 6. Define Stamp Area Dimensions (needed for note area calculation)
-    main_stamp_area_size = int(min(card_w, card_h) * 0.20) # Increased from 0.25 to make stamp taller
-    main_stamp_padding = int(main_stamp_area_size * 0.1)
-    main_stamp_x_start = card_w - pad_x - main_stamp_area_size
-    main_stamp_y_start = pad_y
-    # scallop_circle_radius and scallop_step are no longer used for the old method
+    # --- RECTANGULAR POSTAGE STAMP (Top-Right with LOGO) ---
+    stamp_base_width = int(min(card_w, card_h) * 0.20) 
+    stamp_height = int(stamp_base_width * 4/3) # Height is 1/3 more than width
+    stamp_width = stamp_base_width # Keep original width calculation method
 
-    # 7. Define Note Text Area Boundaries
-    note_text_area_start_x = pad_x
-    note_text_area_end_x = main_stamp_x_start - pad_x 
-    available_width_for_note = note_text_area_end_x - note_text_area_start_x
+    stamp_padding_internal = int(min(stamp_width, stamp_height) * 0.1) # Padding based on smaller dimension of stamp
+    stamp_x_start = card_w - pad_x - stamp_width
+    stamp_y_start = pad_y
 
-    # 8. Prepare Note Text (Wrapping)
-    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.65 # Increased from 1.45 for more spacing
-    lines = []
-    if note_text and note_text.strip():
-        words = note_text.split(' ')
-        current_line_for_note = ""
-        for word in words:
-            word_width, _ = get_text_dimensions(word, f_note)
-            # Check if word itself is wider than available space (edge case for very long words)
-            if current_line_for_note == "" and word_width > available_width_for_note:
-                # For simplicity, we'll append it and let it overflow or be clipped by PIL
-                # A more complex solution would hyphenate or break the word.
-                lines.append(word)
-                current_line_for_note = "" 
-            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= available_width_for_note:
-                current_line_for_note += word + " "
-            else:
-                lines.append(current_line_for_note.strip())
-                current_line_for_note = word + " "
-        if current_line_for_note.strip():
-            lines.append(current_line_for_note.strip())
-        lines = [line for line in lines if line] 
-
-    # 9. Calculate Text Block Horizontal Start (for centering lines)
-    text_block_x_start = note_text_area_start_x # Always align to the start of the note area
-
-    # 10. Calculate Vertical Positioning for the entire Note & Lines Block
-    total_note_block_height = 0
-    if lines:
-        total_note_block_height = (len(lines) * note_line_h)
-    total_note_block_height += (2 * note_line_h) # Add height for the two extra rule lines
-    if total_note_block_height > 0 and lines: # Only adjust if there were text lines
-         total_note_block_height -= (note_line_h * 0.45) # Remove most of the leading from the last text line
-    elif total_note_block_height > 0 and not lines: # Only extra lines
-         total_note_block_height -= (note_line_h * 0.45) # Remove most of the leading from the first extra line
-
-    available_height_for_elements = card_h - pad_y - pad_y 
-    current_elements_y = pad_y # This is the top of the note/rule block
-    if total_note_block_height < available_height_for_elements:
-        current_elements_y = pad_y + (available_height_for_elements - total_note_block_height) / 2
-    current_elements_y = max(pad_y, current_elements_y) # Ensure it doesn't go above top padding
-
-    # 11. Define Rule Line Properties
-    if text_color == (20, 20, 20): # Dark text
-        rule_line_color = (80, 80, 80)  # Darker grey lines, was (190,190,190)
-    else: # Light text (white)
-        rule_line_color = (210, 210, 210)  # Remains a darker grey for contrast on dark card backgrounds
-    rule_line_thickness = 1
-    rule_x_start = note_text_area_start_x 
-    rule_x_end = note_text_area_end_x
-    
-    ascent, _ = f_note.getmetrics() 
-    y_cursor = current_elements_y # This is where the first line of text (or first rule) will be drawn from top
-
-    # --- ORIGINAL SQUARE POSTAGE STAMP (TOP-RIGHT with LOGO) ---
-    square_stamp_size = int(min(card_w, card_h) * 0.20) # User reverted to 0.20
-    square_stamp_padding_internal = int(square_stamp_size * 0.1)
-    square_stamp_x_start = card_w - pad_x - square_stamp_size
-    square_stamp_y_start = pad_y
-
-    # Draw square stamp background
-    square_stamp_bg_color = (240, 240, 240) # Light grey
+    # Draw rectangular stamp background
+    stamp_bg_color = (240, 240, 240) # Light grey
     draw.rectangle([
-        (square_stamp_x_start, square_stamp_y_start), 
-        (square_stamp_x_start + square_stamp_size, square_stamp_y_start + square_stamp_size)
-    ], fill=square_stamp_bg_color)
+        (stamp_x_start, stamp_y_start), 
+        (stamp_x_start + stamp_width, stamp_y_start + stamp_height) # Use new height
+    ], fill=stamp_bg_color)
 
-    # Draw square stamp perforation dots
-    sq_perf_dot_radius = max(2, int(square_stamp_size * 0.035))
-    sq_perf_dot_step = int(sq_perf_dot_radius * 2.2)
-    sq_perf_color = solid_lightened_bg_rgb # Subtle perforations using card background color
-    sq_stamp_edges = [
-        (square_stamp_x_start, square_stamp_y_start, square_stamp_x_start + square_stamp_size, square_stamp_y_start, True), # Top
-        (square_stamp_x_start, square_stamp_y_start + square_stamp_size, square_stamp_x_start + square_stamp_size, square_stamp_y_start + square_stamp_size, True), # Bottom
-        (square_stamp_x_start, square_stamp_y_start, square_stamp_x_start, square_stamp_y_start + square_stamp_size, False), # Left
-        (square_stamp_x_start + square_stamp_size, square_stamp_y_start, square_stamp_x_start + square_stamp_size, square_stamp_y_start + square_stamp_size, False)  # Right
+    # Draw rectangular stamp perforation dots
+    # Use min of stamp_width, stamp_height for relative dot sizing
+    perf_reference_size = min(stamp_width, stamp_height)
+    perf_dot_radius = max(2, int(perf_reference_size * 0.035)) 
+    perf_dot_step = int(perf_dot_radius * 2.2)
+    perf_color = solid_lightened_bg_rgb
+    
+    stamp_edges = [
+        (stamp_x_start, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start, True), # Top
+        (stamp_x_start, stamp_y_start + stamp_height, stamp_x_start + stamp_width, stamp_y_start + stamp_height, True), # Bottom
+        (stamp_x_start, stamp_y_start, stamp_x_start, stamp_y_start + stamp_height, False), # Left
+        (stamp_x_start + stamp_width, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start + stamp_height, False)  # Right
     ]
-    for x1, y1, x2, y2, is_horiz in sq_stamp_edges:
+    for x1, y1, x2, y2, is_horiz in stamp_edges:
         length = (x2 - x1) if is_horiz else (y2 - y1)
-        num_dots = max(1, int(length / sq_perf_dot_step))
+        num_dots = max(1, int(length / perf_dot_step))
         actual_step = length / num_dots if num_dots > 0 else length
         for i in range(num_dots + 1):
             curr_pos = i * actual_step
             px, py = (x1 + curr_pos, y1) if is_horiz else (x1, y1 + curr_pos)
-            draw.ellipse([(px - sq_perf_dot_radius, py - sq_perf_dot_radius), (px + sq_perf_dot_radius, py + sq_perf_dot_radius)], fill=sq_perf_color)
+            draw.ellipse([(px - perf_dot_radius, py - perf_dot_radius), (px + perf_dot_radius, py + perf_dot_radius)], fill=perf_color)
     
-    # Draw Logo in square stamp
+    # Draw Logo in rectangular stamp
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
-        logo_max_dim = square_stamp_size - (2 * square_stamp_padding_internal)
-        logo_img_main = logo_img_original.copy(); logo_img_main.thumbnail((logo_max_dim, logo_max_dim), Image.Resampling.LANCZOS)
-        logo_x = square_stamp_x_start + square_stamp_padding_internal + (logo_max_dim - logo_img_main.width) // 2
-        logo_y = square_stamp_y_start + square_stamp_padding_internal + (logo_max_dim - logo_img_main.height) // 2
+        # Logo fits within the padded area, scaled by the smaller of stamp_width/stamp_height
+        logo_max_dim_w = stamp_width - (2 * stamp_padding_internal)
+        logo_max_dim_h = stamp_height - (2 * stamp_padding_internal)
+        logo_img_main = logo_img_original.copy()
+        logo_img_main.thumbnail((logo_max_dim_w, logo_max_dim_h), Image.Resampling.LANCZOS)
+        
+        logo_x = stamp_x_start + (stamp_width - logo_img_main.width) // 2 # Centered horizontally
+        logo_y = stamp_y_start + (stamp_height - logo_img_main.height) // 2 # Centered vertically
         canvas.paste(logo_img_main, (logo_x, logo_y), logo_img_main)
-    except Exception as e: log(f"Error with square stamp logo: {e}", level="ERROR", request_id=request_id)
-    # --- END ORIGINAL SQUARE POSTAGE STAMP ---
+    except Exception as e: log(f"Error with rectangular stamp logo: {e}", level="ERROR", request_id=request_id)
+    # --- END RECTANGULAR POSTAGE STAMP ---
 
-    # --- NEW CIRCULAR POSTMARK (Iteration 2: Arced Text) ---
-    postmark_diameter = int(min(card_w, card_h) * 0.13) # Was 0.18, now 30% smaller
+    # --- CIRCULAR POSTMARK (Straight Text, Randomized Rotation & Position) ---
+    postmark_diameter = int(min(card_w, card_h) * 0.13)
     postmark_radius = postmark_diameter // 2
-    postmark_red_color = (204, 0, 0) # Classic post office red
-    
-    # Corrected Position: Bottom-left of circular postmark near/on bottom-left of square stamp
-    overlap_offset = int(postmark_radius * 0.5) # How much the circle overlaps into the square stamp corner
-    pm_bbox_x1 = square_stamp_x_start + overlap_offset 
-    pm_bbox_y2 = square_stamp_y_start + square_stamp_size - overlap_offset
-    
-    postmark_cx = pm_bbox_x1 + postmark_radius
-    postmark_cy = pm_bbox_y2 - postmark_radius
+    postmark_red_color = (204, 0, 0)
 
-    postmark_border_color = postmark_red_color
-    postmark_text_color = postmark_red_color # Text inside postmark is red
+    # Base position for the center of the circular postmark (bottom-left of NEW rectangular stamp)
+    base_postmark_cx = stamp_x_start
+    base_postmark_cy = stamp_y_start + stamp_height # Use new stamp_height
 
-    # Draw Postmark Borders
-    draw.ellipse([
-        (postmark_cx - postmark_radius, postmark_cy - postmark_radius),
-        (postmark_cx + postmark_radius, postmark_cy + postmark_radius)
-    ], outline=postmark_border_color, width=max(1, int(postmark_radius * 0.06)))
+    # Create a temporary canvas for the circular postmark to allow rotation
+    # Size needs to be large enough for the rotated postmark (diagonal of its bounding box)
+    temp_canvas_size = int(postmark_diameter * 1.5) # A bit larger to be safe
+    temp_postmark_canvas = Image.new('RGBA', (temp_canvas_size, temp_canvas_size), (0,0,0,0)) # Transparent background
+    temp_draw = ImageDraw.Draw(temp_postmark_canvas)
+    temp_cx = temp_canvas_size // 2 # Center of temporary canvas
+    temp_cy = temp_canvas_size // 2
+
+    # Draw postmark elements (borders, straight text) onto the temporary canvas
+    temp_draw.ellipse([(temp_cx - postmark_radius, temp_cy - postmark_radius), (temp_cx + postmark_radius, temp_cy + postmark_radius)], outline=postmark_red_color, width=max(1, int(postmark_radius * 0.06)))
     pm_inner_radius_offset = int(postmark_radius * 0.15)
-    text_arc_radius = postmark_radius - pm_inner_radius_offset - int(postmark_radius * 0.08) # Radius for text arc path
-
     if postmark_radius - pm_inner_radius_offset > 0:
-        draw.ellipse([
-            (postmark_cx - postmark_radius + pm_inner_radius_offset, postmark_cy - postmark_radius + pm_inner_radius_offset),
-            (postmark_cx + postmark_radius - pm_inner_radius_offset, postmark_cy + postmark_radius - pm_inner_radius_offset)
-        ], outline=postmark_border_color, width=max(1, int(postmark_radius * 0.04)))
+        temp_draw.ellipse([(temp_cx - postmark_radius + pm_inner_radius_offset, temp_cy - postmark_radius + pm_inner_radius_offset), (temp_cx + postmark_radius - pm_inner_radius_offset, temp_cy + postmark_radius - pm_inner_radius_offset)], outline=postmark_red_color, width=max(1, int(postmark_radius * 0.04)))
 
-    # Arced "STAMPED" Text
     pm_stamped_text = "STAMPED"
-    pm_stamped_font_size = max(6, int(postmark_radius * 0.25)) # Slightly larger relative size for arced
+    pm_stamped_font_size = max(8, int(postmark_radius * 0.31))
     f_pm_stamped_text = get_font(pm_stamped_font_size, weight="Regular", font_family="Inter")
-    # Angles for top arc (e.g., from -160 to -20 degrees, or 200 to 340 degrees)
-    _draw_text_along_arc(draw, canvas, postmark_cx, postmark_cy, text_arc_radius, \
-                         pm_stamped_text, f_pm_stamped_text, postmark_text_color, \
-                         start_angle_degrees=-145, arc_span_degrees=110, is_top_arc=True, request_id=request_id)
+    stamped_text_w, stamped_text_h = get_text_dimensions(pm_stamped_text, f_pm_stamped_text)
+    temp_draw.text((temp_cx - stamped_text_w / 2, temp_cy - postmark_radius + int(postmark_radius * 0.28)), pm_stamped_text, font=f_pm_stamped_text, fill=postmark_red_color)
 
-    # Arced Date Text
     if created_at_iso_str:
         try:
             dt = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
             pm_date_str = dt.strftime('%Y-%m-%d')
-            pm_date_font_size = max(6, int(postmark_radius * 0.22))
+            pm_date_font_size = max(8, int(postmark_radius * 0.28))
             f_pm_date = get_font(pm_date_font_size, weight="Regular", font_family="Inter")
-            # Angles for bottom arc (e.g., from 20 to 160 degrees)
-            _draw_text_along_arc(draw, canvas, postmark_cx, postmark_cy, text_arc_radius, \
-                                 pm_date_str, f_pm_date, postmark_text_color, \
-                                 start_angle_degrees=35, arc_span_degrees=110, is_top_arc=False, request_id=request_id)
+            date_text_w, date_text_h = get_text_dimensions(pm_date_str, f_pm_date)
+            temp_draw.text((temp_cx - date_text_w / 2, temp_cy + postmark_radius - int(postmark_radius * 0.38) - date_text_h), pm_date_str, font=f_pm_date, fill=postmark_red_color)
         except ValueError: log(f"Could not parse date for circular postmark: {created_at_iso_str}",level="WARNING")
-    # --- END NEW CIRCULAR POSTMARK ---
 
-    # Adjust Note Area based on the SQUARE stamp (top-right)
+    # Random rotation
+    random_angle = random.uniform(0, 360)
+    rotated_postmark = temp_postmark_canvas.rotate(random_angle, expand=True, resample=Image.Resampling.BICUBIC)
+
+    # Random position jitter
+    max_jitter = postmark_diameter / 4
+    x_jitter = random.uniform(-max_jitter, max_jitter)
+    y_jitter = random.uniform(-max_jitter, max_jitter)
+
+    final_postmark_center_x = base_postmark_cx + x_jitter
+    final_postmark_center_y = base_postmark_cy + y_jitter
+
+    # Calculate top-left for pasting the rotated image so its center aligns with final_postmark_center_x/y
+    paste_x = int(final_postmark_center_x - rotated_postmark.width / 2)
+    paste_y = int(final_postmark_center_y - rotated_postmark.height / 2)
+
+    canvas.paste(rotated_postmark, (paste_x, paste_y), rotated_postmark) # Paste using alpha channel
+    # --- END CIRCULAR POSTMARK ---
+
+    # Adjust Note Area based on the RECTANGULAR stamp (top-right)
     note_text_area_start_x = pad_x
-    note_text_area_end_x = square_stamp_x_start - pad_x # Notes to the left of square stamp
+    note_text_area_end_x = stamp_x_start - pad_x # Notes to the left of rectangular stamp
     available_width_for_note = note_text_area_end_x - note_text_area_start_x
 
     # ... (The rest of the note text processing, line drawing, vertical centering, and final image saving logic) ...
     # This includes: note_line_h, lines array calculation, text_block_x_start, total_note_block_height, current_elements_y, rule_line_color, ascent, y_cursor, and the loops to draw text and rules.
-    # Ensure these calculations use the `available_width_for_note` derived from `square_stamp_x_start`.
+    # Ensure these calculations use the `available_width_for_note` derived from `stamp_x_start`.
 
     # Placeholder for where the detailed note drawing logic (from previous state) would go
     # For brevity, not fully re-pasting the entire note/rule drawing loop here, but it should be integrated using the recalculated
@@ -637,10 +513,6 @@ async def generate_back_card_image_bytes(
         lines = [line for line in lines if line]
 
     text_block_x_start = note_text_area_start_x
-    if lines:
-        max_line_w = max(get_text_dimensions(l, f_note)[0] for l in lines) if lines else 0
-        if available_width_for_note > max_line_w: text_block_x_start = note_text_area_start_x + (available_width_for_note - max_line_w) // 2
-    
     total_note_block_h = (len(lines) * note_line_h) + (2 * note_line_h) # Incl extra lines
     if total_note_block_h > 0: total_note_block_h -= (note_line_h * 0.65) # Adjust last line spacing
 
@@ -654,6 +526,12 @@ async def generate_back_card_image_bytes(
     rule_x_end = note_text_area_end_x
     ascent, _ = f_note.getmetrics()
     y_cursor = current_elements_y
+
+    if text_color == (20, 20, 20): # Dark text
+        rule_line_color = (80, 80, 80)  # Darker grey lines, was (190,190,190)
+    else: # Light text (white)
+        rule_line_color = (210, 210, 210)  # Remains a darker grey for contrast on dark card backgrounds
+    rule_line_thickness = 1
 
     if lines:
         for line_content in lines:
