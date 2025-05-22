@@ -1048,7 +1048,7 @@ export default function HomePage() {
             <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 items-start">
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0">
-                <h2 className="text-2xl md:text-3xl font-semibold mb-3">
+                <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mt-6">
                   Your Everyday Moments, <br />AI&apos;s Extraordinary Postcards
                 </h2>
                 <p className="text-md md:text-lg text-muted-foreground">
@@ -1150,7 +1150,7 @@ export default function HomePage() {
                       <div className="absolute left-1/2 -top-6 transform -translate-x-1/2 group z-20">
                         <button
                           onClick={handlePrevExampleCard}
-                          className="hero-nav-button p-4 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
+                          className="hero-nav-button p-2 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
                           aria-label="Previous example card"
                           disabled={isAnimating}
                         >
@@ -1162,7 +1162,7 @@ export default function HomePage() {
                       <div className="absolute left-1/2 -bottom-6 transform -translate-x-1/2 group z-20">
                         <button
                           onClick={handleNextExampleCard}
-                          className="hero-nav-button p-4 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
+                          className="hero-nav-button p-2 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
                           aria-label="Next example card"
                           disabled={isAnimating}
                         >
