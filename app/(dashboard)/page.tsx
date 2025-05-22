@@ -74,7 +74,6 @@ export default function HomePage() {
   const [currentExampleCardIndex, setCurrentExampleCardIndex] = useState(0);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [swipeDeltaY, setSwipeDeltaY] = useState(0);
-  const [animationClass, setAnimationClass] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   // const [displayedImageSrc, setDisplayedImageSrc] = useState<string>(''); // No longer primary driver for src
   
@@ -312,8 +311,9 @@ export default function HomePage() {
 
     // Reset animation states
     setSwipeDeltaY(0);
-    setAnimationClass('');
     setIsAnimating(false);
+    setPrimaryImage({ src: primaryImage.src, animationClass: '' });
+    setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
   };
 
   const handleImageSelectedForUpload = (file: File) => {
@@ -714,7 +714,6 @@ export default function HomePage() {
   const handleAnimationEnd = () => {
     if (!secondaryImage.src) { // If no secondary image, animation might be snap-back or an old one
       if (primaryImage.animationClass === 'snap-back-animation') {
-        console.log('[Hero Two-Slot] Snap-back animation completed');
         setPrimaryImage(prev => ({ ...prev, animationClass: '' }));
         setIsAnimating(false);
         setSwipeDeltaY(0);
@@ -723,7 +722,6 @@ export default function HomePage() {
     }
 
     // This means a slide-in/out animation has completed
-    console.log('[Hero Two-Slot] Slide in/out animation completed. Promoting secondary to primary.');
     const newPrimarySrc = secondaryImage.src;
     const newCurrentIndex = fetchedHeroCards.findIndex(card => {
       const cardUrl = isMobile ? card.v || card.h : card.h || card.v;
@@ -737,16 +735,9 @@ export default function HomePage() {
     setSwipeDeltaY(0); 
   };
 
-  // For the CSS transitions - currently not used with stacked animations
-  const handleTransitionEnd = () => {
-    // No longer needed with stacked animations, but keeping for potential future use
-    console.log(`[Hero] Transition ended: ${animationClass}`);
-  };
-
   const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
     if (isAnimating) return;
     setIsAnimating(true);
-    console.log(`[Hero Two-Slot] Starting ${direction} animation`);
 
     let newIndex: number;
     if (targetIndex !== undefined) {
@@ -778,7 +769,6 @@ export default function HomePage() {
     // Preload the next image before starting animations
     const img = new Image();
     img.onload = () => {
-      console.log(`[Hero Two-Slot] Next image loaded: ${newImageUrl}`);
       if (direction === 'next') { // Swiping UP (next image comes from bottom)
         setSecondaryImage({ 
           src: newImageUrl, 
@@ -889,7 +879,6 @@ export default function HomePage() {
       }
     } else if (swipeDeltaY !== 0) {
       // Snap back if swipe was not strong enough
-      console.log("[Hero Touch] Snap back initiated");
       setPrimaryImage(prev => ({ ...prev, animationClass: 'snap-back-animation' }));
       // swipeDeltaY will be reset by handleAnimationEnd for snap-back
     }
@@ -958,7 +947,6 @@ export default function HomePage() {
                   onTouchStart={(e) => {
                     if (isAnimating) return;
                     setTouchStartY(e.touches[0].clientY);
-                    setAnimationClass('');
                     setSwipeDeltaY(0); // Reset delta for direct interaction on image
                   }}
                   onTouchMove={(e) => {
