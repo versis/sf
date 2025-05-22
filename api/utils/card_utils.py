@@ -23,7 +23,7 @@ LOGO_PATH = "public/sf-icon.png"
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
     import os # Keep os import here as it might check paths
     font_style_suffix = "Italic" if style.lower() == "italic" else ""
-    pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
+    # pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Only for Inter
 
     font_path = ""
     if font_family == "Mono":
@@ -31,9 +31,16 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "mono", f"IBMPlexMono-{ibm_plex_weight}.ttf")
     elif font_family == "Caveat":
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "caveat", f"Caveat-{weight}.ttf") 
-        font_style_suffix = "" # Caveat is naturally cursive
+        # font_style_suffix = "" # Caveat is naturally cursive, Italic suffix might not be in filenames, ensure `weight` includes any style variant if needed e.g. Caveat-Bold might be only option
+    elif font_family == "IBMPlexSerif":
+        if weight == "Regular" and style.lower() == "italic":
+            # Handle the specific case where "Regular" is omitted for standard italic
+            serif_font_filename = "IBMPlexSerif-Italic.ttf"
+        else:
+            serif_font_filename = f"IBMPlexSerif-{weight}{font_style_suffix}.ttf"
+        font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "serif", serif_font_filename)
     elif font_family == "Inter":
-        # Prioritize direct Inter Italic font names if style is italic
+        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Specific to Inter
         inter_font_filename = ""
         if style.lower() == "italic":
             # Try specific italic files first (e.g., Inter-Italic.ttf, Inter-MediumItalic.ttf)
@@ -61,19 +68,23 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
 
     try:
         loaded_font = ImageFont.truetype(font_path, size)
-        debug(f"Successfully loaded font: {font_path}", request_id=request_id)
+        debug(f"Successfully loaded font: {font_path} for family: {font_family}, weight: {weight}, style: {style}", request_id=request_id)
         return loaded_font
     except IOError as e:
-        log(f"Failed to load font {font_path}: {e}. Falling back to default.", level="WARNING", request_id=request_id)
+        log(f"Failed to load font '{font_path}': {e}. Falling back. (Details: Family='{font_family}', Weight='{weight}', Style='{style}')", level="WARNING", request_id=request_id)
         # Try a more generic Inter fallback first
         try:
-            generic_inter_fallback = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", "Inter-Regular.ttf")
-            if os.path.exists(generic_inter_fallback):
-                debug(f"Attempting generic Inter fallback: {generic_inter_fallback}", request_id=request_id)
-                return ImageFont.truetype(generic_inter_fallback, size)
-        except IOError:
-            pass
-        # Fallback to Pillow's default if all else fails
+            # Fallback to a very common Inter font if the requested one fails
+            # This might not be the desired style, but better than a bitmap default usually
+            generic_inter_fallback_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", "Inter-Regular.ttf") 
+            if os.path.exists(generic_inter_fallback_path):
+                log(f"Attempting Inter-Regular fallback: {generic_inter_fallback_path}", level="DEBUG", request_id=request_id)
+                return ImageFont.truetype(generic_inter_fallback_path, size)
+            else:
+                log(f"Inter-Regular fallback not found at {generic_inter_fallback_path}. Proceeding to Pillow default.", level="WARNING", request_id=request_id)
+        except IOError as fallback_e:
+            log(f"Inter-Regular fallback also failed: {fallback_e}. Using ImageFont.load_default().", level="WARNING", request_id=request_id)
+        
         return ImageFont.load_default(size)
 
 # --- Helper Function for Font Measurements ---
