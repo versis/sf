@@ -85,6 +85,8 @@ export default function HomePage() {
   const [isHeroCardFlipped, setIsHeroCardFlipped] = useState(false);
   const [heroCardSwipeDirection, setHeroCardSwipeDirection] = useState<'left' | 'right' | null>(null);
 
+  const heroImageContainerRef = useRef<HTMLDivElement>(null);
+
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
@@ -114,6 +116,29 @@ export default function HomePage() {
   const mainContainerRef = useRef<HTMLDivElement>(null); // Ref for the main content container
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
+
+  // Effect to reset overflow on hero image container after flip animation
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (isHeroCardFlipped) { // If we just flipped to the back (animation starting)
+      // Also handles the case where we flip from back to front
+      timeoutId = setTimeout(() => {
+        if (heroImageContainerRef.current) {
+          heroImageContainerRef.current.style.overflow = 'hidden'; // Reset after animation
+        }
+      }, 800); // Match CSS flip animation duration (0.8s)
+    } else {
+      // If !isHeroCardFlipped (i.e., card is front-facing), ensure overflow is hidden immediately
+      // This handles the initial state and after flipping back to front if timeout was missed.
+      if (heroImageContainerRef.current && heroImageContainerRef.current.style.overflow !== 'hidden') {
+        heroImageContainerRef.current.style.overflow = 'hidden';
+      }
+    }
+
+    return () => {
+      clearTimeout(timeoutId); // Cleanup timeout if component unmounts or effect re-runs
+    };
+  }, [isHeroCardFlipped]); // Depend on flip state
 
   // Scroll to the active step or results
   useEffect(() => {
@@ -876,8 +901,9 @@ export default function HomePage() {
   };
 
   const handleHeroCardFlip = (swipeDir: 'left' | 'right' | null = 'right') => {
-    // For now, hero cards don't have distinct back content defined in HERO_EXAMPLE_CARD_EXTENDED_IDS
-    // So, we'll just toggle the flip. If they had backs, we'd check here.
+    if (heroImageContainerRef.current) {
+      heroImageContainerRef.current.style.overflow = 'visible'; 
+    }
     setHeroCardSwipeDirection(swipeDir);
     setIsHeroCardFlipped(!isHeroCardFlipped);
   };
@@ -981,7 +1007,7 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         {isHeroVisible && (
-          <section className="w-full py-2 md:py-4">
+          <section className="w-full py-6 md:py-4">
             <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
@@ -996,8 +1022,8 @@ export default function HomePage() {
               {/* Right Column: Example Card with Navigation - takes 3/5ths */}
               <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
                 <div
+                  ref={heroImageContainerRef}
                   className={'relative w-full mb-2 cursor-grab active:cursor-grabbing example-card-image-container'}
-                  // onClick, onTouchStart, etc. will be moved to the perspective-container or card-flipper if needed for flip
                 >
                   <div className="w-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0 && swipeDeltaY === 0) handleHeroCardFlip(); }}>
                     <div 
@@ -1086,7 +1112,7 @@ export default function HomePage() {
                     {currentExampleCardIndex > 0 && (
                       <button
                         onClick={handlePrevExampleCard}
-                        className="absolute left-1/2 -top-4 md:-top-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        className="absolute left-1/2 -top-4 md:-top-6 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
                         aria-label="Previous example card"
                         disabled={isAnimating}
                       >
@@ -1096,7 +1122,7 @@ export default function HomePage() {
                     {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
                       <button
                         onClick={handleNextExampleCard}
-                        className="absolute left-1/2 -bottom-4 md:-bottom-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        className="absolute left-1/2 -bottom-4 md:-bottom-6 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
                         aria-label="Next example card"
                         disabled={isAnimating}
                       >
