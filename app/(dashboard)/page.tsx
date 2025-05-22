@@ -1149,7 +1149,7 @@ export default function HomePage() {
                     {currentExampleCardIndex > 0 && (
                       <button
                         onClick={handlePrevExampleCard}
-                        className="absolute left-1/2 md:-top-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors"
+                        className="absolute left-1/2 md:-top-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors p-2 rounded-md"
                         aria-label="Previous example card"
                         disabled={isAnimating}
                       >
@@ -1159,7 +1159,7 @@ export default function HomePage() {
                     {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
                       <button
                         onClick={handleNextExampleCard}
-                        className="absolute left-1/2 md:-bottom-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors"
+                        className="absolute left-1/2 md:-bottom-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors p-2 rounded-md"
                         aria-label="Next example card"
                         disabled={isAnimating}
                       >
