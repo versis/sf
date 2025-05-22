@@ -1024,9 +1024,7 @@ export default function HomePage() {
                                 transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined,
                                 zIndex: 10,
                                 position: 'relative',
-                                visibility: isHeroCardFlipped ? 'hidden' : 'visible',
-                                backfaceVisibility: 'hidden',
-                                WebkitBackfaceVisibility: 'hidden'
+                                visibility: isHeroCardFlipped ? 'hidden' : 'visible'
                               }}
                               draggable="false"
                               onAnimationEnd={primaryImage.animationClass ? handleAnimationEnd : undefined}
@@ -1043,9 +1041,7 @@ export default function HomePage() {
                                 style={{
                                   transform: secondaryImage.initialTranslate,
                                   zIndex: 5,
-                                  visibility: isHeroCardFlipped ? 'hidden' : 'visible',
-                                  backfaceVisibility: 'hidden',
-                                  WebkitBackfaceVisibility: 'hidden' 
+                                  visibility: isHeroCardFlipped ? 'hidden' : 'visible'
                                 }}
                                 draggable="false"
                                 onAnimationEnd={secondaryImage.animationClass ? handleAnimationEnd : undefined} 
