@@ -149,8 +149,8 @@ export default function HomePage() {
           const data = await response.json();
           return {
             id: extendedId, // Store original ID for reference if needed
-            v: data.verticalImageUrl || null,
-            h: data.horizontalImageUrl || null,
+            v: data.frontVerticalImageUrl || null,
+            h: data.frontHorizontalImageUrl || null,
           };
         } catch (error) {
           console.error(`[Hero Data] Error fetching hero card ${extendedId}:`, error);
