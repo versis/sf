@@ -314,23 +314,25 @@ async def generate_back_card_image_bytes(
         log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
         base_rgb_for_back = (200, 200, 200) 
     
-    white_bg_rgb = (255, 255, 255)
-    opacity_for_original_color = 0.15
-
-    try:
-        r_orig, g_orig, b_orig = base_rgb_for_back
-        r_bg, g_bg, b_bg = white_bg_rgb
-        r_blend = round(r_orig * opacity_for_original_color + r_bg * (1 - opacity_for_original_color))
-        g_blend = round(g_orig * opacity_for_original_color + g_bg * (1 - opacity_for_original_color))
-        b_blend = round(b_orig * opacity_for_original_color + b_bg * (1 - opacity_for_original_color))
-        final_bg_rgb = (
-            max(0, min(255, r_blend)),
-            max(0, min(255, g_blend)),
-            max(0, min(255, b_blend))
-        )
-    except Exception as e:
-        log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
-        final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
+    # 1. Background color: Use raw user-decided hex color
+    final_bg_rgb = base_rgb_for_back
+    # Removed blending logic:
+    # white_bg_rgb = (255, 255, 255)
+    # opacity_for_original_color = 0.15
+    # try:
+    #     r_orig, g_orig, b_orig = base_rgb_for_back
+    #     r_bg, g_bg, b_bg = white_bg_rgb
+    #     r_blend = round(r_orig * opacity_for_original_color + r_bg * (1 - opacity_for_original_color))
+    #     g_blend = round(g_orig * opacity_for_original_color + g_bg * (1 - opacity_for_original_color))
+    #     b_blend = round(b_orig * opacity_for_original_color + b_bg * (1 - opacity_for_original_color))
+    #     final_bg_rgb = (
+    #         max(0, min(255, r_blend)),
+    #         max(0, min(255, g_blend)),
+    #         max(0, min(255, b_blend))
+    #     )
+    # except Exception as e:
+    #     log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
+    #     final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
 
     bg_color_tuple = (*final_bg_rgb, 255)
 
@@ -348,6 +350,7 @@ async def generate_back_card_image_bytes(
     
     canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
+    # 2. Text color: Use the same logic as the front of the card
     text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (245, 245, 245) 
     
     pad_x = int(card_w * 0.05) # Increased from 0.035 for more left padding
@@ -362,6 +365,16 @@ async def generate_back_card_image_bytes(
     main_stamp_y_start = pad_y
     scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004))
     scallop_step = max(1, int(scallop_circle_radius * 4.5));
+
+    # 3. Post stamp background: Fill with light grey color
+    stamp_bg_color = (240, 240, 240) # Light grey #F0F0F0
+    # Draw a filled rectangle for the stamp background before drawing scallops and logo
+    # The rectangle should be slightly smaller than the main_stamp_area_size to be inside the scallops
+    stamp_fill_x1 = main_stamp_x_start + scallop_circle_radius
+    stamp_fill_y1 = main_stamp_y_start + scallop_circle_radius
+    stamp_fill_x2 = main_stamp_x_start + main_stamp_area_size - scallop_circle_radius
+    stamp_fill_y2 = main_stamp_y_start + main_stamp_area_size - scallop_circle_radius
+    draw.rectangle([(stamp_fill_x1, stamp_fill_y1), (stamp_fill_x2, stamp_fill_y2)], fill=stamp_bg_color)
 
     s_edges = [
         (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),

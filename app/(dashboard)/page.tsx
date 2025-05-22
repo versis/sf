@@ -8,7 +8,9 @@ import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
-import { Save, SkipForward, PenSquare } from 'lucide-react';
+import { Save, SkipForward, PenSquare, ChevronDown, ChevronUp, Palette, UploadCloud, Wand2, Eye, RotateCcw,
+  Copy, Check, Share2, Download, AlertTriangle, MoreHorizontal, X, ExternalLink,
+  Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText } from 'lucide-react';
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -1313,9 +1315,9 @@ export default function HomePage() {
                           <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
-                            placeholder="Add your personal note here (optional, max 500 characters)..."
+                            placeholder="Add your note here (optional, max 500 characters). It will be placed on the back of the card..."
                             maxLength={500}
-                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground text-foreground text-sm resize"
+                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-sm resize"
                             aria-label="Note for the back of the card"
                           />
                           <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
@@ -1327,13 +1329,13 @@ export default function HomePage() {
                         {noteSubmissionError && (
                           <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
                         )}
-                        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                        <div className="flex flex-col sm:flex-row gap-4 mt-4"> {/* Reverted container style */}
                           <button
                             onClick={() => handleNoteSubmission(noteText)}
                             disabled={isSubmittingNote || noteText.length > 500}
                             className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                           >
-                            <PenSquare size={20} className="mr-2" />
+                            <PenSquare size={20} className="mr-2" /> {/* Reverted icon and text */}
                             Save The Note
                           </button>
                           <button
@@ -1342,7 +1344,7 @@ export default function HomePage() {
                             className="px-6 py-3 font-semibold bg-background text-foreground border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none sm:w-auto"
                           >
                             <SkipForward size={20} className="mr-2" />
-                            Skip
+                            Skip Forever
                           </button>
                         </div>
                       </div>
