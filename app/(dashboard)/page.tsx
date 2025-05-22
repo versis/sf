@@ -971,6 +971,32 @@ export default function HomePage() {
     }
   };
 
+  // Auto-flip hero card with different timings
+  useEffect(() => {
+    let flipInterval: NodeJS.Timeout;
+
+    // Always clear the previous interval when the dependencies change
+    // The effect will then set a new interval if conditions are met.
+    // Note: clearInterval(undefined) is a no-op, so this is safe even on initial run.
+    // We declare flipInterval outside the if block so cleanup can access it.
+    const clearCurrentInterval = () => {
+      clearInterval(flipInterval);
+    };
+    clearCurrentInterval(); // Clear any existing interval immediately
+
+    if (isHeroVisible && fetchedHeroCards.length > 0 && !isAnimating) {
+      const currentFlipDelay = isHeroCardFlipped ? 3000 : 5000; // 2.5s if back is shown, 5s if front is shown
+      
+      flipInterval = setInterval(() => {
+        handleHeroCardFlip(); 
+      }, currentFlipDelay);
+    }
+
+    return () => {
+      clearCurrentInterval(); // Clear interval on cleanup
+    };
+  }, [isHeroVisible, fetchedHeroCards.length, isAnimating, isHeroCardFlipped, handleHeroCardFlip]); // Added isHeroCardFlipped to deps
+
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
