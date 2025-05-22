@@ -119,26 +119,33 @@ export default function HomePage() {
 
   // Effect to reset overflow on hero image container after flip animation
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    if (isHeroCardFlipped) { // If we just flipped to the back (animation starting)
-      // Also handles the case where we flip from back to front
+    let timeoutId: NodeJS.Timeout | undefined = undefined;
+
+    // This effect runs after isHeroCardFlipped has changed.
+    // handleHeroCardFlip would have just set overflow to 'visible' if a flip was initiated.
+    // We always want to set it back to 'hidden' after the animation duration.
+
+    if (heroImageContainerRef.current && heroImageContainerRef.current.style.overflow === 'visible') {
+      // If overflow is visible, it means a flip was likely just initiated.
+      // Start a timer to set it back to hidden after the animation.
       timeoutId = setTimeout(() => {
         if (heroImageContainerRef.current) {
-          heroImageContainerRef.current.style.overflow = 'hidden'; // Reset after animation
+          heroImageContainerRef.current.style.overflow = 'hidden';
         }
       }, 800); // Match CSS flip animation duration (0.8s)
-    } else {
-      // If !isHeroCardFlipped (i.e., card is front-facing), ensure overflow is hidden immediately
-      // This handles the initial state and after flipping back to front if timeout was missed.
-      if (heroImageContainerRef.current && heroImageContainerRef.current.style.overflow !== 'hidden') {
-        heroImageContainerRef.current.style.overflow = 'hidden';
-      }
+    } else if (heroImageContainerRef.current && !isHeroCardFlipped && heroImageContainerRef.current.style.overflow !== 'hidden') {
+      // This is a fallback: if the card is front-facing (e.g., initial load, or flipped back to front and timeout was cleared early)
+      // and overflow is not already hidden, hide it.
+      // This helps ensure the default state for the front-facing card is overflow: hidden.
+      heroImageContainerRef.current.style.overflow = 'hidden';
     }
 
     return () => {
-      clearTimeout(timeoutId); // Cleanup timeout if component unmounts or effect re-runs
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
-  }, [isHeroCardFlipped]); // Depend on flip state
+  }, [isHeroCardFlipped]); // Re-run when flip state changes
 
   // Scroll to the active step or results
   useEffect(() => {
