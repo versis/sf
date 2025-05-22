@@ -1,8 +1,8 @@
-# Shadefreude - Project Plan
+# shadefreude - Project Plan
 
 ## 1. Project Overview
 
-Shadefreude is an interactive tool designed to help users create images reminiscent of Pantone color cards, but with a playful twist. Users will upload a photo, select or define a dominant color from it, and the tool will generate a composite image featuring the chosen color swatch, its details (HEX, CMYK, RGB), a custom name, and the user's photo. The project name "Shadefreude" is a humorous take on "Pantone."
+shadefreude is an interactive tool designed to help users create images reminiscent of Pantone color cards, but with a playful twist. Users will upload a photo, select or define a dominant color from it, and the tool will generate a composite image featuring the chosen color swatch, its details (HEX, CMYK, RGB), a custom name, and the user's photo. The project name "shadefreude" is a humorous take on "Pantone."
 
 ## 2. Core Features (MVP - Step 1, 2, 3)
 
@@ -180,9 +180,9 @@ Shadefreude is an interactive tool designed to help users create images reminisc
     *   Call the `/api/generate-name` endpoint.
     *   Populate the color name input field with the AI's suggestion, allowing the user to accept or edit it.
 
-## 6. Vercel Deployment Files and Setup (Original Shadefreude Plan)
+## 6. Vercel Deployment Files and Setup (Original shadefreude Plan)
 
-*Note: This section was part of the original Shadefreude plan. Some details, like paths (`frontend/package.json`), need to be adapted to the merged `sf` project structure where Next.js is at the root and the API is in `api/`.*
+*Note: This section was part of the original shadefreude plan. Some details, like paths (`frontend/package.json`), need to be adapted to the merged `sf` project structure where Next.js is at the root and the API is in `api/`.*
 
 *   **`package.json`:** (For Next.js frontend - now at the root of `sf`)
     *   Standard Next.js scripts (`dev`, `build`, `start`, `lint`).

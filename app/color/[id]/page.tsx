@@ -173,7 +173,7 @@ export default function ColorCardPage() {
     const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`;
     const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
     const shareData = {
-      title: cardDetails?.card_name ? `Shadefreude: ${cardDetails.card_name}` : 'Shadefreude Color Card',
+      title: cardDetails?.card_name ? `shadefreude: ${cardDetails.card_name}` : 'shadefreude Color Card',
       text: shareMessage,
       url: shareUrl,
     };
@@ -286,16 +286,25 @@ export default function ColorCardPage() {
 
           <div className="w-full order-4 mt-4">
             <div className="max-w-4xl mx-auto">
-              <h3 className="text-xl font-semibold mb-3 text-left">What is it?</h3>
+              <h3 className="text-xl font-semibold mb-3 text-left">What is this Page?</h3>
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
-                  You&apos;ve landed on a unique shadefreude creation
+                  This is an AI-crafted digital postcard from <i>shadefreude</i>
                   {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono text-xs">
                       {' '}({cardDetails.card_name ? `${cardDetails.card_name}, ` : ''}{cardDetails.hexColor || 'N/A'})
                     </span>
-                  )}
-                  , where a color from a personal photo has been given its own AI-crafted name and poetic tale. Discover its unique voice, then see what stories your own colors might tell!
+                  )}.
+                </p>
+                <p>
+                  It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
+                </p>
+                <p>
+                  shadefreude turns ordinary snaps into share-worthy mementos. Curious to create your own?
+                  <br />
+                  <Link href="/" className="underline hover:text-foreground">
+                    Create your own postcard
+                  </Link>
                 </p>
               </div>
             </div>

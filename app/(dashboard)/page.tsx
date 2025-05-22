@@ -674,7 +674,7 @@ export default function HomePage() {
     const shareMessage = `My latest shadefreude discovery – a color with a tale to tell: ${shareUrl}`;
 
     const shareData = {
-      title: 'Shadefreude Color Card',
+      title: 'shadefreude Color Card',
       text: shareMessage,
       url: shareUrl, 
     };
@@ -942,8 +942,8 @@ export default function HomePage() {
             <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
-                <h2 className="text-3xl md:text-4xl font-semibold mb-3">
-                  Your Everyday Moments, <br className="md:hidden" />AI&apos;s Extraordinary Postcards
+                <h2 className="text-2xl md:text-3xl font-semibold mb-3">
+                  Your Everyday Moments, <br />AI&apos;s Extraordinary Postcards
                 </h2>
                 <p className="text-md md:text-lg text-muted-foreground">
                   Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
@@ -992,7 +992,7 @@ export default function HomePage() {
                     <img
                       key={displayedImageSrc} // Add key for re-rendering on src change
                       src={displayedImageSrc}
-                      alt={`Example Shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
+                      alt={`Example shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
                       className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
                       style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
                       draggable="false"
