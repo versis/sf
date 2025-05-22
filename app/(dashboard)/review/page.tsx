@@ -10,8 +10,8 @@ interface Generation {
   hex_color: string; // Kept in interface, not displayed
   status: string; // Kept in interface, not displayed
   metadata: any | null; 
-  horizontal_image_url: string | null;
-  vertical_image_url: string | null;
+  front_horizontal_image_url: string | null;
+  front_vertical_image_url: string | null;
   created_at: string | null; 
   updated_at: string | null;
 }
@@ -73,9 +73,9 @@ export default function ReviewPage() {
       // Initialize orientation for new items (default to horizontal if available, else vertical)
       const newOrientations: ItemOrientations = {};
       newGenerations.forEach(gen => {
-        if (gen.horizontal_image_url) {
+        if (gen.front_horizontal_image_url) {
           newOrientations[gen.id] = 'horizontal';
-        } else if (gen.vertical_image_url) {
+        } else if (gen.front_vertical_image_url) {
           newOrientations[gen.id] = 'vertical';
         } 
         // If neither, it won't be set, and buttons will be disabled / no image shown
@@ -141,18 +141,18 @@ export default function ReviewPage() {
           let imageUrlToShow: string | null = null;
           let altText = '';
 
-          if (currentOrientation === 'horizontal' && gen.horizontal_image_url) {
-            imageUrlToShow = gen.horizontal_image_url;
+          if (currentOrientation === 'horizontal' && gen.front_horizontal_image_url) {
+            imageUrlToShow = gen.front_horizontal_image_url;
             altText = `Horizontal ${gen.extended_id || gen.id}`;
-          } else if (currentOrientation === 'vertical' && gen.vertical_image_url) {
-            imageUrlToShow = gen.vertical_image_url;
+          } else if (currentOrientation === 'vertical' && gen.front_vertical_image_url) {
+            imageUrlToShow = gen.front_vertical_image_url;
             altText = `Vertical ${gen.extended_id || gen.id}`;
-          } else if (gen.horizontal_image_url) {
-            imageUrlToShow = gen.horizontal_image_url;
+          } else if (gen.front_horizontal_image_url) {
+            imageUrlToShow = gen.front_horizontal_image_url;
             altText = `Horizontal (fallback) ${gen.extended_id || gen.id}`;
             if (!currentOrientation) setTimeout(() => handleOrientationChange(gen.id, 'horizontal'), 0); 
-          } else if (gen.vertical_image_url) {
-            imageUrlToShow = gen.vertical_image_url;
+          } else if (gen.front_vertical_image_url) {
+            imageUrlToShow = gen.front_vertical_image_url;
             altText = `Vertical (fallback) ${gen.extended_id || gen.id}`;
             if (!currentOrientation) setTimeout(() => handleOrientationChange(gen.id, 'vertical'), 0); 
           }
@@ -175,15 +175,15 @@ export default function ReviewPage() {
                   <div className="flex space-x-3 mb-2">
                     <button 
                       onClick={() => handleOrientationChange(gen.id, 'horizontal')} 
-                      disabled={!gen.horizontal_image_url}
-                      className={getButtonClasses(currentOrientation === 'horizontal' && !!gen.horizontal_image_url, !gen.horizontal_image_url)}>
+                      disabled={!gen.front_horizontal_image_url}
+                      className={getButtonClasses(currentOrientation === 'horizontal' && !!gen.front_horizontal_image_url, !gen.front_horizontal_image_url)}>
                       <IconHorizontal />
                       Horizontal
                     </button>
                     <button 
                       onClick={() => handleOrientationChange(gen.id, 'vertical')} 
-                      disabled={!gen.vertical_image_url}
-                      className={getButtonClasses(currentOrientation === 'vertical' && !!gen.vertical_image_url, !gen.vertical_image_url)}>
+                      disabled={!gen.front_vertical_image_url}
+                      className={getButtonClasses(currentOrientation === 'vertical' && !!gen.front_vertical_image_url, !gen.front_vertical_image_url)}>
                       <IconVertical />
                       Vertical
                     </button>
