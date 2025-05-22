@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
+import CardDisplay from '@/components/CardDisplay';
 
 interface Generation {
   id: number;
@@ -12,6 +13,10 @@ interface Generation {
   metadata: any | null; 
   front_horizontal_image_url: string | null;
   front_vertical_image_url: string | null;
+  back_horizontal_image_url: string | null;
+  back_vertical_image_url: string | null;
+  note_text: string | null;
+  has_note: boolean | null;
   created_at: string | null; 
   updated_at: string | null;
 }
@@ -21,6 +26,11 @@ const ITEMS_PER_PAGE = 30;
 // Type for individual item orientation preferences
 interface ItemOrientations {
   [key: number]: 'horizontal' | 'vertical';
+}
+
+// Type for individual item flipped states
+interface ItemFlippedStates {
+  [key: number]: boolean;
 }
 
 // SVG Icons for buttons
@@ -54,6 +64,7 @@ export default function ReviewPage() {
   const [offset, setOffset] = useState(0);
   const observer = useRef<IntersectionObserver | null>(null);
   const [itemOrientations, setItemOrientations] = useState<ItemOrientations>({});
+  const [itemFlippedStates, setItemFlippedStates] = useState<ItemFlippedStates>({});
   const [copyIdFeedback, setCopyIdFeedback] = useState<{ id: number | null; message: string }>({ id: null, message: '' });
 
   const fetchGenerations = useCallback(async (currentOffset: number) => {
@@ -70,17 +81,23 @@ export default function ReviewPage() {
       setOffset(prevOffset => prevOffset + newGenerations.length);
       setHasMore(newGenerations.length === ITEMS_PER_PAGE);
 
-      // Initialize orientation for new items (default to horizontal if available, else vertical)
       const newOrientations: ItemOrientations = {};
+      const newFlippedStates: ItemFlippedStates = {};
       newGenerations.forEach(gen => {
+        // Default orientation logic: prefer horizontal, then vertical.
         if (gen.front_horizontal_image_url) {
           newOrientations[gen.id] = 'horizontal';
         } else if (gen.front_vertical_image_url) {
           newOrientations[gen.id] = 'vertical';
-        } 
-        // If neither, it won't be set, and buttons will be disabled / no image shown
+        } else {
+          // If neither front image is available, default to horizontal
+          // CardDisplay will show a placeholder if the preferred image is missing.
+          newOrientations[gen.id] = 'horizontal'; 
+        }
+        newFlippedStates[gen.id] = false; 
       });
       setItemOrientations(prev => ({ ...prev, ...newOrientations }));
+      setItemFlippedStates(prev => ({ ...prev, ...newFlippedStates }));
 
     } catch (error) {
       console.error('Error fetching generations:', error);
@@ -110,6 +127,15 @@ export default function ReviewPage() {
       ...prev,
       [id]: orientation
     }));
+    // When orientation changes, ensure we are showing the front of the card
+    setItemFlippedStates(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleCardClick = (id: number) => {
+    setItemFlippedStates(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
   };
 
   const getButtonClasses = (isActive: boolean, isDisabled: boolean) => {
@@ -137,25 +163,13 @@ export default function ReviewPage() {
       )}
       <div>
         {generations.map((gen, index) => {
-          const currentOrientation = itemOrientations[gen.id];
-          let imageUrlToShow: string | null = null;
-          let altText = '';
+          const currentOrientation = itemOrientations[gen.id] || 'horizontal'; // Default to horizontal if not set
+          const isFlipped = itemFlippedStates[gen.id] || false;
 
-          if (currentOrientation === 'horizontal' && gen.front_horizontal_image_url) {
-            imageUrlToShow = gen.front_horizontal_image_url;
-            altText = `Horizontal ${gen.extended_id || gen.id}`;
-          } else if (currentOrientation === 'vertical' && gen.front_vertical_image_url) {
-            imageUrlToShow = gen.front_vertical_image_url;
-            altText = `Vertical ${gen.extended_id || gen.id}`;
-          } else if (gen.front_horizontal_image_url) {
-            imageUrlToShow = gen.front_horizontal_image_url;
-            altText = `Horizontal (fallback) ${gen.extended_id || gen.id}`;
-            if (!currentOrientation) setTimeout(() => handleOrientationChange(gen.id, 'horizontal'), 0); 
-          } else if (gen.front_vertical_image_url) {
-            imageUrlToShow = gen.front_vertical_image_url;
-            altText = `Vertical (fallback) ${gen.extended_id || gen.id}`;
-            if (!currentOrientation) setTimeout(() => handleOrientationChange(gen.id, 'vertical'), 0); 
-          }
+          // Dummy handlers for CardDisplay props not used in this list view
+          const dummyShare = async () => console.log("Share action from review page");
+          const dummyCopyUrl = async () => console.log("Copy URL action from review page");
+          const dummyDownload = () => console.log("Download action from review page");
 
           const itemContent = (
             <article 
@@ -163,10 +177,8 @@ export default function ReviewPage() {
               className="py-6"
               ref={index === generations.length - 1 ? lastElementRef : null}
             >
-              {/* Main flex container: column on small, row on medium+ */}
               <div className="flex flex-col md:flex-row md:items-start">
                 
-                {/* Info and Controls Area - DOM first, order-2 on medium+ (right side) */}
                 <div className="w-full md:order-2 flex-grow mb-6 md:mb-0 md:ml-10">
                   <p className="mb-3 text-sm text-gray-600">
                     <span className="font-semibold">{offset - generations.length + index + 1}.</span> Created: {formatDate(gen.created_at)}
@@ -175,15 +187,15 @@ export default function ReviewPage() {
                   <div className="flex space-x-3 mb-2">
                     <button 
                       onClick={() => handleOrientationChange(gen.id, 'horizontal')} 
-                      disabled={!gen.front_horizontal_image_url}
-                      className={getButtonClasses(currentOrientation === 'horizontal' && !!gen.front_horizontal_image_url, !gen.front_horizontal_image_url)}>
+                      disabled={!gen.front_horizontal_image_url && !gen.back_horizontal_image_url}
+                      className={getButtonClasses(currentOrientation === 'horizontal', !gen.front_horizontal_image_url && !gen.back_horizontal_image_url)}>
                       <IconHorizontal />
                       Horizontal
                     </button>
                     <button 
                       onClick={() => handleOrientationChange(gen.id, 'vertical')} 
-                      disabled={!gen.front_vertical_image_url}
-                      className={getButtonClasses(currentOrientation === 'vertical' && !!gen.front_vertical_image_url, !gen.front_vertical_image_url)}>
+                      disabled={!gen.front_vertical_image_url && !gen.back_vertical_image_url}
+                      className={getButtonClasses(currentOrientation === 'vertical', !gen.front_vertical_image_url && !gen.back_vertical_image_url)}>
                       <IconVertical />
                       Vertical
                     </button>
@@ -211,8 +223,8 @@ export default function ReviewPage() {
                         )}
                       </div>
                       <div>
-                        <Link href={`/color/${gen.extended_id}`} legacyBehavior>
-                          <a className="text-sm text-blue-600 hover:text-blue-800 underline">
+                        <Link href={`/color/${gen.extended_id.replace(/\s+/g, '-').toLowerCase()}`} legacyBehavior>
+                          <a className="text-sm text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
                             View Full Card Details
                           </a>
                         </Link>
@@ -221,15 +233,31 @@ export default function ReviewPage() {
                   )}
                 </div>
 
-                {/* Image Area - DOM second, order-1 on medium+ (left side) */}
                 <div className="w-full md:order-1 md:w-1/2 lg:w-2/5 flex-shrink-0">
-                  {imageUrlToShow ? (
-                    <img src={imageUrlToShow} alt={altText} className="w-full h-auto rounded-lg"/>
-                  ) : (
-                    <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                      <p>No image available for this selection.</p>
-                    </div>
-                  )}
+                  <CardDisplay
+                    frontHorizontalImageUrl={gen.front_horizontal_image_url}
+                    frontVerticalImageUrl={gen.front_vertical_image_url}
+                    backHorizontalImageUrl={gen.back_horizontal_image_url}
+                    backVerticalImageUrl={gen.back_vertical_image_url}
+                    noteText={gen.note_text}
+                    hasNote={gen.has_note}
+                    isFlippable={true}
+                    isFlipped={isFlipped}
+                    onFlip={() => handleCardClick(gen.id)}
+                    currentDisplayOrientation={currentOrientation}
+                    setCurrentDisplayOrientation={(orientation) => handleOrientationChange(gen.id, orientation)}
+                    // Pass dummy or no-op handlers for actions not relevant in list view
+                    handleShare={dummyShare}
+                    handleCopyGeneratedUrl={dummyCopyUrl}
+                    handleDownloadImage={dummyDownload}
+                    isGenerating={false} 
+                    generatedExtendedId={gen.extended_id}
+                    isVisible={true}
+                    disableScrollOnLoad={true} // Prevent CardDisplay's own scroll effect
+                    // hexColor and createdAt could be passed if CardDisplay uses them on the back for non-note cards
+                    hexColor={gen.hex_color}
+                    createdAt={gen.created_at}
+                  />
                 </div>
 
               </div>
