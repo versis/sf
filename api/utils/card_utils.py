@@ -372,13 +372,11 @@ async def generate_back_card_image_bytes(
     # f_date_below_note will be defined just before date rendering
 
     # 6. Define Stamp Area Dimensions (needed for note area calculation)
-    main_stamp_area_size = int(min(card_w, card_h) * 0.20)
+    main_stamp_area_size = int(min(card_w, card_h) * 0.25) # Increased from 0.20 to make stamp taller
     main_stamp_padding = int(main_stamp_area_size * 0.1)
     main_stamp_x_start = card_w - pad_x - main_stamp_area_size
     main_stamp_y_start = pad_y
-    # Increase scallop circle radius for more prominent border
-    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.08)) # Was 0.06
-    # scallop_step is used only in stamp drawing section, defined later
+    # scallop_circle_radius and scallop_step are no longer used for the old method
 
     # 7. Define Note Text Area Boundaries
     note_text_area_start_x = pad_x
@@ -441,32 +439,45 @@ async def generate_back_card_image_bytes(
 
     # --- DRAWING SECTION ---
 
-    # 12. Draw Stamp (Background, Border, Logo) - Moved here after canvas is ready
-    stamp_bg_color = (240, 240, 240)
-    stamp_fill_x1 = main_stamp_x_start + scallop_circle_radius
-    stamp_fill_y1 = main_stamp_y_start + scallop_circle_radius
-    stamp_fill_x2 = main_stamp_x_start + main_stamp_area_size - scallop_circle_radius
-    stamp_fill_y2 = main_stamp_y_start + main_stamp_area_size - scallop_circle_radius
-    draw.rectangle([(stamp_fill_x1, stamp_fill_y1), (stamp_fill_x2, stamp_fill_y2)], fill=stamp_bg_color)
+    # 12. Draw Stamp (Background, Border, Logo)
+    # Draw the main light grey rectangle for the stamp background first
+    stamp_bg_color = (240, 240, 240) # Light grey #F0F0F0
+    draw.rectangle([
+        (main_stamp_x_start, main_stamp_y_start), 
+        (main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size)
+    ], fill=stamp_bg_color)
 
-    scallop_step = max(1, int(scallop_circle_radius * 0.75)) # Adjusted step for more overlap, was 2.0
-    s_edges = [
-        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),
-        (main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, True),
-        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, False),
-        (main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, False)
+    # New Perforation Dot Logic
+    perforation_dot_radius = max(2, int(main_stamp_area_size * 0.035))
+    perforation_dot_step = int(perforation_dot_radius * 2.2) # Step is slightly more than diameter
+    perforation_color = solid_lightened_bg_rgb # Use card's background color for a subtle effect
+
+    # Edges to draw perforations on: [x1, y1, x2, y2, is_horizontal]
+    stamp_edges_for_perforation = [
+        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True), # Top
+        (main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, True), # Bottom
+        (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, False), # Left
+        (main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, False)  # Right
     ]
-    for x1_s, y1_s, x2_s, y2_s, is_horizontal_edge in s_edges:
-        current_pos_val = 0; length_val = x2_s - x1_s if is_horizontal_edge else y2_s - y1_s
-        if length_val <= 0: continue
-        while current_pos_val <= length_val:
-            px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
-            py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
-            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=solid_lightened_bg_rgb)
-            current_pos_val += scallop_step
-        px_end = x2_s if is_horizontal_edge else x1_s
-        py_end = y2_s if not is_horizontal_edge else y1_s
-        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=solid_lightened_bg_rgb)
+
+    for x1, y1, x2, y2, is_horizontal_edge in stamp_edges_for_perforation:
+        length = (x2 - x1) if is_horizontal_edge else (y2 - y1)
+        num_dots = max(1, int(length / perforation_dot_step))
+        actual_step = length / num_dots if num_dots > 0 else length # Distribute dots evenly
+
+        for i in range(num_dots + 1):
+            current_pos = i * actual_step
+            if is_horizontal_edge:
+                px, py = x1 + current_pos, y1
+            else:
+                px, py = x1, y1 + current_pos
+            
+            # Draw a filled circle for perforation
+            draw.ellipse([
+                (px - perforation_dot_radius, py - perforation_dot_radius),
+                (px + perforation_dot_radius, py + perforation_dot_radius)
+            ], fill=perforation_color)
+
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
         logo_max_dim_main = main_stamp_area_size - (2 * main_stamp_padding)
@@ -474,7 +485,37 @@ async def generate_back_card_image_bytes(
         logo_main_x = main_stamp_x_start + main_stamp_padding + (logo_max_dim_main - logo_img_main.width) // 2
         logo_main_y = main_stamp_y_start + main_stamp_padding + (logo_max_dim_main - logo_img_main.height) // 2
         canvas.paste(logo_img_main, (logo_main_x, logo_main_y), logo_img_main)
-    except Exception as e: log(f"Error with main stamp logo: {e}", level="ERROR", request_id=request_id)
+
+        # --- Render Date INSIDE the stamp ---
+        if created_at_iso_str:
+            date_font_size = 16 if orientation == 'vertical' else 18
+            f_stamp_date = get_font(date_font_size, weight="Regular", style="Normal", font_family="Inter", request_id=request_id)
+            try:
+                dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
+                date_str_formatted = dt_object.strftime('%b %d, %Y') # Shorter month format
+                date_display_text = f"Stamped: {date_str_formatted}"
+                date_text_color = (20, 20, 20) # Always black
+                
+                date_w, date_h = get_text_dimensions(date_display_text, f_stamp_date)
+                
+                # Position date text below the logo, centered within the stamp
+                # Y: Below logo bottom edge + padding. Logo bottom edge is approx logo_main_y + logo_img_main.height
+                date_padding_below_logo = int(main_stamp_area_size * 0.05) # 5% of stamp height as padding
+                date_y = logo_main_y + logo_img_main.height + date_padding_below_logo
+                
+                date_x = main_stamp_x_start + (main_stamp_area_size - date_w) // 2
+                
+                # Check if date fits within the stamp vertically
+                if date_y + date_h < main_stamp_y_start + main_stamp_area_size - main_stamp_padding: # Ensure it's above bottom padding
+                    draw.text((date_x, date_y), date_display_text, font=f_stamp_date, fill=date_text_color)
+                else:
+                    log(f"Date text '{date_display_text}' does not fit in stamp. Y: {date_y}, Stamp Bottom: {main_stamp_y_start + main_stamp_area_size}", level="WARNING", request_id=request_id)
+            except ValueError:
+                log(f"Could not parse date for stamp: {created_at_iso_str}", level="WARNING", request_id=request_id)
+            except AttributeError: # Catches if logo_img_main is None (e.g. logo file error)
+                log(f"Cannot position date text in stamp because logo image was not loaded.", level="WARNING", request_id=request_id)
+
+    except Exception as e: log(f"Error with main stamp logo or date drawing: {e}", level="ERROR", request_id=request_id)
 
     # 13. Render Note Text and Ruled Lines
     # y_cursor is already set from current_elements_y
@@ -501,24 +542,6 @@ async def generate_back_card_image_bytes(
             y_cursor += note_line_h 
         else:
             break 
-
-    # 15. Render Date
-    if created_at_iso_str:
-        f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id)
-        try:
-            dt_object = datetime.fromisoformat(created_at_iso_str.replace('Z', '+00:00'))
-            date_str = dt_object.strftime('%B %d, %Y')
-            date_w, date_h = get_text_dimensions(date_str, f_date_below_note)
-            gap_below_stamp = int(card_h * (0.015 if orientation == 'vertical' else 0.03)) 
-            date_y = main_stamp_y_start + main_stamp_area_size + gap_below_stamp
-            date_x = main_stamp_x_start + (main_stamp_area_size - date_w) // 2
-            date_x = max(pad_x, date_x) 
-            if date_y + date_h < card_h - pad_y:
-                 draw.text((date_x, date_y), date_str, font=f_date_below_note, fill=text_color)
-            else:
-                 log(f"Date does not fit on card at new position below stamp. Y: {date_y}", request_id=request_id)
-        except ValueError:
-            log(f"Could not parse date for date string: {created_at_iso_str}", level="WARNING", request_id=request_id)
 
     # 16. Finalize Image (Rounded Corners, Save)
     radius = 40
