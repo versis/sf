@@ -286,18 +286,18 @@ export default function ColorCardPage() {
 
           <div className="w-full order-4 mt-4">
             <div className="max-w-4xl mx-auto">
-              <h3 className="text-xl font-semibold mb-3 text-left">What is this Page?</h3>
+              <h3 className="text-xl font-semibold mb-3 text-left">So... what&#39;s this? (first time here)</h3>
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
-                  This is an AI-crafted digital postcard from <i>shadefreude</i>
+                  This is an AI-crafted digital postcard from <i>shadefreude</i> with its unique title:
                   {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono text-xs">
-                      {' '}({cardDetails.card_name ? `${cardDetails.card_name}, ` : ''}{cardDetails.hexColor || 'N/A'})
+                      {' '}{cardDetails.card_name ? `${cardDetails.card_name}` : ''}
                     </span>
                   )}.
                 </p>
                 <p>
-                  It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
+                  This is human and AI cooperation. It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
                 </p>
                 <p>
                   <Link href="/" className="underline hover:text-foreground">
