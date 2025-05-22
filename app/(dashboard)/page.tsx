@@ -35,6 +35,8 @@ const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 // User-provided IDs (ensure these are correct and exist in your DB)
 const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
   "000000063 FE F",
+  "000000064 FE F",
+  "000000065 FE F",
   // Add more valid extended_ids from your database here
 ];
 const SWIPE_THRESHOLD = 50;
