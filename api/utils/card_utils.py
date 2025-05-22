@@ -309,54 +309,62 @@ async def generate_back_card_image_bytes(
 ) -> bytes:
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
-    base_rgb_for_back = hex_to_rgb(hex_color_input, request_id=request_id)
-    if not base_rgb_for_back:
-        log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
-        base_rgb_for_back = (200, 200, 200) 
-    
-    # 1. Background color: Use raw user-decided hex color
-    final_bg_rgb = base_rgb_for_back
-    # Removed blending logic:
-    # white_bg_rgb = (255, 255, 255)
-    # opacity_for_original_color = 0.15
-    # try:
-    #     r_orig, g_orig, b_orig = base_rgb_for_back
-    #     r_bg, g_bg, b_bg = white_bg_rgb
-    #     r_blend = round(r_orig * opacity_for_original_color + r_bg * (1 - opacity_for_original_color))
-    #     g_blend = round(g_orig * opacity_for_original_color + g_bg * (1 - opacity_for_original_color))
-    #     b_blend = round(b_orig * opacity_for_original_color + b_bg * (1 - opacity_for_original_color))
-    #     final_bg_rgb = (
-    #         max(0, min(255, r_blend)),
-    #         max(0, min(255, g_blend)),
-    #         max(0, min(255, b_blend))
-    #     )
-    # except Exception as e:
-    #     log(f"Error blending color for card back: {e}. Using desaturated fallback.", level="ERROR", request_id=request_id)
-    #     final_bg_rgb = adjust_hls(base_rgb_for_back, s_factor=0.4, l_factor=1.15)
+    # --- TOGGLE for background effect ---
+    # Set to True to apply the 60% opacity effect (blended with white).
+    # Set to False to use the raw original_rgb for the background.
+    apply_60_percent_opacity_effect_to_back_bg = False 
+    # --- END TOGGLE ---
 
-    bg_color_tuple = (*final_bg_rgb, 255)
+    original_rgb = hex_to_rgb(hex_color_input, request_id=request_id)
+    if not original_rgb:
+        log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
+        original_rgb = (200, 200, 200) 
+    
+    # 1. Calculate the target solid background color
+    r_orig, g_orig, b_orig = original_rgb
+    
+    if apply_60_percent_opacity_effect_to_back_bg:
+        alpha_blend_factor = 0.60 # Blend with white at 60% opacity
+    else:
+        alpha_blend_factor = 1.0 # Use raw color (effectively 100% opacity of original_rgb)
+        
+    r_white, g_white, b_white = 255, 255, 255 # White background for blending reference
+
+    r_blended = round(r_orig * alpha_blend_factor + r_white * (1 - alpha_blend_factor))
+    g_blended = round(g_orig * alpha_blend_factor + g_white * (1 - alpha_blend_factor))
+    b_blended = round(b_orig * alpha_blend_factor + b_white * (1 - alpha_blend_factor))
+    
+    # Ensure blended values are within 0-255 range
+    solid_lightened_bg_rgb = (
+        max(0, min(255, r_blended)),
+        max(0, min(255, g_blended)),
+        max(0, min(255, b_blended))
+    )
+
+    # 2. Set Card Background: Use the calculated solid_lightened_bg_rgb with 100% opacity
+    bg_color_tuple = (*solid_lightened_bg_rgb, 255) # Alpha is 255 for solid
 
     VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
     HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
 
     if orientation == "horizontal":
         card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
-        note_font_size_val = 34
+        note_font_size_val = 32
         date_below_note_font_size_val = 26
     else: # vertical
         card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
-        note_font_size_val = 34
+        note_font_size_val = 32
         date_below_note_font_size_val = 22
     
-    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
+    canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple) # Use the new solid bg_color_tuple
     draw = ImageDraw.Draw(canvas)
-    # 2. Text color: Use the same logic as the front of the card, but ensure light text is pure white
-    text_color = (20, 20, 20) if sum(final_bg_rgb) > 384 else (255, 255, 255)
+    # 3. Determine Text Color based on the new solid_lightened_bg_rgb
+    text_color = (20, 20, 20) if sum(solid_lightened_bg_rgb) > 384 else (255, 255, 255)
     
-    pad_x = int(card_w * 0.05) # Increased from 0.035 for more left padding
+    pad_x = int(card_w * 0.05) 
     pad_y = int(card_h * 0.05)
     
-    f_note = get_font(note_font_size_val, weight="Regular", style="Italic", font_family="Inter", request_id=request_id)
+    f_note = get_font(note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id)
     f_date_below_note = get_font(date_below_note_font_size_val, weight="Light", style="Italic", font_family="Inter", request_id=request_id) 
 
     main_stamp_area_size = int(min(card_w, card_h) * 0.20)
@@ -388,11 +396,11 @@ async def generate_back_card_image_bytes(
         while current_pos_val <= length_val:
             px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
             py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
-            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=final_bg_rgb)
+            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=solid_lightened_bg_rgb) # 4. Post Stamp Border uses the new solid background color
             current_pos_val += scallop_step
         px_end = x2_s if is_horizontal_edge else x1_s
         py_end = y2_s if not is_horizontal_edge else y1_s
-        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=final_bg_rgb)
+        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=solid_lightened_bg_rgb) # 4. Post Stamp Border uses the new solid background color
 
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
