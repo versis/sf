@@ -135,9 +135,9 @@ export default function ColorCardPage() {
           setError(null);
           // Scroll to card display after data is loaded and orientation set
           // Ensure this happens after the DOM has a chance to update with the CardDisplay component
-          setTimeout(() => {
-            swipeableElementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 150); // Adjusted delay slightly
+          // setTimeout(() => {
+          //   swipeableElementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // }, 150); // Adjusted delay slightly
 
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -277,6 +277,8 @@ export default function ColorCardPage() {
               copyUrlFeedback={copyUrlFeedback}
               disableScrollOnLoad={true}
               swipeDirection={swipeDirection}
+              hexColor={cardDetails?.hexColor}
+              createdAt={cardDetails?.createdAt}
             />
           </div>
           

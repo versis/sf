@@ -5,6 +5,7 @@ import {
   MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical,
   Undo2, BookOpenText
 } from 'lucide-react';
+import { getContrastTextColor } from '@/lib/colorUtils';
 
 interface CardDisplayProps {
   frontHorizontalImageUrl: string | null;
@@ -30,6 +31,8 @@ interface CardDisplayProps {
   isVisible: boolean;
   disableScrollOnLoad?: boolean;
   swipeDirection?: 'left' | 'right' | null;
+  hexColor?: string | null;
+  createdAt?: string | null;
 }
 
 // Define known dimensions (assuming these are correct, adjust if needed)
@@ -62,6 +65,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   isVisible,
   disableScrollOnLoad,
   swipeDirection,
+  hexColor,
+  createdAt,
 }) => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -73,6 +78,10 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
   const cardImageUrl = currentOrientation === "horizontal" ? frontHorizontalImageUrl : frontVerticalImageUrl;
   const backCardImageUrl = currentOrientation === "horizontal" ? backHorizontalImageUrl : backVerticalImageUrl;
+
+  // For the "post stamp" area, if its background is always page white, text will be black (or determined by contrast with white)
+  const postStampBackgroundColor = 'hsl(0, 0%, 98%)'; // Use specific off-white from globals.css
+  const postStampTextColor = getContrastTextColor('hsl(0, 0%, 98%)'); // Text color for this background
 
   const handleSetOrientation = (newOrientation: "horizontal" | "vertical") => {
     setCurrentOrientation(newOrientation);
@@ -219,6 +228,29 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
               ) : (currentOrientation === 'vertical' && backVerticalImageUrl) ? (
                 <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
+              ) : noteText ? (
+                <div 
+                  className="w-full h-full flex flex-col justify-center items-center p-6 rounded-md overflow-auto"
+                  style={{
+                    backgroundColor: postStampBackgroundColor,
+                    color: postStampTextColor,
+                  }}
+                >
+                  <p className="text-sm text-center whitespace-pre-wrap">{noteText}</p>
+                  {createdAt && (
+                    <p className="text-xs text-center whitespace-pre-wrap mt-4">Created: {new Date(createdAt).toLocaleDateString()}</p>
+                  )}
+                </div>
+              ) : createdAt ? (
+                <div 
+                  className="w-full h-full flex flex-col justify-center items-center p-6 rounded-md"
+                  style={{
+                    backgroundColor: postStampBackgroundColor,
+                    color: postStampTextColor,
+                  }}
+                >
+                  <p className="text-sm text-center whitespace-pre-wrap">Created: {new Date(createdAt).toLocaleDateString()}</p>
+                </div>
               ) : (
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Card back not available.</p>
@@ -234,11 +266,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={handleFlipCard}
-                  className={revealButtonStyle}
-                  title={isFlipped ? "Go Back" : "Reveal the Note"}
+                  className={`${revealButtonStyle} min-w-[180px]`}
+                  title={isFlipped ? "Show Front" : "Reveal the Note"}
                 >
                   {isFlipped ? <Undo2 size={20} className="mr-1.5" /> : <BookOpenText size={20} className="mr-1.5" />}
-                  <span className="text-sm">{isFlipped ? "Go Back" : "Reveal the Note"}</span>
+                  <span className="text-sm">{isFlipped ? "Show Front" : "Reveal the Note"}</span>
                 </button>
 
                 <div className="relative" ref={actionsMenuRef}>
