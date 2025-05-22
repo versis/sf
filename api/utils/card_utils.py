@@ -372,7 +372,7 @@ async def generate_back_card_image_bytes(
     # f_date_below_note will be defined just before date rendering
 
     # 6. Define Stamp Area Dimensions (needed for note area calculation)
-    main_stamp_area_size = int(min(card_w, card_h) * 0.25) # Increased from 0.20 to make stamp taller
+    main_stamp_area_size = int(min(card_w, card_h) * 0.30) # Increased from 0.25 to make stamp taller
     main_stamp_padding = int(main_stamp_area_size * 0.1)
     main_stamp_x_start = card_w - pad_x - main_stamp_area_size
     main_stamp_y_start = pad_y
