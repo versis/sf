@@ -37,7 +37,7 @@ const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
   "000000075 FE F",
   "000000089 FE F",
   "000000081 FE F",
-  "000000088 FE F",
+  "000000091 FE F",
   "000000066 FE F",
   "000000084 FE F",
   "000000090 FE F",
@@ -1044,10 +1044,10 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         {isHeroVisible && (
-          <section className="w-full py-6 md:py-4">
-            <div className="md:grid md:grid-cols-5 md:gap-8 lg:gap-12 items-start">
+          <section className="w-full py-3 md:py-2">
+            <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 items-start">
               {/* Left Column: Text - takes 2/5ths */}
-              <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
+              <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0">
                 <h2 className="text-2xl md:text-3xl font-semibold mb-3">
                   Your Everyday Moments, <br />AI&apos;s Extraordinary Postcards
                 </h2>
@@ -1057,10 +1057,10 @@ export default function HomePage() {
               </div>
 
               {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-              <div className="flex flex-col md:items-start w-full md:col-span-3 relative md:-mt-3">
+              <div className="flex flex-col md:items-start w-full md:col-span-3 relative">
                 <div
                   ref={heroImageContainerRef}
-                  className={'relative w-full cursor-grab active:cursor-grabbing example-card-image-container'}
+                  className={'relative w-full cursor-grab active:cursor-grabbing example-card-image-container md:my-6'}
                   style={{ aspectRatio: isMobile ? '12/20' : '80/33' }}
                 >
                   <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0 && swipeDeltaY === 0) handleHeroCardFlip(); }}>
@@ -1147,24 +1147,28 @@ export default function HomePage() {
                 {!isMobile && fetchedHeroCards.length > 1 && (
                   <>
                     {currentExampleCardIndex > 0 && (
-                      <button
-                        onClick={handlePrevExampleCard}
-                        className="absolute left-1/2 md:-top-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors p-2 rounded-md"
-                        aria-label="Previous example card"
-                        disabled={isAnimating}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                      </button>
+                      <div className="absolute left-1/2 -top-6 transform -translate-x-1/2 group z-20">
+                        <button
+                          onClick={handlePrevExampleCard}
+                          className="hero-nav-button p-4 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
+                          aria-label="Previous example card"
+                          disabled={isAnimating}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                      </div>
                     )}
                     {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
-                      <button
-                        onClick={handleNextExampleCard}
-                        className="absolute left-1/2 md:-bottom-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-20 transition-colors p-2 rounded-md"
-                        aria-label="Next example card"
-                        disabled={isAnimating}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                      </button>
+                      <div className="absolute left-1/2 -bottom-6 transform -translate-x-1/2 group z-20">
+                        <button
+                          onClick={handleNextExampleCard}
+                          className="hero-nav-button p-4 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
+                          aria-label="Next example card"
+                          disabled={isAnimating}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                      </div>
                     )}
                   </>
                 )}
@@ -1173,10 +1177,10 @@ export default function HomePage() {
           </section>
         )}
 
-        <hr className="w-full border-t-2 border-foreground my-6" />
+        <hr className="w-full border-t-2 border-foreground my-3" />
 
         {/* Inserted Title and HR */}
-        <div className="w-full flex flex-col items-start my-4">
+        <div className="w-full flex flex-col items-start my-2">
           <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
         </div>
 
