@@ -34,11 +34,11 @@ const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
 // User-provided IDs (ensure these are correct and exist in your DB)
 const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
+  "000000075 FE F",
   "000000089 FE F",
   "000000081 FE F",
   "000000088 FE F",
   "000000066 FE F",
-  "000000075 FE F",
   "000000084 FE F",
   "000000090 FE F",
   // Add more valid extended_ids from your database here
