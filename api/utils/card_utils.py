@@ -388,11 +388,11 @@ async def generate_back_card_image_bytes(
         while current_pos_val <= length_val:
             px_val = x1_s + current_pos_val if is_horizontal_edge else x1_s
             py_val = y1_s + current_pos_val if not is_horizontal_edge else y1_s
-            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=text_color)
+            draw.ellipse([(px_val - scallop_circle_radius, py_val - scallop_circle_radius), (px_val + scallop_circle_radius, py_val + scallop_circle_radius)], fill=final_bg_rgb)
             current_pos_val += scallop_step
         px_end = x2_s if is_horizontal_edge else x1_s
         py_end = y2_s if not is_horizontal_edge else y1_s
-        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=text_color)
+        draw.ellipse([(px_end - scallop_circle_radius, py_end - scallop_circle_radius), (px_end + scallop_circle_radius, py_end + scallop_circle_radius)], fill=final_bg_rgb)
 
     try:
         logo_img_original = Image.open(LOGO_PATH).convert("RGBA")
