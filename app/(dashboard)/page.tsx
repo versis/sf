@@ -105,6 +105,8 @@ export default function HomePage() {
   const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
   const [noteSubmissionError, setNoteSubmissionError] = useState<string | null>(null);
   
+  const mainContainerRef = useRef<HTMLDivElement>(null); // Ref for the main content container
+  
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
 
   // Scroll to the active step or results
@@ -882,6 +884,16 @@ export default function HomePage() {
       // Successfully submitted note or skipped
       setIsNoteStepActive(false);
       const slug = result.extended_id?.replace(/\s+/g, '-').toLowerCase() || generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
+      
+      // Attempt to reset zoom before navigation
+      if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === 'function') {
+        (document.activeElement as HTMLElement).blur();
+      }
+      mainContainerRef.current?.focus(); // Focus on a non-input element
+      
+      // Optional: Short delay if direct focus doesn't work, but can feel clunky
+      // await new Promise(resolve => setTimeout(resolve, 50)); 
+
       router.push(`/color/${slug}`);
 
     } catch (error) {
@@ -894,7 +906,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
+    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
         <header className="py-6 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
@@ -1247,7 +1259,7 @@ export default function HomePage() {
                             onChange={(e) => setNoteText(e.target.value)}
                             placeholder="Add your note here (optional, max 500 characters). It will be placed on the back of the card..."
                             maxLength={500}
-                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-sm resize"
+                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
                             aria-label="Note for the back of the card"
                           />
                           <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}

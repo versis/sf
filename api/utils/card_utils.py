@@ -376,8 +376,9 @@ async def generate_back_card_image_bytes(
     main_stamp_padding = int(main_stamp_area_size * 0.1)
     main_stamp_x_start = card_w - pad_x - main_stamp_area_size
     main_stamp_y_start = pad_y
-    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.004))
-    # scallop_step is used only in stamp drawing section
+    # Increase scallop circle radius for more prominent border
+    scallop_circle_radius = max(1, int(main_stamp_area_size * 0.08)) # Was 0.06
+    # scallop_step is used only in stamp drawing section, defined later
 
     # 7. Define Note Text Area Boundaries
     note_text_area_start_x = pad_x
@@ -448,7 +449,7 @@ async def generate_back_card_image_bytes(
     stamp_fill_y2 = main_stamp_y_start + main_stamp_area_size - scallop_circle_radius
     draw.rectangle([(stamp_fill_x1, stamp_fill_y1), (stamp_fill_x2, stamp_fill_y2)], fill=stamp_bg_color)
 
-    scallop_step = max(1, int(scallop_circle_radius * 4.5)) # Define scallop_step here
+    scallop_step = max(1, int(scallop_circle_radius * 0.75)) # Adjusted step for more overlap, was 2.0
     s_edges = [
         (main_stamp_x_start, main_stamp_y_start, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start, True),
         (main_stamp_x_start, main_stamp_y_start + main_stamp_area_size, main_stamp_x_start + main_stamp_area_size, main_stamp_y_start + main_stamp_area_size, True),
