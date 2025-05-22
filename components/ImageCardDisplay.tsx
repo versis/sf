@@ -30,7 +30,6 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [currentOrientation, setCurrentOrientation] = useState<'horizontal' | 'vertical'>(defaultOrientation);
-  const [animationClass, setAnimationClass] = useState('');
 
   const getContainerClasses = (orientation: 'horizontal' | 'vertical', mobile: boolean) => {
     let aspectRatioContainer = 'aspect-video max-w-xl'; // Default to desktop horizontal
@@ -64,20 +63,12 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
 
   const handleNextCard = () => {
     if (!actualEnableImageSwitching) return;
-    setAnimationClass('slide-out-left');
-    setTimeout(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % cardSet.length);
-      setAnimationClass('slide-in-right');
-    }, 300); // Match CSS animation duration
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % cardSet.length);
   };
 
   const handlePrevCard = () => {
     if (!actualEnableImageSwitching) return;
-    setAnimationClass('slide-out-right');
-    setTimeout(() => {
-      setCurrentIndex((prevIndex) => (prevIndex - 1 + cardSet.length) % cardSet.length);
-      setAnimationClass('slide-in-left');
-    }, 300); // Match CSS animation duration
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + cardSet.length) % cardSet.length);
   };
 
   const currentCard = cardSet[currentIndex];
@@ -103,14 +94,11 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
   return (
     <div className={`flex flex-col items-center w-full ${className}`}>
       {/* Image Container */}
-      <div
-        className={`relative w-full mb-2 cursor-grab active:cursor-grabbing ${aspectRatioContainer} overflow-hidden`}
-        onTouchStart={(e) => {
-          if (animationClass) return; // Don't allow swipe during animation
-          setTouchStartX(e.touches[0].clientX);
-        }}
+      <div 
+        className={`relative w-full mb-2 cursor-grab active:cursor-grabbing ${aspectRatioContainer}`}
+        onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
         onTouchEnd={(e) => {
-          if (touchStartX === null || animationClass) return; // Don't allow swipe during animation
+          if (touchStartX === null) return;
           const touchEndX = e.changedTouches[0].clientX;
           const deltaX = touchEndX - touchStartX;
           if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
@@ -120,12 +108,11 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
           setTouchStartX(null);
         }}
       >
-        <img
+        <img 
           src={imageUrl}
           alt={currentCard.altText || `Card image ${currentIndex + 1} - ${currentOrientation}`}
-          className={`w-full h-full rounded-lg object-contain ${animationClass}`}
+          className="w-full h-full rounded-lg object-contain"
           draggable="false"
-          onAnimationEnd={() => setAnimationClass('')}
         />
 
         {/* Desktop Overlay/Side Buttons - Conditionally Rendered */}
