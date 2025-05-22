@@ -34,10 +34,7 @@ const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
 // User-provided IDs (ensure these are correct and exist in your DB)
 const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
-  "000000081 FE F",
-  "000000089 FE F",
-  "000000109 FE F",
-  "000000097 FE F",
+  "000000063 FE F",
   // Add more valid extended_ids from your database here
 ];
 const SWIPE_THRESHOLD = 50;
@@ -946,10 +943,10 @@ export default function HomePage() {
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-6 md:mb-0 md:col-span-2 pt-0">
                 <h2 className="text-3xl md:text-4xl font-semibold mb-3">
-                  Your photo&apos;s shade,<br /> AI&apos;s poetic debut.
+                  Your Everyday Moments, <br className="md:hidden" />AI&apos;s Extraordinary Postcards
                 </h2>
                 <p className="text-md md:text-lg text-muted-foreground">
-                  Hi, I&apos;m Kuba, a data scientist who loves to tinker. I built shadefreude to blend a bit of AI magic with your everyday images. Pick a photo, choose a color that speaks to you, and my system will craft a unique name and a poetic little story for it. Think of this whole thing as an experiment, resulting in a unique and memorable artifact for your photo.
+                  Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
                 </p>
               </div>
 
