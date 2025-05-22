@@ -121,6 +121,13 @@ export default function HomePage() {
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
 
+  // Helper to restore page scroll on mobile
+  const restorePageScroll = () => {
+    if (isMobile) {
+      document.body.style.overflow = '';
+    }
+  };
+
   // Effect to reset overflow on hero image container after flip animation
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | undefined = undefined;
@@ -761,6 +768,8 @@ export default function HomePage() {
         setIsAnimating(false);
         setSwipeDeltaY(0);
       }
+      // Ensure page scroll is restored after any animation, especially snap-back
+      restorePageScroll();
       return;
     }
 
@@ -776,6 +785,8 @@ export default function HomePage() {
     setCurrentExampleCardIndex(newCurrentIndex !== -1 ? newCurrentIndex : 0);
     setIsAnimating(false);
     setSwipeDeltaY(0); 
+    // Ensure page scroll is restored after card change animation
+    restorePageScroll();
   };
 
   const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
@@ -921,6 +932,11 @@ export default function HomePage() {
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (isAnimating) return; // Prevent action if card is changing (up/down)
+
+    if (isMobile) {
+      document.body.style.overflow = 'hidden'; // Disable page scroll
+    }
+
     // For horizontal swipe detection (flipping)
     setTouchStartX(e.touches[0].clientX); 
     setTouchStartY(e.touches[0].clientY); // Keep for vertical swipe
@@ -947,6 +963,8 @@ export default function HomePage() {
     if (isAnimating && (primaryImage.animationClass.includes('slide') || secondaryImage.animationClass.includes('slide'))) {
       setTouchStartX(null);
       setTouchStartY(null);
+      // Restore scroll if animation was preventing touch end logic, but touch still ends.
+      restorePageScroll();
       return;
     }
 
@@ -980,6 +998,8 @@ export default function HomePage() {
         setSwipeDeltaX(0);
         setSwipeDeltaY(0);
     }
+    // Restore page scroll after handling touch end
+    restorePageScroll();
   };
 
   // Auto-flip hero card with different timings
@@ -1007,6 +1027,25 @@ export default function HomePage() {
       clearCurrentInterval(); // Clear interval on cleanup
     };
   }, [isHeroVisible, fetchedHeroCards.length, isAnimating, isHeroCardFlipped, handleHeroCardFlip]); // Added isHeroCardFlipped to deps
+
+  // New touch cancel handler for the hero card
+  const handleHeroCardTouchCancel = (e: React.TouchEvent<HTMLDivElement>) => {
+    console.log("Hero card touch cancelled");
+    restorePageScroll(); // Ensure scroll is restored on cancel
+
+    // Reset touch states similar to handleTouchEnd
+    setTouchStartX(null);
+    setTouchStartY(null);
+    setSwipeDeltaX(0);
+    setSwipeDeltaY(0);
+    
+    // If a snap-back animation was potentially initiated but touch cancelled
+    if (primaryImage.animationClass === 'snap-back-animation') {
+      setPrimaryImage(prev => ({ ...prev, animationClass: '' }));
+    }
+    // If isAnimating was true due to a swipe that got cancelled.
+    setIsAnimating(false); 
+  };
 
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
@@ -1072,6 +1111,7 @@ export default function HomePage() {
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleHeroCardTouchCancel}
                       >
                         {/* CARD_FRONT and CARD_BACK content */}
                         <div className="card-face card-front">
