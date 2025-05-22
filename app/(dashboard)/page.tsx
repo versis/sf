@@ -72,11 +72,14 @@ export default function HomePage() {
   const [isResultsStepCompleted, setIsResultsStepCompleted] = useState(false);
   const [generatedExtendedId, setGeneratedExtendedId] = useState<string | null>(null);
   const [currentExampleCardIndex, setCurrentExampleCardIndex] = useState(0);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [swipeDeltaX, setSwipeDeltaX] = useState(0);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [swipeDeltaY, setSwipeDeltaY] = useState(0);
   const [animationClass, setAnimationClass] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
-  const [displayedImageSrc, setDisplayedImageSrc] = useState<string>('');
+  // const [displayedImageSrc, setDisplayedImageSrc] = useState<string>(''); // No longer primary driver for src
+  
+  const [primaryImage, setPrimaryImage] = useState<{ src: string; animationClass: string }>({ src: '', animationClass: '' });
+  const [secondaryImage, setSecondaryImage] = useState<{ src: string | null; animationClass: string; initialTranslate: string }>({ src: null, animationClass: '', initialTranslate: '' });
   
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
   
@@ -173,32 +176,26 @@ export default function HomePage() {
     fetchAllHeroCards();
   }, []); // Empty dependency array: Runs once on mount
 
-  // Initialize displayedImageSrc based on initial currentExampleCardIndex, isMobile, and fetchedHeroCards
+  // Initialize primaryImage based on initial currentExampleCardIndex, isMobile, and fetchedHeroCards
   useEffect(() => {
     if (!heroCardsLoading && fetchedHeroCards.length > 0) {
       const card = fetchedHeroCards[currentExampleCardIndex];
       if (card) {
-        const initialImage = isMobile ? card.v : card.h;
-        if (initialImage) {
-          setDisplayedImageSrc(initialImage);
-          console.log("[Hero Init] Initial displayedImageSrc set to:", initialImage);
+        const initialImageSrc = isMobile ? card.v || card.h : card.h || card.v;
+        if (initialImageSrc) {
+          setPrimaryImage({ src: initialImageSrc, animationClass: '' });
+          console.log("[Hero Init] Initial primaryImage.src set to:", initialImageSrc);
         } else {
-          // Fallback if preferred orientation is missing for the first card
-          const fallbackImage = isMobile ? card.h : card.v;
-          if (fallbackImage) {
-            setDisplayedImageSrc(fallbackImage);
-            console.log("[Hero Init] Initial displayedImageSrc (fallback) set to:", fallbackImage);
-          } else {
-            console.warn(`[Hero Init] Card at index ${currentExampleCardIndex} has no image URLs.`);
-            // setDisplayedImageSrc('/placeholder-hero.png'); // Optional placeholder
-          }
+          console.warn(`[Hero Init] Card at index ${currentExampleCardIndex} has no image URLs.`);
+          setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
         }
       } else {
         console.warn(`[Hero Init] No card data found at currentExampleCardIndex: ${currentExampleCardIndex} after loading.`);
+        setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
       }
     } else if (!heroCardsLoading && fetchedHeroCards.length === 0 && HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 0) {
         console.warn("[Hero Init] Hero cards were fetched, but the resulting array is empty or all items filtered out.");
-        // setDisplayedImageSrc('/placeholder-hero.png'); // Optional placeholder
+        setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
     }
   }, [currentExampleCardIndex, isMobile, fetchedHeroCards, heroCardsLoading]);
 
@@ -314,7 +311,7 @@ export default function HomePage() {
     console.log('Wizard reset.');
 
     // Reset animation states
-    setSwipeDeltaX(0);
+    setSwipeDeltaY(0);
     setAnimationClass('');
     setIsAnimating(false);
   };
@@ -715,39 +712,42 @@ export default function HomePage() {
   };
 
   const handleAnimationEnd = () => {
-    console.log(`[Hero] Animation ended: ${animationClass}`);
-    
-    // Only handle slide-out animations ending here
-    if (animationClass.includes('slide-out')) {
-      // Animation end is handled via setTimeout in triggerImageChangeAnimation
-      console.log(`[Hero] Slide-out animation completed`);
-    } else if (animationClass === 'snap-back-animation') {
-      // Handle snap-back for swipe that didn't reach threshold
-      console.log(`[Hero] Snap-back animation completed`);
-      setAnimationClass('');
-      setIsAnimating(false);
-      setSwipeDeltaX(0);
+    if (!secondaryImage.src) { // If no secondary image, animation might be snap-back or an old one
+      if (primaryImage.animationClass === 'snap-back-animation') {
+        console.log('[Hero Two-Slot] Snap-back animation completed');
+        setPrimaryImage(prev => ({ ...prev, animationClass: '' }));
+        setIsAnimating(false);
+        setSwipeDeltaY(0);
+      }
+      return;
     }
+
+    // This means a slide-in/out animation has completed
+    console.log('[Hero Two-Slot] Slide in/out animation completed. Promoting secondary to primary.');
+    const newPrimarySrc = secondaryImage.src;
+    const newCurrentIndex = fetchedHeroCards.findIndex(card => {
+      const cardUrl = isMobile ? card.v || card.h : card.h || card.v;
+      return cardUrl === newPrimarySrc;
+    });
+    
+    setPrimaryImage({ src: newPrimarySrc, animationClass: '' });
+    setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
+    setCurrentExampleCardIndex(newCurrentIndex !== -1 ? newCurrentIndex : 0);
+    setIsAnimating(false);
+    setSwipeDeltaY(0); 
   };
 
-  // For the CSS transitions (slide-from-left/right), we need to handle transitionend events
+  // For the CSS transitions - currently not used with stacked animations
   const handleTransitionEnd = () => {
-    if (animationClass === 'slide-from-left' || animationClass === 'slide-from-right') {
-      console.log(`[Hero] Slide-in transition completed`);
-      setAnimationClass(''); // Remove transition class after complete
-      setIsAnimating(false);
-      setSwipeDeltaX(0);
-    }
+    // No longer needed with stacked animations, but keeping for potential future use
+    console.log(`[Hero] Transition ended: ${animationClass}`);
   };
 
   const triggerImageChangeAnimation = (direction: 'next' | 'prev', targetIndex?: number) => {
-    // Don't start a new animation if one is already in progress
     if (isAnimating) return;
-    
     setIsAnimating(true);
-    console.log(`[Hero] Starting ${direction} animation`);
+    console.log(`[Hero Two-Slot] Starting ${direction} animation`);
 
-    // Calculate the target index
     let newIndex: number;
     if (targetIndex !== undefined) {
       newIndex = targetIndex;
@@ -761,72 +761,46 @@ export default function HomePage() {
         : (currentExampleCardIndex - 1 + fetchedHeroCards.length) % fetchedHeroCards.length;
     }
 
-    console.log(`[Hero] Navigating from card ${currentExampleCardIndex} to ${newIndex}`);
-
-    // Get the card data for the target index
-    const card = fetchedHeroCards[newIndex];
-    if (!card) {
-      console.error(`[Hero] No card data for index ${newIndex}`);
+    const nextCardData = fetchedHeroCards[newIndex];
+    if (!nextCardData) {
+      console.error(`[Hero Two-Slot] No card data for index ${newIndex}`);
       setIsAnimating(false);
       return;
     }
 
-    // Select the appropriate image based on device
-    const imageUrl = isMobile 
-      ? card.v || card.h // Prefer vertical on mobile, fallback to horizontal
-      : card.h || card.v; // Prefer horizontal on desktop, fallback to vertical
-
-    if (!imageUrl) {
-      console.error(`[Hero] No image available for card at index ${newIndex}`);
+    const newImageUrl = isMobile ? nextCardData.v || nextCardData.h : nextCardData.h || nextCardData.v;
+    if (!newImageUrl) {
+      console.error(`[Hero Two-Slot] No image available for card at index ${newIndex}`);
       setIsAnimating(false);
       return;
     }
 
-    // Set the slide-out animation class
-    setAnimationClass(direction === 'next' ? 'slide-out-left-animation' : 'slide-out-right-animation');
-
-    // Preload the image
+    // Preload the next image before starting animations
     const img = new Image();
     img.onload = () => {
-      console.log(`[Hero] Next image loaded: ${imageUrl}`);
-      
-      // We'll use a completely different approach with CSS transitions instead of animations
-    // This gives us more control over the timing and prevents double-loading appearance
-    
-    // First, wait for the slide-out animation to complete
-    setTimeout(() => {
-      // Prepare for the immediate transition on next render
-      if (direction === 'next') {
-        // No animation class - just update the image, which will be initially invisible
-        setAnimationClass('prepare-from-right');
-        setDisplayedImageSrc(imageUrl);
-        setCurrentExampleCardIndex(newIndex);
-        
-        // Force browser to process the above changes before starting animation
-        setTimeout(() => {
-          // Now trigger the slide-in with CSS transition
-          setAnimationClass('slide-from-right');
-        }, 20);
-      } else {
-        // Same flow for previous direction
-        setAnimationClass('prepare-from-left');
-        setDisplayedImageSrc(imageUrl);
-        setCurrentExampleCardIndex(newIndex);
-        
-        setTimeout(() => {
-          setAnimationClass('slide-from-left');
-        }, 20);
+      console.log(`[Hero Two-Slot] Next image loaded: ${newImageUrl}`);
+      if (direction === 'next') { // Swiping UP (next image comes from bottom)
+        setSecondaryImage({ 
+          src: newImageUrl, 
+          animationClass: 'slide-in-from-bottom-animation', 
+          initialTranslate: 'translateY(120%)'
+        });
+        setPrimaryImage(prev => ({ ...prev, animationClass: 'slide-out-to-top-animation' }));
+      } else { // Swiping DOWN (next image comes from top)
+        setSecondaryImage({ 
+          src: newImageUrl, 
+          animationClass: 'slide-in-from-top-animation', 
+          initialTranslate: 'translateY(-120%)'
+        });
+        setPrimaryImage(prev => ({ ...prev, animationClass: 'slide-out-to-bottom-animation' }));
       }
-    }, 300); // Match this to the slide-out animation duration in CSS
+      // currentExampleCardIndex will be updated in handleAnimationEnd after animations
     };
-    
     img.onerror = () => {
-      console.error(`[Hero] Failed to load image: ${imageUrl}`);
-      setAnimationClass('');
-      setIsAnimating(false);
+      console.error(`[Hero Two-Slot] Failed to load image: ${newImageUrl}`);
+      setIsAnimating(false); // Reset if image fails to load
     };
-    
-    img.src = imageUrl;
+    img.src = newImageUrl;
   };
 
   const handleNextExampleCard = () => {
@@ -904,6 +878,31 @@ export default function HomePage() {
     }
   };
 
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY === null || isAnimating) return;
+    if (Math.abs(swipeDeltaY) > SWIPE_THRESHOLD) {
+      // setIsAnimating(true); // Moved to triggerImageChangeAnimation
+      if (swipeDeltaY < 0) { // Swipe Up
+        triggerImageChangeAnimation('next');
+      } else { // Swipe Down
+        triggerImageChangeAnimation('prev');
+      }
+    } else if (swipeDeltaY !== 0) {
+      // Snap back if swipe was not strong enough
+      console.log("[Hero Touch] Snap back initiated");
+      setPrimaryImage(prev => ({ ...prev, animationClass: 'snap-back-animation' }));
+      // swipeDeltaY will be reset by handleAnimationEnd for snap-back
+    }
+    setTouchStartY(null);
+    // Do not reset swipeDeltaY here if it's a snap-back, handleAnimationEnd will do it.
+    // If not a snap-back and not a swipe, it can be reset, or rely on animation end.
+    if (!(Math.abs(swipeDeltaY) > SWIPE_THRESHOLD) && swipeDeltaY !== 0) {
+      // This is a snap-back, let handleAnimationEnd reset swipeDeltaY
+    } else {
+      setSwipeDeltaY(0); // Reset for non-swipe or successful swipe (redundant due to handleAnimationEnd)
+    }
+  };
+
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
@@ -958,54 +957,56 @@ export default function HomePage() {
                   className={'relative w-full mb-2 cursor-grab active:cursor-grabbing overflow-hidden example-card-image-container'}
                   onTouchStart={(e) => {
                     if (isAnimating) return;
-                    setTouchStartX(e.touches[0].clientX);
+                    setTouchStartY(e.touches[0].clientY);
                     setAnimationClass('');
-                    setSwipeDeltaX(0); // Reset delta for direct interaction on image
+                    setSwipeDeltaY(0); // Reset delta for direct interaction on image
                   }}
                   onTouchMove={(e) => {
-                    if (touchStartX === null || isAnimating) return;
-                    const currentX = e.touches[0].clientX;
-                    const delta = currentX - touchStartX;
-                    setSwipeDeltaX(delta);
+                    if (touchStartY === null || isAnimating) return;
+                    const currentY = e.touches[0].clientY;
+                    const delta = currentY - touchStartY;
+                    setSwipeDeltaY(delta);
                   }}
-                  onTouchEnd={(e) => {
-                    if (touchStartX === null || isAnimating) return;
-                    if (Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
-                      setIsAnimating(true);
-                      if (swipeDeltaX < 0) {
-                        triggerImageChangeAnimation('next');
-                      } else {
-                        triggerImageChangeAnimation('prev');
-                      }
-                    } else {
-                      // Snap back if swipe was not strong enough
-                      setAnimationClass('snap-back-animation');
-                      // swipeDeltaX will be reset by handleAnimationEnd after snap-back
-                    }
-                    setTouchStartX(null);
-                  }}
+                  onTouchEnd={handleTouchEnd}
                 >
                   {heroCardsLoading ? (
                     <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
                       <p className="text-muted-foreground">Loading examples...</p>
                       {/* Optional: Add a spinner SVG icon here */}
                     </div>
-                  ) : fetchedHeroCards.length > 0 && displayedImageSrc ? (
-                    <img
-                      key={displayedImageSrc} // Add key for re-rendering on src change
-                      src={displayedImageSrc}
-                      alt={`Example shadefreude Card ${currentExampleCardIndex + 1} - ${fetchedHeroCards[currentExampleCardIndex]?.id}`}
-                      className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${animationClass} ${swipeDeltaX !== 0 && !animationClass ? '' : 'transitioning'} mx-auto`}
-                      style={{ transform: (swipeDeltaX !== 0 && !animationClass) ? `translateX(${swipeDeltaX}px)` : undefined }}
-                      draggable="false"
-                      onAnimationEnd={handleAnimationEnd}
-                      onTransitionEnd={handleTransitionEnd}
-                      onError={(e) => { 
-                          console.error("[Hero Image Error] Failed to load displayedImageSrc:", displayedImageSrc, e);
-                          // Optionally set to a placeholder if an image fails to load, e.g.:
-                          // setDisplayedImageSrc('/placeholder-error.png'); 
-                      }}
-                    />
+                  ) : fetchedHeroCards.length > 0 && primaryImage.src ? (
+                    <>
+                      <img
+                        key={`primary-${primaryImage.src}-${currentExampleCardIndex}`} // More unique key
+                        src={primaryImage.src}
+                        alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
+                        className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image ${primaryImage.animationClass} ${swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass ? '' : 'transitioning'} mx-auto`}
+                        style={{
+                          transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass) ? `translateY(${swipeDeltaY}px)` : undefined,
+                          zIndex: 10, 
+                          position: 'relative' 
+                        }}
+                        draggable="false"
+                        onAnimationEnd={primaryImage.animationClass ? handleAnimationEnd : undefined}
+                        onError={(e) => { 
+                            console.error("[Hero Image Error] Failed to load primaryImage.src:", primaryImage.src, e);
+                        }}
+                      />
+                      {secondaryImage.src && (
+                        <img
+                          key={`secondary-${secondaryImage.src}`}
+                          src={secondaryImage.src}
+                          alt="Next example card image"
+                          className={`w-full h-auto max-h-[80vh] md:max-h-none rounded-lg object-contain example-card-image absolute top-0 left-0 ${secondaryImage.animationClass} mx-auto`}
+                          style={{
+                            transform: secondaryImage.initialTranslate,
+                            zIndex: 5 
+                          }}
+                          draggable="false"
+                          onAnimationEnd={secondaryImage.animationClass ? handleAnimationEnd : undefined} 
+                        />
+                      )}
+                    </>
                   ) : (
                     <div className="w-full h-auto max-h-[80vh] md:max-h-none rounded-lg bg-muted flex items-center justify-center aspect-[4/3] mx-auto">
                       <p className="text-muted-foreground">No example images available.</p>
@@ -1013,27 +1014,27 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* Desktop Overlay/Side Buttons - Hidden on Mobile */}
+                {/* Desktop Overlay/Top and Bottom Buttons - Hidden on Mobile */}
                 {!isMobile && fetchedHeroCards.length > 1 && (
                   <>
                     {currentExampleCardIndex > 0 && (
                       <button
                         onClick={handlePrevExampleCard}
-                        className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        className="absolute left-1/2 -top-4 md:-top-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
                         aria-label="Previous example card"
                         disabled={isAnimating}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                       </button>
                     )}
                     {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
                       <button
                         onClick={handleNextExampleCard}
-                        className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                        className="absolute left-1/2 -bottom-4 md:-bottom-8 transform -translate-x-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
                         aria-label="Next example card"
                         disabled={isAnimating}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                       </button>
                     )}
                   </>

@@ -89,3 +89,59 @@
     text-wrap: balance;
   }
 }
+
+/* Hero card swipe animations for vertical movement */
+@keyframes snap-back {
+  from {
+    transform: translateY(var(--snap-delta, 0));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.snap-back-animation {
+  animation: snap-back 0.2s ease-out forwards;
+}
+
+/* Ensure the image container can hold positioned elements and clip overflow */
+.example-card-image-container {
+  position: relative;
+  overflow: hidden; /* This is important to clip the outgoing/incoming images */
+}
+
+/* Animation for the current card sliding OUT to the TOP */
+.slide-out-to-top-animation {
+  animation: slide-out-to-top 0.3s ease-in-out forwards;
+}
+@keyframes slide-out-to-top {
+  from { transform: translateY(0); }
+  to { transform: translateY(-120%); }
+}
+
+/* Animation for the current card sliding OUT to the BOTTOM */
+.slide-out-to-bottom-animation {
+  animation: slide-out-to-bottom 0.3s ease-in-out forwards;
+}
+@keyframes slide-out-to-bottom {
+  from { transform: translateY(0); }
+  to { transform: translateY(120%); }
+}
+
+/* Animation for the next card sliding IN from the BOTTOM */
+.slide-in-from-bottom-animation {
+  animation: slide-in-from-bottom 0.3s ease-in-out forwards;
+}
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(120%); } /* Starts below with 20% gap */
+  to { transform: translateY(0); }
+}
+
+/* Animation for the next card sliding IN from the TOP */
+.slide-in-from-top-animation {
+  animation: slide-in-from-top 0.3s ease-in-out forwards;
+}
+@keyframes slide-in-from-top {
+  from { transform: translateY(-120%); } /* Starts above with 20% gap */
+  to { transform: translateY(0); }
+}
