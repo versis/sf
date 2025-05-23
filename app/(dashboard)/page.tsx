@@ -1029,7 +1029,7 @@ export default function HomePage() {
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
-        <header className="py-6 border-b-2 border-foreground">
+        <header className="py-4 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
             <a href="/" onClick={(e) => { e.preventDefault(); resetWizard(); }} className="flex items-center justify-center cursor-pointer">
               <span className="mr-1 ml-1">
@@ -1062,7 +1062,7 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         {isHeroVisible && (
-          <section className="w-full py-3 md:py-2">
+          <section className="w-full md:pt-1 md:pb-2 py-3">
             <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 items-start">
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2">
@@ -1179,10 +1179,10 @@ export default function HomePage() {
                       <button
                         key={`page-btn-${index}`}
                         onClick={() => handlePageButtonClick(index)} // Use renamed handler
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ease-in-out transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-background
+                        className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium transition-all duration-100 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
                           ${currentExampleCardIndex === index 
-                            ? 'bg-blue-600 text-white shadow-md focus:ring-blue-400' 
-                            : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground focus:ring-blue-500'}
+                            ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]' 
+                            : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px]'}
                         `}
                         aria-label={`Go to card ${index + 1}`}
                         disabled={isAnimating}
