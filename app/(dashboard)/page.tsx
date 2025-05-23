@@ -1117,7 +1117,7 @@ export default function HomePage() {
               {/* Left Column: Text - takes 2/5ths */}
               <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2">
                 <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mt-6">
-                  <span className="text-lg md:text-xl font-normal text-muted-foreground">turn </span>Your everyday moment<br /><span className="text-lg md:text-xl font-normal text-muted-foreground">into </span>extraordinary AI postcard
+                  <span className="text-lg md:text-xl font-normal text-muted-foreground">turn </span>your everyday moment<br /><span className="text-lg md:text-xl font-normal text-muted-foreground">into </span>extraordinary AI postcard
                 </h2>
                 <p className="text-md md:text-lg text-muted-foreground">
                   Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
