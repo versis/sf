@@ -322,15 +322,13 @@ async def generate_back_card_image_bytes(
 ) -> bytes:
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
-    # --- TOGGLE for background effect ---
-    apply_60_percent_opacity_effect_to_back_bg = False 
-    # --- END TOGGLE ---
+    # Define the fixed background color for the card back
+    FIXED_BACK_CARD_COLOR_HEX = "#FAF7F0" # Pale, warm cream
+    fixed_back_card_rgb = hex_to_rgb(FIXED_BACK_CARD_COLOR_HEX, request_id=request_id)
+    if not fixed_back_card_rgb: # Fallback if hex_to_rgb fails for the fixed color
+        log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback grey.", level="ERROR", request_id=request_id)
+        fixed_back_card_rgb = (230, 230, 230) # A light fallback grey
 
-    original_rgb = hex_to_rgb(hex_color_input, request_id=request_id)
-    if not original_rgb:
-        log(f"Invalid hex_color_input '{hex_color_input}' for card back. Using fallback grey.", level="WARNING", request_id=request_id)
-        original_rgb = (200, 200, 200) 
-    
     # 1. Determine card dimensions and base font sizes
     if orientation == "horizontal":
         card_w, card_h = 1400, 700
@@ -340,21 +338,7 @@ async def generate_back_card_image_bytes(
         note_font_size_val = 32
 
     # 2. Calculate effective background color
-    r_orig_bg, g_orig_bg, b_orig_bg = original_rgb
-    alpha_blend_factor_for_bg = 1.0
-    if apply_60_percent_opacity_effect_to_back_bg:
-        alpha_blend_factor_for_bg = 0.60
-    
-    r_white_blend, g_white_blend, b_white_blend = 255, 255, 255
-    r_blended_bg = round(r_orig_bg * alpha_blend_factor_for_bg + r_white_blend * (1 - alpha_blend_factor_for_bg))
-    g_blended_bg = round(g_orig_bg * alpha_blend_factor_for_bg + g_white_blend * (1 - alpha_blend_factor_for_bg))
-    b_blended_bg = round(b_orig_bg * alpha_blend_factor_for_bg + b_white_blend * (1 - alpha_blend_factor_for_bg))
-    
-    solid_lightened_bg_rgb = (
-        max(0, min(255, r_blended_bg)),
-        max(0, min(255, g_blended_bg)),
-        max(0, min(255, b_blended_bg))
-    )
+    solid_lightened_bg_rgb = fixed_back_card_rgb # Use the fixed color directly
     bg_color_tuple = (*solid_lightened_bg_rgb, 255)
 
     # 3. Initialize Canvas and Draw objects
@@ -380,18 +364,22 @@ async def generate_back_card_image_bytes(
     stamp_y_start = pad_y
 
     # Draw rectangular stamp background
-    stamp_bg_color = (240, 240, 240) # Light grey
+    stamp_bg_color = (251, 251, 251) # Back to #FBFBFB
     draw.rectangle([
         (stamp_x_start, stamp_y_start), 
-        (stamp_x_start + stamp_width, stamp_y_start + stamp_height) # Use new height
+        (stamp_x_start + stamp_width, stamp_y_start + stamp_height)
     ], fill=stamp_bg_color)
+
+    # --- Bevel Effect REMOVED ---
+    # (The code for inner_shadow_color, highlight_color, line_thickness, and draw.line calls for bevel is deleted)
+    # --- End Bevel Effect REMOVED ---
 
     # Draw rectangular stamp perforation dots
     # Use min of stamp_width, stamp_height for relative dot sizing
     perf_reference_size = min(stamp_width, stamp_height)
     perf_dot_radius = max(2, int(perf_reference_size * 0.035)) 
     perf_dot_step = int(perf_dot_radius * 2.2)
-    perf_color = solid_lightened_bg_rgb
+    perf_color = solid_lightened_bg_rgb # This will now be FIXED_BACK_CARD_COLOR_HEX
     
     stamp_edges = [
         (stamp_x_start, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start, True), # Top
