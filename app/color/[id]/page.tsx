@@ -298,8 +298,7 @@ export default function ColorCardPage() {
                       )}
                     </span>
                   )}.
-                </p>
-                <p>
+                  <br/>
                   This is human and AI cooperation. It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
                 </p>
                 <p>
