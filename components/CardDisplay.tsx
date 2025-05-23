@@ -74,7 +74,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
   const flipperBaseClasses = "card-flipper";
   const flipperAspectRatio = currentOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
-  const verticalMaxHeightClass = currentOrientation === 'vertical' ? 'max-h-[80vh]' : '';
+  // const verticalMaxHeightClass = currentOrientation === 'vertical' ? 'max-h-[80vh]' : ''; // Intentionally commented out
 
   const cardImageUrl = currentOrientation === "horizontal" ? frontHorizontalImageUrl : frontVerticalImageUrl;
   const backCardImageUrl = currentOrientation === "horizontal" ? backHorizontalImageUrl : backVerticalImageUrl;
@@ -202,7 +202,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
-          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${verticalMaxHeightClass} ${
+          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${
             isFlippable && isFlipped
               ? swipeDirection === 'left'
                 ? 'is-flipped swipe-left'
