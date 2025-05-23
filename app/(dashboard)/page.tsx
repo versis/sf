@@ -1103,14 +1103,15 @@ export default function HomePage() {
               {/* Right Column: Example Card with Navigation - takes 3/5ths */}
               <div className="flex flex-col md:items-start w-full md:col-span-3 relative">
                 {/* Wrapper for card image (and formerly mobile dots) */}
-                <div className={`w-full ${isMobile ? 'flex flex-row items-center' : ''}`}>
+                <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}> {/* Added justify-center for mobile */}
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
-                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'flex-grow' : 'w-full'}` }
+                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? '' : 'w-full'}` } // Removed flex-grow for mobile
                     style={{
-                      aspectRatio: isMobile ? '3/4' : '80/33',
                       height: isMobile ? '80vh' : undefined,
+                      width: isMobile ? '60vh' : undefined, // Explicit width (3/4 of 80vh) for mobile
+                      aspectRatio: isMobile ? undefined : '80/33', // Keep for desktop, remove for mobile
                       // On mobile, ensure width adjusts to maintain aspect ratio with the 80vh height, or set a specific width constraint if needed.
                       // For now, flex-grow and aspect-ratio should handle it, but might need explicit width e.g., width: 'auto' or a percentage.
                     }}
