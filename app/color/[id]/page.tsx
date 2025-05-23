@@ -291,10 +291,10 @@ export default function ColorCardPage() {
                 <p>
                   This is an AI-crafted digital postcard from <i>shadefreude</i> with its unique title:
                   {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
-                    <span className="font-mono text-xs">
-                      {' '}{cardDetails.card_name ? `${cardDetails.card_name}, ` : ''}
+                    <span className="font-mono">
+                      {' '}{cardDetails.card_name ? `${cardDetails.card_name} ` : ''}
                       {cardDetails.hexColor && (
-                        <span>{cardDetails.hexColor}</span>
+                        <span>({cardDetails.hexColor})</span>
                       )}
                     </span>
                   )}.
