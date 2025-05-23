@@ -108,53 +108,83 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                             "type": "text", 
                             "text": (
                                 f"""
-# Main Goal
-Create a deeply personal and uniquely descriptive color card based on:
-1. Hex color value: '{hex_color}'
-2. The attached image
-
-# Structured Analysis
-Before creating the final details, explicitly outline the following:
-
-## Step 1: Image Analysis
-List clearly and concisely:
-- Main visible elements (people, objects, scenes)
-- Emotions, moods, or atmosphere
-- Distinctive details or background features
-- Speculation about why this moment was captured by the user
-
-## Step 2: Color Analysis
-Describe briefly in direct, simple terms:
-- Visual characteristics (e.g., bright, muted, pastel, vibrant, earthy)
-- Emotional tone or vibe of the color (e.g., calming, energetic, serene, warm)
-- Possible real-world applications or contexts (fashion, interior design, branding, nature)
-
-## Step 3: Connection
-Identify clearly how the image and color relate:
-- Shared or contrasting emotional tones
-- Ways the color emphasizes or complements the image
-- Specific, unique insight arising from the pairing
-
-## Step 4: Avoiding Repetition
-Explicitly note and avoid using repetitive terms such as "hush," "whisper," "embrace," "dance," "symphony," or other clichés previously overused.
-
-Only after completing these steps, proceed to the final title and description.
-
-# Final Output Requirements
-Provide:
-- A fresh, evocative color name (max 3 words, ALL CAPS)
-- Phonetic pronunciation (IPA symbols)
-- Grammatical article (e.g., noun)
-- A concise, vivid description (30–40 words) written in third person, uniquely connecting the color and the captured moment
-
-Ensure your description:
-- Immediately uses original, concrete imagery or sensory details without explicit color terminology
-- Avoids repetitive language or clichés
-- Clearly communicates the unique blend of color and the personal moment depicted in the image
-
-Your structured and original thinking will ensure a meaningful and truly distinct result.
-
-Good luck!
+                                    # Main Goal
+                                    Create a deeply personal color card based on:
+                                    1. Hex value: '{hex_color}'
+                                    2. The attached image
+                                    
+                                    # Core Philosophy
+                                    You're creating a unique color that belongs to THIS specific person. This isn't just any color - it's THEIR color, discovered in THEIR moment, through THEIR lens.
+                                    
+                                    # Image Analysis Guidelines
+                                    First, analyze the image carefully:
+                                    - If there's one main person: This is likely the user themselves. Speak to them directly through the color.
+                                    - If it's a scene/object/multiple people: The user chose to capture this moment. Honor their eye, their timing, their perspective.
+                                    
+                                    # Personalization Approach
+                                    Consider:
+                                    - What emotion or memory might this photo hold for them?
+                                    - What was special about the moment they pressed the shutter?
+                                    - How does their chosen color connect to their personal story in this image?
+                                    - What quality in them does this photo+color combination reveal?
+                                    
+                                    # Writing Style Requirements
+                                    - Avoid generic descriptions (no "whispers of," "dance of," "embrace of," "symphony of")
+                                    - NEVER start with: "This hue," "This color," "This shade," "A color that," "The color," "A shade," "The shade," "The hue," or ANY variation mentioning color/hue/shade/tone
+                                    - Begin immediately with vivid, descriptive language - like opening to the middle of a poem
+                                    - Jump straight into the essence: "Afternoon light caught in a grandmother's locket..." or "The exact temperature of laughter at 3am..." or "Cinnamon dust on fingertips after midnight baking..."
+                                    - Start with concrete imagery, sensory details, or poetic metaphors - NEVER with color terminology
+                                    - Each description should feel like it could ONLY belong to this specific photo+color combination
+                                    - Use unexpected metaphors and fresh language
+                                    - Write in third person, describing the color/concept itself
+                                    - The description should still feel deeply personal, as if this color embodies something unique about the moment/person captured
+                                    
+                                    # Description Depth (let the image+color naturally guide which aspect emerges):
+                                    - For intimate moments: Focus on personal memories, quiet revelations, or tender details
+                                    - For joyful/achievement moments: Capture triumph, celebration, or personal milestones
+                                    - For contemplative scenes: Explore deeper meanings, life's subtle truths, or philosophical undertones
+                                    - For dynamic/energetic images: Highlight personality, creative spark, or spirited essence
+                                    - For grounding moments: Anchor significant life moments, transitions, or realizations
+                                    
+                                    # Analysis Process (complete this internally before creating the final output)
+                                    
+                                    ## Step 1: Image Analysis
+                                    - Visual elements: What objects, people, scenery are present?
+                                    - Composition: What's the focal point? Background elements?
+                                    - Lighting: Natural/artificial? Time of day? Shadows and highlights?
+                                    - Mood/Atmosphere: What emotions does this image evoke?
+                                    - Story: What moment is being captured? What happened before/after?
+                                    - Personal significance: Why might this photo be special to the person who took it?
+                                    
+                                    ## Step 2: Color Analysis
+                                    - Basic properties: Is it warm/cool? Light/dark? Saturated/muted?
+                                    - Emotional qualities: Calm/energetic? Joyful/melancholic? Bold/subtle?
+                                    - Natural associations: What in nature has this color? (sky, plants, minerals, etc.)
+                                    - Cultural associations: What does this color typically represent?
+                                    - Sensory connections: What textures, tastes, sounds, or temperatures relate to this color?
+                                    
+                                    ## Step 3: Intersection Discovery
+                                    - How does this specific color relate to this specific image?
+                                    - What unique story emerges from THIS color in THIS context?
+                                    - What unexpected connections can be made?
+                                    - What makes this combination one-of-a-kind?
+                                    - What personal quality or moment does this combination reveal?
+                                    
+                                    ## Step 4: Creative Synthesis
+                                    - Based on the above analysis, craft a name and description that:
+                                      - Captures the unique intersection of color + image
+                                      - Feels deeply personal and specific
+                                      - Uses fresh, unexpected language
+                                      - Creates a sense of discovery and significance
+                                    
+                                    # Output Structure
+                                    Create:
+                                    - A color name that feels like a personal discovery (max 3 words, ALL CAPS)
+                                    - A description written in third person that captures the essence of this unique color (30-40 words)
+                                    - The description should describe the color/concept itself, not address the user directly
+                                    - Still make it deeply personal and unique to their photo+color combination
+                                    
+                                    Remember: This color didn't exist until they created it. Make them feel the magic of that creation through poetic, immediate description.
                                 """
                             )
                         },
@@ -175,7 +205,7 @@ Good luck!
                 azure_client.beta.chat.completions.parse(
                     model=model_name,
                     messages=messages,
-                    max_completion_tokens=2000,
+                    max_completion_tokens=2500,
                     response_format=ColorCardDetails,
                 ),
                 timeout=AZURE_OPENAI_CLIENT_TIMEOUT
