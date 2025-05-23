@@ -80,6 +80,10 @@ export default function HomePage() {
   const [swipeDeltaX, setSwipeDeltaX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   
+  // New states for button press handling
+  const [pressedButtonIndex, setPressedButtonIndex] = useState<number | null>(null);
+  const [mouseIsDown, setMouseIsDown] = useState(false);
+  
   const [primaryImage, setPrimaryImage] = useState<{ src: string; animationClass: string }>({ src: '', animationClass: '' });
   const [secondaryImage, setSecondaryImage] = useState<{ src: string | null; animationClass: string; initialTranslate: string }>({ src: null, animationClass: '', initialTranslate: '' });
   
@@ -851,6 +855,28 @@ export default function HomePage() {
     triggerImageChangeAnimation(direction, index);
   };
 
+  // New handlers for button press states
+  const handleButtonMouseDown = (index: number) => {
+    if (isAnimating) return;
+    setPressedButtonIndex(index);
+    setMouseIsDown(true);
+    // Immediately update the selected index for instant visual feedback
+    if (index !== currentExampleCardIndex) {
+      handlePageButtonClick(index);
+    }
+  };
+
+  const handleButtonMouseUp = () => {
+    setPressedButtonIndex(null);
+    setMouseIsDown(false);
+  };
+
+  const handleButtonMouseLeave = () => {
+    // Clear pressed state if mouse leaves while pressed
+    setPressedButtonIndex(null);
+    setMouseIsDown(false);
+  };
+
   // New function to handle note submission
   const handleNoteSubmission = async (currentNoteText?: string) => {
     if (!generatedExtendedId || !currentDbId) { // Use currentDbId from state
@@ -1175,21 +1201,29 @@ export default function HomePage() {
                 {/* New Numbered Pagination - Moved here, below the card image container and its wrapper */}
                 {fetchedHeroCards.length > 1 && (
                   <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
-                    {fetchedHeroCards.map((_, index) => (
-                      <button
-                        key={`page-btn-${index}`}
-                        onClick={() => handlePageButtonClick(index)} // Use renamed handler
-                        className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium transition-all duration-100 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                          ${currentExampleCardIndex === index 
-                            ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]' 
-                            : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px]'}
-                        `}
-                        aria-label={`Go to card ${index + 1}`}
-                        disabled={isAnimating}
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
+                    {fetchedHeroCards.map((_, index) => {
+                      // A button looks "pressed/selected" if it's either the current selection OR currently being pressed
+                      const isPressed = (currentExampleCardIndex === index) || (pressedButtonIndex === index && mouseIsDown);
+                      
+                      return (
+                        <button
+                          key={`page-btn-${index}`}
+                          onMouseDown={() => handleButtonMouseDown(index)}
+                          onMouseUp={handleButtonMouseUp}
+                          onMouseLeave={handleButtonMouseLeave}
+                          className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+                            ${isPressed
+                              ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]'
+                              : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)]'
+                            }
+                          `}
+                          aria-label={`Go to card ${index + 1}`}
+                          disabled={isAnimating}
+                        >
+                          {index + 1}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
