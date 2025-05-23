@@ -323,11 +323,11 @@ async def generate_back_card_image_bytes(
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
     # Define the fixed background color for the card back
-    FIXED_BACK_CARD_COLOR_HEX = "#E9EFF1" # Blue-Grey Card 6
+    FIXED_BACK_CARD_COLOR_HEX = "#e9e9eb"  # "#E9EFF1" # Blue-Grey Card 6
     fixed_back_card_rgb = hex_to_rgb(FIXED_BACK_CARD_COLOR_HEX, request_id=request_id)
     if not fixed_back_card_rgb:
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
-        fixed_back_card_rgb = (233, 237, 241)
+        fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
     # 1. Determine card dimensions and base font sizes
     if orientation == "horizontal":
