@@ -1431,6 +1431,11 @@ export default function HomePage() {
                           <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                              }
+                            }}
                             placeholder="Add your note here (optional, max 500 characters). It will be placed on the back of the card..."
                             maxLength={500}
                             className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
