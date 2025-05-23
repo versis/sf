@@ -8,7 +8,7 @@ import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
-import { Save, SkipForward, PenSquare, ChevronDown, ChevronUp, Palette, UploadCloud, Wand2, Eye, RotateCcw,
+import { Save, SkipForward, PenSquare, /*ChevronDown, ChevronUp,*/ Palette, UploadCloud, Wand2, Eye, RotateCcw,
   Copy, Check, Share2, Download, AlertTriangle, MoreHorizontal, X, ExternalLink,
   Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText } from 'lucide-react';
 
@@ -76,8 +76,6 @@ export default function HomePage() {
   const [isResultsStepCompleted, setIsResultsStepCompleted] = useState(false);
   const [generatedExtendedId, setGeneratedExtendedId] = useState<string | null>(null);
   const [currentExampleCardIndex, setCurrentExampleCardIndex] = useState(0);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [swipeDeltaY, setSwipeDeltaY] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [swipeDeltaX, setSwipeDeltaX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -360,7 +358,6 @@ export default function HomePage() {
     console.log('Wizard reset.');
 
     // Reset animation states
-    setSwipeDeltaY(0);
     setIsAnimating(false);
     setPrimaryImage({ src: primaryImage.src, animationClass: '' });
     setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
@@ -763,12 +760,12 @@ export default function HomePage() {
 
   const handleAnimationEnd = () => {
     if (!secondaryImage.src) { // If no secondary image, animation might be snap-back or an old one
-      if (primaryImage.animationClass === 'snap-back-animation') {
-        setPrimaryImage(prev => ({ ...prev, animationClass: '' }));
-        setIsAnimating(false);
-        setSwipeDeltaY(0);
-      }
-      // Ensure page scroll is restored after any animation, especially snap-back
+      // Removed snap-back logic for vertical swipe
+      // The 'snap-back-animation' class was set by handleTouchEnd for vertical swipes that didn't meet the threshold.
+      // Since vertical swipe is removed, this specific animation class trigger is gone.
+      // We might still have other animations on primaryImage, so we don't want to clear animationClass unconditionally here.
+      // If other animations need resetting, they should handle it.
+      // setIsAnimating(false); // This was part of the snap-back logic, ensure it's handled if needed elsewhere.
       restorePageScroll();
       return;
     }
@@ -784,7 +781,7 @@ export default function HomePage() {
     setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
     setCurrentExampleCardIndex(newCurrentIndex !== -1 ? newCurrentIndex : 0);
     setIsAnimating(false);
-    setSwipeDeltaY(0); 
+    // setSwipeDeltaY(0); // Removed
     // Ensure page scroll is restored after card change animation
     restorePageScroll();
   };
@@ -847,28 +844,10 @@ export default function HomePage() {
     img.src = newImageUrl;
   };
 
-  const handleNextExampleCard = () => {
-    triggerImageChangeAnimation('next');
-  };
-
-  const handlePrevExampleCard = () => {
-    triggerImageChangeAnimation('prev');
-  };
-
-  const handleDotClick = (index: number) => {
+  const handlePageButtonClick = (index: number) => { // Renamed from handleDotClick
     if (isAnimating || index === currentExampleCardIndex) return;
-    const direction = index > currentExampleCardIndex ? 'next' : 'prev'; // Simplistic, assumes not wrapping around for direction
-                                                                    // More robust: check if it's shorter to go next or prev for wrapping
-    // A more robust way to determine direction for dots when wrapping is needed:
-    // const numCards = EXAMPLE_CARDS.length;
-    // const diff = index - currentExampleCardIndex;
-    // let determinedDirection: 'next' | 'prev' = 'next';
-    // if (diff < 0) { // Target is "before" current
-    //    determinedDirection = (Math.abs(diff) < numCards / 2) ? 'prev' : 'next'; // Go prev if shorter, else wrap next
-    // } else { // Target is "after" current
-    //    determinedDirection = (diff < numCards / 2) ? 'next' : 'prev'; // Go next if shorter, else wrap prev
-    // }
-    // For simplicity, let's stick to the basic direction for now as clicks are usually direct.
+    // Determine direction for animation (simplistic, could be more robust for wrapping)
+    const direction = index > currentExampleCardIndex ? 'next' : 'prev'; 
     triggerImageChangeAnimation(direction, index);
   };
 
@@ -939,64 +918,67 @@ export default function HomePage() {
 
     // For horizontal swipe detection (flipping)
     setTouchStartX(e.touches[0].clientX); 
-    setTouchStartY(e.touches[0].clientY); // Keep for vertical swipe
+    // setTouchStartY(e.touches[0].clientY); // Removed for vertical swipe
     setSwipeDeltaX(0);
-    setSwipeDeltaY(0); 
+    // setSwipeDeltaY(0); // Removed for vertical swipe
     // Don't reset primaryImage.animationClass here for flip, it might interfere with vertical swipe snap-back
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX === null && touchStartY === null) return;
+    if (touchStartX === null ) return; // Only proceed if touchStartX is not null (ignore vertical only)
     if (isAnimating && (primaryImage.animationClass.includes('slide') || secondaryImage.animationClass.includes('slide'))) return; // Don't allow swipe if vertical animation is running
 
     if (touchStartX !== null) {
       const currentX = e.touches[0].clientX;
       setSwipeDeltaX(currentX - touchStartX);
     }
-    if (touchStartY !== null) {
-      const currentY = e.touches[0].clientY;
-      setSwipeDeltaY(currentY - touchStartY);
-    }
+    // Removed logic for swipeDeltaY
+    // if (touchStartY !== null) {
+    //   const currentY = e.touches[0].clientY;
+    //   setSwipeDeltaY(currentY - touchStartY);
+    // }
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (isAnimating && (primaryImage.animationClass.includes('slide') || secondaryImage.animationClass.includes('slide'))) {
       setTouchStartX(null);
-      setTouchStartY(null);
-      // Restore scroll if animation was preventing touch end logic, but touch still ends.
+      // setTouchStartY(null); // Removed
       restorePageScroll();
       return;
     }
 
-    // Prioritize vertical swipe for changing cards
-    if (touchStartY !== null && Math.abs(swipeDeltaY) > SWIPE_THRESHOLD && Math.abs(swipeDeltaY) > Math.abs(swipeDeltaX)) {
-      if (swipeDeltaY < 0) { // Swipe Up
-        triggerImageChangeAnimation('next');
-      } else { // Swipe Down
-        triggerImageChangeAnimation('prev');
-      }
-      setHeroCardSwipeDirection(null); // Reset flip direction if vertical swipe occurs
-    } 
+    // Removed: Prioritize vertical swipe for changing cards
+    // if (touchStartY !== null && Math.abs(swipeDeltaY) > SWIPE_THRESHOLD && Math.abs(swipeDeltaY) > Math.abs(swipeDeltaX)) {
+    //   if (swipeDeltaY < 0) { // Swipe Up
+    //     triggerImageChangeAnimation('next');
+    //   } else { // Swipe Down
+    //     triggerImageChangeAnimation('prev');
+    //   }
+    //   setHeroCardSwipeDirection(null); // Reset flip direction if vertical swipe occurs
+    // } 
     // Horizontal swipe for flipping card
-    else if (touchStartX !== null && Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
+    // else if (touchStartX !== null && Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) {
+    if (touchStartX !== null && Math.abs(swipeDeltaX) > SWIPE_THRESHOLD) { // Changed to if from else if
       if (swipeDeltaX < 0) { // Swipe Left
         handleHeroCardFlip('left');
       } else { // Swipe Right
         handleHeroCardFlip('right');
       }
     } 
-    // Snap back for vertical swipe if not enough
-    else if (touchStartY !== null && swipeDeltaY !== 0) { 
-      setPrimaryImage(prev => ({ ...prev, animationClass: 'snap-back-animation' }));
-    }
+    // Removed: Snap back for vertical swipe if not enough
+    // else if (touchStartY !== null && swipeDeltaY !== 0) { 
+    //   setPrimaryImage(prev => ({ ...prev, animationClass: 'snap-back-animation' }));
+    // }
     // No snap-back for horizontal, flip is discrete or nothing
 
     setTouchStartX(null);
-    setTouchStartY(null);
+    // setTouchStartY(null); // Removed
+    
     // swipeDeltaX and swipeDeltaY are reset by animation handlers or if no action taken
-    if (!(Math.abs(swipeDeltaY) > SWIPE_THRESHOLD) && !(Math.abs(swipeDeltaX) > SWIPE_THRESHOLD)) {
+    // Only reset swipeDeltaX if no flip action was taken. swipeDeltaY is removed.
+    if (!(Math.abs(swipeDeltaX) > SWIPE_THRESHOLD)) {
         setSwipeDeltaX(0);
-        setSwipeDeltaY(0);
+        // setSwipeDeltaY(0); // Removed
     }
     // Restore page scroll after handling touch end
     restorePageScroll();
@@ -1035,16 +1017,13 @@ export default function HomePage() {
 
     // Reset touch states similar to handleTouchEnd
     setTouchStartX(null);
-    setTouchStartY(null);
+    // setTouchStartY(null); // Removed
     setSwipeDeltaX(0);
-    setSwipeDeltaY(0);
+    // setSwipeDeltaY(0); // Removed
     
-    // If a snap-back animation was potentially initiated but touch cancelled
-    if (primaryImage.animationClass === 'snap-back-animation') {
-      setPrimaryImage(prev => ({ ...prev, animationClass: '' }));
-    }
-    // If isAnimating was true due to a swipe that got cancelled.
-    setIsAnimating(false); 
+    // isAnimating was primarily for vertical card changes.
+    // Horizontal flip animation is CSS-driven and doesn't rely on isAnimating state in the same way.
+    // Removing setIsAnimating(false) here to avoid interfering with potential flip animations.
   };
 
   return (
@@ -1097,15 +1076,20 @@ export default function HomePage() {
 
               {/* Right Column: Example Card with Navigation - takes 3/5ths */}
               <div className="flex flex-col md:items-start w-full md:col-span-3 relative">
-                {/* New wrapper for card image and mobile dots to be side-by-side on mobile */}
+                {/* Wrapper for card image (and formerly mobile dots) */}
                 <div className={`w-full ${isMobile ? 'flex flex-row items-center' : ''}`}>
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
                     className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'flex-grow' : 'w-full'}` }
-                    style={{ aspectRatio: isMobile ? '3/4' : '80/33' }}
+                    style={{
+                      aspectRatio: isMobile ? '3/4' : '80/33',
+                      height: isMobile ? '80vh' : undefined,
+                      // On mobile, ensure width adjusts to maintain aspect ratio with the 80vh height, or set a specific width constraint if needed.
+                      // For now, flex-grow and aspect-ratio should handle it, but might need explicit width e.g., width: 'auto' or a percentage.
+                    }}
                   >
-                    <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0 && swipeDeltaY === 0) handleHeroCardFlip(); }}>
+                    <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
                       <div 
                         className={`card-flipper w-full h-full ${isHeroCardFlipped ? (heroCardSwipeDirection === 'left' ? 'is-flipped swipe-left' : 'is-flipped swipe-right') : ''}`}
                         onTouchStart={handleTouchStart}
@@ -1127,7 +1111,7 @@ export default function HomePage() {
                                 alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
                                 className={`w-full h-full rounded-lg object-cover example-card-image ${primaryImage.animationClass} mx-auto`}
                                 style={{
-                                  transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined,
+                                  // transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined, // Removed
                                   zIndex: 10, 
                                   position: 'relative',
                                   visibility: isHeroCardFlipped ? 'hidden' : 'visible'
@@ -1185,53 +1169,28 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Mobile Dots Navigation - Now to the right of the card */}
-                  {isMobile && fetchedHeroCards.length > 1 && (
-                    <div className="flex flex-col justify-center items-center space-y-2 ml-3">
-                      {fetchedHeroCards.map((_, index) => (
-                        <button
-                          key={`dot-${index}`}
-                          onClick={() => handleDotClick(index)}
-                          className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ease-in-out transform active:scale-90
-                            ${currentExampleCardIndex === index ? 'bg-foreground scale-110' : 'bg-muted hover:bg-foreground/60'}
-                            focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-background`}
-                          aria-label={`Go to card ${index + 1}`}
-                          disabled={isAnimating}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {/* Numbered pagination was here, moved below the wrapper div */}
                 </div>
 
-                {/* Desktop Overlay/Top and Bottom Buttons - MOVED HERE */}
-                {!isMobile && fetchedHeroCards.length > 1 && (
-                  <>
-                    {currentExampleCardIndex > 0 && (
-                      <div className="absolute left-1/2 -top-6 transform -translate-x-1/2 group z-20">
-                        <button
-                          onClick={handlePrevExampleCard}
-                          className="hero-nav-button p-2 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
-                          aria-label="Previous example card"
-                          disabled={isAnimating}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                        </button>
-                      </div>
-                    )}
-                    {currentExampleCardIndex < fetchedHeroCards.length - 1 && (
-                      <div className="absolute left-1/2 -bottom-6 transform -translate-x-1/2 group z-20">
-                        <button
-                          onClick={handleNextExampleCard}
-                          className="hero-nav-button p-2 text-muted-foreground hover:text-foreground transition-all rounded-lg flex items-center justify-center hover:bg-background/80 active:bg-background active:scale-95"
-                          aria-label="Next example card"
-                          disabled={isAnimating}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                      </div>
-                    )}
-                  </>
+                {/* New Numbered Pagination - Moved here, below the card image container and its wrapper */}
+                {fetchedHeroCards.length > 1 && (
+                  <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
+                    {fetchedHeroCards.map((_, index) => (
+                      <button
+                        key={`page-btn-${index}`}
+                        onClick={() => handlePageButtonClick(index)} // Use renamed handler
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ease-in-out transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-background
+                          ${currentExampleCardIndex === index 
+                            ? 'bg-blue-600 text-white shadow-md focus:ring-blue-400' 
+                            : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground focus:ring-blue-500'}
+                        `}
+                        aria-label={`Go to card ${index + 1}`}
+                        disabled={isAnimating}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
