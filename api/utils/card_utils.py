@@ -365,7 +365,7 @@ async def generate_back_card_image_bytes(
     stamp_y_start = pad_y
 
     # Draw rectangular stamp background (the actual stamp face)
-    stamp_bg_color = (255, 255, 255) # New: #FFFFFF (Pure White)
+    stamp_bg_color = (248, 249, 250) # New: App Background Color (#F8F9FA)
     draw.rectangle([
         (stamp_x_start, stamp_y_start), 
         (stamp_x_start + stamp_width, stamp_y_start + stamp_height)
