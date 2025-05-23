@@ -109,49 +109,50 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                             "text": (
                                 f"""
 # Main Goal
-Create a deeply personal color card based on:
+Create a deeply personal and uniquely descriptive color card based on:
 1. Hex color value: '{hex_color}'
 2. The attached image
 
-# Core Philosophy
-You're creating a unique color that belongs specifically to this person. This color emerges from their moment, captured through their perspective.
+# Structured Analysis
+Before creating the final details, explicitly outline the following:
 
-# Image Analysis Guidelines
-Analyze the image carefully:
-- If there's clearly one main person: Capture qualities, emotions, or aspects of the person's presence indirectly through the color.
-- If it's a scene, object, or multiple people: Recognize and celebrate the user's choice to capture this specific moment, emphasizing their creative perspective.
+## Step 1: Image Analysis
+List clearly and concisely:
+- Main visible elements (people, objects, scenes)
+- Emotions, moods, or atmosphere
+- Distinctive details or background features
+- Speculation about why this moment was captured by the user
 
-# Personalization Approach
-Consider:
-- What emotion or memory might this photo hold?
-- What made the moment special enough for them to capture it?
-- How does their chosen color connect to the personal story in the image?
-- What personal qualities does this photo and color combination reveal?
+## Step 2: Color Analysis
+Describe briefly in direct, simple terms:
+- Visual characteristics (e.g., bright, muted, pastel, vibrant, earthy)
+- Emotional tone or vibe of the color (e.g., calming, energetic, serene, warm)
+- Possible real-world applications or contexts (fashion, interior design, branding, nature)
 
-# Writing Style Requirements
-- Avoid generic poetic clichés (no "whispers of," "dance of," "embrace of," "symphony of")
-- NEVER start with explicit color terminology (e.g., "This hue," "A shade," "The color")
-- Immediately begin with vivid, concrete imagery or sensory details—like opening to the middle of a poem (e.g., "Afternoon light caught in a grandmother's locket...", "The exact temperature of laughter at 3am...", "Cinnamon dust on fingertips after midnight baking...")
-- Use fresh, unexpected metaphors
-- Write in third person, describing the color/concept itself
-- Ensure each description feels uniquely tied to this specific photo-color combination
+## Step 3: Connection
+Identify clearly how the image and color relate:
+- Shared or contrasting emotional tones
+- Ways the color emphasizes or complements the image
+- Specific, unique insight arising from the pairing
 
-# Description Depth
-Let the image and color naturally guide the aspect you highlight:
-- Intimate moments: Focus on personal memories or quiet revelations
-- Joyful or achievement moments: Celebrate triumph or milestones
-- Contemplative scenes: Explore deeper meanings or philosophical undertones
-- Dynamic or energetic images: Capture spirited essence or creative spark
-- Grounding moments: Anchor life transitions or significant realizations
+## Step 4: Avoiding Repetition
+Explicitly note and avoid using repetitive terms such as "hush," "whisper," "embrace," "dance," "symphony," or other clichés previously overused.
 
-# Output Structure
+Only after completing these steps, proceed to the final title and description.
+
+# Final Output Requirements
 Provide:
-- A personalized, evocative color name (max 3 words, ALL CAPS)
+- A fresh, evocative color name (max 3 words, ALL CAPS)
 - Phonetic pronunciation (IPA symbols)
 - Grammatical article (e.g., noun)
-- A description (30–40 words) written in third person, capturing the essence of this unique color and moment
+- A concise, vivid description (30–40 words) written in third person, uniquely connecting the color and the captured moment
 
-This color didn't exist until it was created through their unique combination. Reflect the magic of this creation through your writing.
+Ensure your description:
+- Immediately uses original, concrete imagery or sensory details without explicit color terminology
+- Avoids repetitive language or clichés
+- Clearly communicates the unique blend of color and the personal moment depicted in the image
+
+Your structured and original thinking will ensure a meaningful and truly distinct result.
 
 Good luck!
                                 """
