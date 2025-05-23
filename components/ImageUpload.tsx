@@ -439,7 +439,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   onLoad={onImageLoad}
                   style={{ 
                     maxWidth: '100%', 
-                    maxHeight: '70vh', 
+                    maxHeight: '500px', 
                     objectFit: 'contain'
                   }}
                   className="border border-foreground" 

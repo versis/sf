@@ -1131,13 +1131,9 @@ export default function HomePage() {
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
-                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? '' : 'w-full'}` } // Removed flex-grow for mobile
+                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'w-full max-w-sm mx-auto' : 'w-full'}`}
                     style={{
-                      height: isMobile ? '80vh' : undefined,
-                      width: isMobile ? '60vh' : undefined, // Explicit width (3/4 of 80vh) for mobile
-                      aspectRatio: isMobile ? undefined : '80/33', // Keep for desktop, remove for mobile
-                      // On mobile, ensure width adjusts to maintain aspect ratio with the 80vh height, or set a specific width constraint if needed.
-                      // For now, flex-grow and aspect-ratio should handle it, but might need explicit width e.g., width: 'auto' or a percentage.
+                      aspectRatio: isMobile ? '3/4' : '80/33', // Use stable aspect ratio for mobile instead of vh units
                     }}
                   >
                     <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
