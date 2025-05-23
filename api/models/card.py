@@ -10,16 +10,17 @@ class ColorCardDetails(BaseModel):
     Attributes:
     -----------
     colorName : str
-        A creative and evocative name for the color (max 3 words, ALL CAPS)
+        A unique and meaningful name for the color (max 3 words, ALL CAPS)
     phoneticName : str
         Phonetic pronunciation (IPA symbols) for the color name
     article : str
-        The part of speech for the color name (e.g., noun, adjective phrase)
+        The part of speech for the color name (e.g., noun, adjective)
     description : str
-        A poetic description (max 25-30 words) of the color's feeling/mood
+        A personal description (max 30-40 words) that captures this specific
+        color-image combination without generic openers
     """
     colorName: str = Field(
-        description="A creative and evocative name for the color (max 3 words, ALL CAPS)"
+        description="A unique and meaningful name for the color (max 3 words, ALL CAPS)"
     )
     phoneticName: str = Field(
         description="Phonetic pronunciation (IPA symbols) for your creative colorName"
@@ -28,5 +29,5 @@ class ColorCardDetails(BaseModel):
         description="The part of speech for the colorName (e.g., noun, adjective). Do not use the word `phrase`. It's just `noun`, and not `noun phrase`."
     )
     description: str = Field(
-        description="A poetic description (max 30-40 words) that evokes the feeling/mood of this color, inspired by the image"
-    ) 
+        description="A personal description (25-33 words) starting with concrete imagery or a moment, never with 'This color' or similar. Captures the unique intersection of this specific color and image."
+    )
