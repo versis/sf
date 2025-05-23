@@ -1260,7 +1260,7 @@ export default function HomePage() {
 
         {/* Inserted Title and HR */}
         <div className="w-full flex flex-col items-start my-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-left mt-2">Create Your Card</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your postcard</h2>
         </div>
 
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
