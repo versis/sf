@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When working on:
+- working on new feaature
+- improved implemnetation
+- changes to the implementation
+- bug fixing
+- and similar
+
+1. Do not start immedaitely.
+2. State the problem (rephrase it).
+3. Take a step back, think at the bigger picture and what possibly you are missing.
+4. Take your time to think about.
+3. Think about at least 3 possible solutions that are very different. They cannot be temporary solutions (band aids), we don't want to technical dept, we can spend some time on the refactor if needed.
+5. Describe all solutions.
+6. Is any one those solutions the most prominent? Or maybe you have new idea based on those solutions?
+7. Craft a multi step plan.
+7. Start the implementation, step by step.
