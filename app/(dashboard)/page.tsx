@@ -1131,7 +1131,7 @@ export default function HomePage() {
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
-                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'w-full max-w-sm mx-auto' : 'w-full'}`}
+                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'w-96 mx-auto' : 'w-full'}`}
                     style={{
                       aspectRatio: isMobile ? '3/4' : '80/33', // Use stable aspect ratio for mobile instead of vh units
                     }}
