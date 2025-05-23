@@ -185,24 +185,48 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const fetchAllHeroCards = async () => {
+    let isMounted = true;
+    const fetchFirstHeroCard = async () => {
       if (HERO_EXAMPLE_CARD_EXTENDED_IDS.length === 0) {
-        console.log("[Hero Data] No hero card IDs provided.");
         setHeroCardsLoading(false);
         setFetchedHeroCards([]);
         return;
       }
-      console.log("[Hero Data] Starting to fetch hero cards for IDs:", HERO_EXAMPLE_CARD_EXTENDED_IDS);
       setHeroCardsLoading(true);
+      const firstId = HERO_EXAMPLE_CARD_EXTENDED_IDS[0];
+      try {
+        const encodedExtendedId = encodeURIComponent(firstId);
+        const response = await fetch(`/api/retrieve-card-by-extended-id/${encodedExtendedId}`);
+        if (!response.ok) throw new Error('Failed to fetch first hero card');
+        const data = await response.json();
+        const firstCard = {
+          id: firstId,
+          v: data.frontVerticalImageUrl || null,
+          h: data.frontHorizontalImageUrl || null,
+          bv: data.backVerticalImageUrl || null,
+          bh: data.backHorizontalImageUrl || null,
+        };
+        if (isMounted) {
+          setFetchedHeroCards([firstCard]);
+          setHeroCardsLoading(false);
+        }
+        // Start fetching the rest in the background
+        fetchRemainingHeroCards();
+      } catch (error) {
+        if (isMounted) {
+          setFetchedHeroCards([]);
+          setHeroCardsLoading(false);
+        }
+      }
+    };
 
-      const cardDataPromises = HERO_EXAMPLE_CARD_EXTENDED_IDS.map(async (extendedId) => {
+    const fetchRemainingHeroCards = async () => {
+      const remainingIds = HERO_EXAMPLE_CARD_EXTENDED_IDS.slice(1);
+      const cardDataPromises = remainingIds.map(async (extendedId) => {
         try {
           const encodedExtendedId = encodeURIComponent(extendedId);
           const response = await fetch(`/api/retrieve-card-by-extended-id/${encodedExtendedId}`);
-          if (!response.ok) {
-            console.error(`[Hero Data] Failed to fetch hero card ${extendedId} (encoded: ${encodedExtendedId}): ${response.status} ${response.statusText}`);
-            return null;
-          }
+          if (!response.ok) return null;
           const data = await response.json();
           return {
             id: extendedId,
@@ -211,24 +235,29 @@ export default function HomePage() {
             bv: data.backVerticalImageUrl || null,
             bh: data.backHorizontalImageUrl || null,
           };
-        } catch (error) {
-          console.error(`[Hero Data] Error fetching hero card ${extendedId}:`, error);
+        } catch {
           return null;
         }
       });
-
       const results = await Promise.all(cardDataPromises);
-      console.log("[Hero Data] Raw fetched results for all hero card IDs:", JSON.stringify(results, null, 2));
-
-      const filteredResults = results.filter(card => card !== null && (card.v || card.h)) as Array<{ id: string; v: string | null; h: string | null; bv: string | null; bh: string | null }>;
-      console.log("[Hero Data] Filtered results (non-null with at least one FRONT image URL) being set to state:", JSON.stringify(filteredResults, null, 2));
-      
-      setFetchedHeroCards(filteredResults);
-      setHeroCardsLoading(false);
+      const filteredResults = results.filter(card => card !== null && (card.v || card.h));
+      if (isMounted) {
+        setFetchedHeroCards(prev => {
+          // Avoid duplicates if user reloads quickly
+          const existingIds = new Set(prev.map(card => card.id));
+          // Filter out nulls and only add new cards
+          const newCards = filteredResults.filter(card => card && !existingIds.has(card.id));
+          return [
+            ...prev,
+            ...newCards as Array<{ id: string; v: string | null; h: string | null; bv: string | null; bh: string | null }> // type assertion for safety
+          ];
+        });
+      }
     };
 
-    fetchAllHeroCards();
-  }, []); // Empty dependency array: Runs once on mount
+    fetchFirstHeroCard();
+    return () => { isMounted = false; };
+  }, []);
 
   // Initialize primaryImage based on initial currentExampleCardIndex, isMobile, and fetchedHeroCards
   useEffect(() => {
