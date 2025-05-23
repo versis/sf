@@ -73,7 +73,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   const [currentOrientation, setCurrentOrientation] = useState<"horizontal" | "vertical">(currentDisplayOrientation);
 
   const flipperBaseClasses = "card-flipper";
-  const flipperAspectRatio = currentOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]';
+  // const flipperAspectRatio = currentOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]'; // REMOVED
   // const verticalMaxHeightClass = currentOrientation === 'vertical' ? 'max-h-[80vh]' : ''; // Intentionally commented out
 
   const cardImageUrl = currentOrientation === "horizontal" ? frontHorizontalImageUrl : frontVerticalImageUrl;
@@ -156,7 +156,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         .flippable-card-wrapper .card-flipper {
           position: relative; /* Children will be absolute to this */
           width: 100%; /* Takes full width of its column in the grid/flex parent */
-          /* Height will be determined by Tailwind's aspect-ratio class (e.g., aspect-[2/1]) */
+          height: 0; /* ADDED for padding-bottom trick */
+          /* padding-bottom will be set dynamically inline */
           transform-style: preserve-3d;
           transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smoother, slightly bouncy flip */
         }
@@ -202,13 +203,18 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
       <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
         <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
-          <div className={`${flipperBaseClasses} ${flipperAspectRatio} ${
-            isFlippable && isFlipped
-              ? swipeDirection === 'left'
-                ? 'is-flipped swipe-left'
-                : 'is-flipped swipe-right'
-              : ''
-          }`}>
+          <div 
+            className={`${flipperBaseClasses} ${ 
+              isFlippable && isFlipped
+                ? swipeDirection === 'left'
+                  ? 'is-flipped swipe-left'
+                  : 'is-flipped swipe-right'
+                : ''
+            }`.trim()}
+            style={{
+              paddingBottom: currentOrientation === 'horizontal' ? '50%' : '200%',
+            }}
+          >
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
               {(currentOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
