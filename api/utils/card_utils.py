@@ -323,11 +323,12 @@ async def generate_back_card_image_bytes(
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
     # Define the fixed background color for the card back
-    FIXED_BACK_CARD_COLOR_HEX = "#FAF7F0" # Pale, warm cream
+    # FIXED_BACK_CARD_COLOR_HEX = "#E6E3DC" # Slightly darker pale, warm cream (Previous)
+    FIXED_BACK_CARD_COLOR_HEX = "#F5F0E1" # New: Warmer Beige/Cream (Parchment-like)
     fixed_back_card_rgb = hex_to_rgb(FIXED_BACK_CARD_COLOR_HEX, request_id=request_id)
     if not fixed_back_card_rgb: # Fallback if hex_to_rgb fails for the fixed color
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback grey.", level="ERROR", request_id=request_id)
-        fixed_back_card_rgb = (230, 230, 230) # A light fallback grey
+        fixed_back_card_rgb = (245, 240, 225) # Fallback for #F5F0E1
 
     # 1. Determine card dimensions and base font sizes
     if orientation == "horizontal":
@@ -363,31 +364,26 @@ async def generate_back_card_image_bytes(
     stamp_x_start = card_w - pad_x - stamp_width
     stamp_y_start = pad_y
 
-    # Draw rectangular stamp background
-    stamp_bg_color = (251, 251, 251) # Back to #FBFBFB
+    # Draw rectangular stamp background (the actual stamp face)
+    stamp_bg_color = (255, 255, 255) # New: #FFFFFF (Pure White)
     draw.rectangle([
         (stamp_x_start, stamp_y_start), 
         (stamp_x_start + stamp_width, stamp_y_start + stamp_height)
     ], fill=stamp_bg_color)
 
-    # --- Bevel Effect REMOVED ---
-    # (The code for inner_shadow_color, highlight_color, line_thickness, and draw.line calls for bevel is deleted)
-    # --- End Bevel Effect REMOVED ---
-
     # Draw rectangular stamp perforation dots
-    # Use min of stamp_width, stamp_height for relative dot sizing
     perf_reference_size = min(stamp_width, stamp_height)
     perf_dot_radius = max(2, int(perf_reference_size * 0.035)) 
     perf_dot_step = int(perf_dot_radius * 2.2)
-    perf_color = solid_lightened_bg_rgb # This will now be FIXED_BACK_CARD_COLOR_HEX
+    perf_color = fixed_back_card_rgb # Perforations match the new card background #DBDBDB
     
-    stamp_edges = [
+    stamp_edges_coords = [
         (stamp_x_start, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start, True), # Top
         (stamp_x_start, stamp_y_start + stamp_height, stamp_x_start + stamp_width, stamp_y_start + stamp_height, True), # Bottom
         (stamp_x_start, stamp_y_start, stamp_x_start, stamp_y_start + stamp_height, False), # Left
         (stamp_x_start + stamp_width, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start + stamp_height, False)  # Right
     ]
-    for x1, y1, x2, y2, is_horiz in stamp_edges:
+    for x1, y1, x2, y2, is_horiz in stamp_edges_coords:
         length = (x2 - x1) if is_horiz else (y2 - y1)
         num_dots = max(1, int(length / perf_dot_step))
         actual_step = length / num_dots if num_dots > 0 else length
