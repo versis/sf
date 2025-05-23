@@ -1443,7 +1443,7 @@ export default function HomePage() {
                           {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
                             <img src={generatedHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-auto object-contain rounded-md aspect-[2/1]" />
                           ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                            <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2] max-h-[70vh]" />
+                            <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2]" />
                           ) : (
                             <div className="w-full aspect-[2/1] flex justify-center items-center bg-muted rounded-md">
                               <p className="text-muted-foreground">Front image not available.</p>
