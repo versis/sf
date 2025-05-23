@@ -99,7 +99,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             messages = [
                 {
                     "role": "system", 
-                    "content": "You are a poetic color curator who creates deeply personal and unique color experiences. You craft names and descriptions that make each person feel seen, understood, and celebrated through the intersection of their chosen color and image."
+                    "content": "You are a creative color curator who crafts meaningful and personal color experiences. You create names and descriptions that make each person feel understood and celebrated through the intersection of their chosen color and image."
                 },
                 {
                     "role": "user", 
@@ -131,20 +131,20 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                                     # Writing Style Requirements
                                     - Avoid generic descriptions (no "whispers of," "dance of," "embrace of," "symphony of")
                                     - NEVER start with: "This hue," "This color," "This shade," "A color that," "The color," "A shade," "The shade," "The hue," or ANY variation mentioning color/hue/shade/tone
-                                    - Begin immediately with vivid, descriptive language - like opening to the middle of a poem
-                                    - Jump straight into the essence: "Afternoon light caught in a grandmother's locket..." or "The exact temperature of laughter at 3am..." or "Cinnamon dust on fingertips after midnight baking..."
-                                    - Start with concrete imagery, sensory details, or poetic metaphors - NEVER with color terminology
+                                    - Begin immediately with descriptive language - like a snapshot of a moment
+                                    - Jump straight into the essence: "Afternoon light on grandmother's jewelry box" or "Three AM coffee and unfinished conversations"
+                                    - Start with concrete imagery or relatable moments - NEVER with color terminology
                                     - Each description should feel like it could ONLY belong to this specific photo+color combination
-                                    - Use unexpected metaphors and fresh language
+                                    - Use clear, evocative language that balances creativity with accessibility
                                     - Write in third person, describing the color/concept itself
-                                    - The description should still feel deeply personal, as if this color embodies something unique about the moment/person captured
+                                    - The description should feel personal and meaningful without being overly flowery
                                     
                                     # Description Depth (let the image+color naturally guide which aspect emerges):
-                                    - For intimate moments: Focus on personal memories, quiet revelations, or tender details
-                                    - For joyful/achievement moments: Capture triumph, celebration, or personal milestones
-                                    - For contemplative scenes: Explore deeper meanings, life's subtle truths, or philosophical undertones
-                                    - For dynamic/energetic images: Highlight personality, creative spark, or spirited essence
-                                    - For grounding moments: Anchor significant life moments, transitions, or realizations
+                                    - For intimate moments: Focus on personal memories or familiar details
+                                    - For joyful/achievement moments: Capture celebration or personal milestones
+                                    - For contemplative scenes: Explore reflections or meaningful observations
+                                    - For dynamic/energetic images: Highlight personality or creative energy
+                                    - For grounding moments: Anchor significant life moments or transitions
                                     
                                     # Analysis Process (complete this internally before creating the final output)
                                     
@@ -180,7 +180,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                                     # Output Structure
                                     Create:
                                     - A color name that feels like a personal discovery (max 3 words, ALL CAPS)
-                                    - A description written in third person that captures the essence of this unique color (30-40 words)
+                                    - A description written in third person that captures the essence of this unique color (25-33 words)
                                     - The description should describe the color/concept itself, not address the user directly
                                     - Still make it deeply personal and unique to their photo+color combination
                                     
