@@ -23,28 +23,10 @@ interface Generation {
 
 const ITEMS_PER_PAGE = 30;
 
-// Type for individual item orientation preferences
-interface ItemOrientations {
-  [key: number]: 'horizontal' | 'vertical';
-}
-
 // Type for individual item flipped states
 interface ItemFlippedStates {
   [key: number]: boolean;
 }
-
-// SVG Icons for buttons
-const IconHorizontal = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-1.5 flex-shrink-0">
-    <path d="M21 6H3C2.45 6 2 6.45 2 7V17C2 17.55 2.45 18 3 18H21C21.55 18 22 17.55 22 17V7C22 6.45 21.55 6 21 6ZM20 16H4V8H20V16Z"></path>
-  </svg>
-);
-
-const IconVertical = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-1.5 flex-shrink-0">
-    <path d="M18 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V4C20 2.9 19.1 2 18 2ZM18 20H6V4H18V20Z"></path>
-  </svg>
-);
 
 const formatDate = (dateString: string | null): string => {
   if (!dateString) return 'N/A';
@@ -63,7 +45,6 @@ export default function ReviewPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const observer = useRef<IntersectionObserver | null>(null);
-  const [itemOrientations, setItemOrientations] = useState<ItemOrientations>({});
   const [itemFlippedStates, setItemFlippedStates] = useState<ItemFlippedStates>({});
   const [copyIdFeedback, setCopyIdFeedback] = useState<{ id: number | null; message: string }>({ id: null, message: '' });
 
@@ -81,22 +62,10 @@ export default function ReviewPage() {
       setOffset(prevOffset => prevOffset + newGenerations.length);
       setHasMore(newGenerations.length === ITEMS_PER_PAGE);
 
-      const newOrientations: ItemOrientations = {};
       const newFlippedStates: ItemFlippedStates = {};
       newGenerations.forEach(gen => {
-        // Default orientation logic: prefer horizontal, then vertical.
-        if (gen.front_horizontal_image_url) {
-          newOrientations[gen.id] = 'horizontal';
-        } else if (gen.front_vertical_image_url) {
-          newOrientations[gen.id] = 'vertical';
-        } else {
-          // If neither front image is available, default to horizontal
-          // CardDisplay will show a placeholder if the preferred image is missing.
-          newOrientations[gen.id] = 'horizontal'; 
-        }
         newFlippedStates[gen.id] = false; 
       });
-      setItemOrientations(prev => ({ ...prev, ...newOrientations }));
       setItemFlippedStates(prev => ({ ...prev, ...newFlippedStates }));
 
     } catch (error) {
@@ -122,36 +91,11 @@ export default function ReviewPage() {
     if (node) observer.current.observe(node);
   }, [isLoading, hasMore, fetchGenerations, offset]);
 
-  const handleOrientationChange = (id: number, orientation: 'horizontal' | 'vertical') => {
-    setItemOrientations(prev => ({
-      ...prev,
-      [id]: orientation
-    }));
-    // When orientation changes, ensure we are showing the front of the card
-    setItemFlippedStates(prev => ({ ...prev, [id]: false }));
-  };
-
   const handleCardClick = (id: number) => {
     setItemFlippedStates(prev => ({
       ...prev,
       [id]: !prev[id]
     }));
-  };
-
-  const getButtonClasses = (isActive: boolean, isDisabled: boolean) => {
-    const baseClasses = "flex items-center justify-center p-2 rounded border text-sm transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-300";
-
-    if (isDisabled) {
-      return `${baseClasses} bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed opacity-75`;
-    }
-
-    if (isActive) {
-      // Active button style based on the image provided (blue border, light blue background)
-      return `${baseClasses} bg-blue-50 text-blue-700 border-2 border-blue-600 hover:bg-blue-100`;
-    }
-    
-    // Inactive button style (light gray border, white background)
-    return `${baseClasses} bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400`;
   };
 
   return (
@@ -163,7 +107,6 @@ export default function ReviewPage() {
       )}
       <div>
         {generations.map((gen, index) => {
-          const currentOrientation = itemOrientations[gen.id] || 'horizontal'; // Default to horizontal if not set
           const isFlipped = itemFlippedStates[gen.id] || false;
 
           // Dummy handlers for CardDisplay props not used in this list view
@@ -184,23 +127,6 @@ export default function ReviewPage() {
                     <span className="font-semibold">{offset - generations.length + index + 1}.</span> Created: {formatDate(gen.created_at)}
                   </p>
                   
-                  <div className="flex space-x-3 mb-2">
-                    <button 
-                      onClick={() => handleOrientationChange(gen.id, 'horizontal')} 
-                      disabled={!gen.front_horizontal_image_url && !gen.back_horizontal_image_url}
-                      className={getButtonClasses(currentOrientation === 'horizontal', !gen.front_horizontal_image_url && !gen.back_horizontal_image_url)}>
-                      <IconHorizontal />
-                      Horizontal
-                    </button>
-                    <button 
-                      onClick={() => handleOrientationChange(gen.id, 'vertical')} 
-                      disabled={!gen.front_vertical_image_url && !gen.back_vertical_image_url}
-                      className={getButtonClasses(currentOrientation === 'vertical', !gen.front_vertical_image_url && !gen.back_vertical_image_url)}>
-                      <IconVertical />
-                      Vertical
-                    </button>
-                  </div>
-
                   {gen.extended_id && (
                     <div className="mt-3 space-y-2">
                       <div>
@@ -244,8 +170,8 @@ export default function ReviewPage() {
                     isFlippable={true}
                     isFlipped={isFlipped}
                     onFlip={() => handleCardClick(gen.id)}
-                    currentDisplayOrientation={currentOrientation}
-                    setCurrentDisplayOrientation={(orientation) => handleOrientationChange(gen.id, orientation)}
+                    currentDisplayOrientation={"horizontal"} // Default to horizontal, CardDisplay will handle its own state
+                    setCurrentDisplayOrientation={() => {}} // No-op since CardDisplay handles this
                     // Pass dummy or no-op handlers for actions not relevant in list view
                     handleShare={dummyShare}
                     handleCopyGeneratedUrl={dummyCopyUrl}
