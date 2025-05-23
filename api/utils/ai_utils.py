@@ -99,7 +99,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             messages = [
                 {
                     "role": "system", 
-                    "content": "You are a creative assistant. For the given hex color and image, generate poetic and evocative card details."
+                    "content": "You are a poetic color curator who creates deeply personal and unique color experiences. You craft names and descriptions that make each person feel seen, understood, and celebrated through the intersection of their chosen color and image."
                 },
                 {
                     "role": "user", 
@@ -108,21 +108,52 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                             "type": "text", 
                             "text": (
                                 f"""
-                                # Main goal
-                                Generate details based for a color card, based on:
-                                1. hex value '{hex_color}',
-                                2. analysis of attached image.
-                                
-                                # Detailed description
-                                Create a creative name and description inspired by both the color and the image content.
-                                It's a pantone like swatch card with a twist.
-                                
-                                The image and color is coming from the user.
-                                It should give the user his unique color name and description that will take into consideration not only the hex value (chosen by the user), but also the image.
-                                When you try to figure the name and description out , remember - it's not only about the elements of image, but also the emotions one can feel when looks at the image. You should always find something positive. To make the user's day better, inspired. It will be poetic for sure. And unique. Each card is unique.
-                                
-                                The description should fit the name.
-                                Make your ideas wander. Good luck.
+# Main Goal
+Create a deeply personal color card based on:
+1. Hex color value: '{hex_color}'
+2. The attached image
+
+# Core Philosophy
+You're creating a unique color that belongs specifically to this person. This color emerges from their moment, captured through their perspective.
+
+# Image Analysis Guidelines
+Analyze the image carefully:
+- If there's clearly one main person: Capture qualities, emotions, or aspects of the person's presence indirectly through the color.
+- If it's a scene, object, or multiple people: Recognize and celebrate the user's choice to capture this specific moment, emphasizing their creative perspective.
+
+# Personalization Approach
+Consider:
+- What emotion or memory might this photo hold?
+- What made the moment special enough for them to capture it?
+- How does their chosen color connect to the personal story in the image?
+- What personal qualities does this photo and color combination reveal?
+
+# Writing Style Requirements
+- Avoid generic poetic clichés (no "whispers of," "dance of," "embrace of," "symphony of")
+- NEVER start with explicit color terminology (e.g., "This hue," "A shade," "The color")
+- Immediately begin with vivid, concrete imagery or sensory details—like opening to the middle of a poem (e.g., "Afternoon light caught in a grandmother's locket...", "The exact temperature of laughter at 3am...", "Cinnamon dust on fingertips after midnight baking...")
+- Use fresh, unexpected metaphors
+- Write in third person, describing the color/concept itself
+- Ensure each description feels uniquely tied to this specific photo-color combination
+
+# Description Depth
+Let the image and color naturally guide the aspect you highlight:
+- Intimate moments: Focus on personal memories or quiet revelations
+- Joyful or achievement moments: Celebrate triumph or milestones
+- Contemplative scenes: Explore deeper meanings or philosophical undertones
+- Dynamic or energetic images: Capture spirited essence or creative spark
+- Grounding moments: Anchor life transitions or significant realizations
+
+# Output Structure
+Provide:
+- A personalized, evocative color name (max 3 words, ALL CAPS)
+- Phonetic pronunciation (IPA symbols)
+- Grammatical article (e.g., noun)
+- A description (30–40 words) written in third person, capturing the essence of this unique color and moment
+
+This color didn't exist until it was created through their unique combination. Reflect the magic of this creation through your writing.
+
+Good luck!
                                 """
                             )
                         },
@@ -143,7 +174,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                 azure_client.beta.chat.completions.parse(
                     model=model_name,
                     messages=messages,
-                    max_completion_tokens=1500,
+                    max_completion_tokens=2000,
                     response_format=ColorCardDetails,
                 ),
                 timeout=AZURE_OPENAI_CLIENT_TIMEOUT
