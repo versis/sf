@@ -123,6 +123,9 @@ export default function HomePage() {
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
 
+  // Add new state for pending selection
+  const [pendingExampleCardIndex, setPendingExampleCardIndex] = useState<number | null>(null);
+
   // Helper to restore page scroll on mobile
   const restorePageScroll = () => {
     if (isMobile) {
@@ -763,30 +766,20 @@ export default function HomePage() {
   };
 
   const handleAnimationEnd = () => {
-    if (!secondaryImage.src) { // If no secondary image, animation might be snap-back or an old one
-      // Removed snap-back logic for vertical swipe
-      // The 'snap-back-animation' class was set by handleTouchEnd for vertical swipes that didn't meet the threshold.
-      // Since vertical swipe is removed, this specific animation class trigger is gone.
-      // We might still have other animations on primaryImage, so we don't want to clear animationClass unconditionally here.
-      // If other animations need resetting, they should handle it.
-      // setIsAnimating(false); // This was part of the snap-back logic, ensure it's handled if needed elsewhere.
+    if (!secondaryImage.src) {
       restorePageScroll();
       return;
     }
-
-    // This means a slide-in/out animation has completed
     const newPrimarySrc = secondaryImage.src;
     const newCurrentIndex = fetchedHeroCards.findIndex(card => {
       const cardUrl = isMobile ? card.v || card.h : card.h || card.v;
       return cardUrl === newPrimarySrc;
     });
-    
     setPrimaryImage({ src: newPrimarySrc, animationClass: '' });
     setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
     setCurrentExampleCardIndex(newCurrentIndex !== -1 ? newCurrentIndex : 0);
+    setPendingExampleCardIndex(null); // Clear pending index after animation
     setIsAnimating(false);
-    // setSwipeDeltaY(0); // Removed
-    // Ensure page scroll is restored after card change animation
     restorePageScroll();
   };
 
@@ -850,6 +843,8 @@ export default function HomePage() {
 
   const handlePageButtonClick = (index: number) => { // Renamed from handleDotClick
     if (isAnimating || index === currentExampleCardIndex) return;
+    // Set pending index immediately for instant feedback
+    setPendingExampleCardIndex(index);
     // Determine direction for animation (simplistic, could be more robust for wrapping)
     const direction = index > currentExampleCardIndex ? 'next' : 'prev'; 
     triggerImageChangeAnimation(direction, index);
@@ -1204,7 +1199,7 @@ export default function HomePage() {
                   <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
                     {fetchedHeroCards.map((_, index) => {
                       // A button looks "pressed/selected" if it's either the current selection OR currently being pressed
-                      const isPressed = (currentExampleCardIndex === index) || (pressedButtonIndex === index && mouseIsDown);
+                      const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
                       
                       return (
                         <button
