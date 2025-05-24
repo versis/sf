@@ -42,6 +42,20 @@
 - [ ] **3.3. Verify layout adjustments work correctly**
 - [ ] **3.4. Test deployment on Vercel**
 
+## Phase 4: Code Cleanup ✅ COMPLETED
+
+- [X] **4.1. Python Backend Cleanup:**
+    - [X] **4.1.1.** Removed all commented-out old EXIF extraction code from `api/utils/card_utils.py`.
+    - [X] **4.1.2.** Removed extensive commented-out old metrics logic (HEX, RGB, CMYK system).
+    - [X] **4.1.3.** Cleaned up imports and removed unused debugging comments.
+    - [X] **4.1.4.** Simplified font loading code and removed unnecessary inline comments.
+    - [X] **4.1.5.** Updated "shadefreude" brand text to use same font size as ID (38pt scale).
+
+- [X] **4.2. Router Cleanup:**
+    - [X] **4.2.1.** Removed debugging code that saved images locally for testing.
+    - [X] **4.2.2.** Cleaned up import comments and removed outdated inline comments.
+    - [X] **4.2.3.** Simplified logging messages and removed redundant explanatory comments.
+
 ## Additional Notes
 
 *   **Privacy-Conscious:** Only the country name is sent to the backend, not raw GPS coordinates.

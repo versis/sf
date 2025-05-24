@@ -2,35 +2,22 @@ import io
 import base64
 from typing import Tuple, Dict, Any, Optional
 
-# Attempt to move logger import earlier to resolve NameError
-from api.utils.logger import log, debug, error # MOVED EARLIER
-
+from api.utils.logger import log, debug, error
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-
 from datetime import datetime
-import os # Added for path joining
-import math # Import math for trigonometric functions if we attempt arced text later
-import random # Ensure random is imported
+import os
+import math
+import random
 
-# from api.utils.logger import log, debug, error # Ensure error is imported if used # MOVED EARLIER
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
-# Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
-# and assets folder is at the project root (sf/assets)
 ASSETS_BASE_PATH = "assets"
-# Define project root for robust path construction, assuming 'api' is a top-level dir or similar
-# This might need adjustment based on actual execution context.
-# For now, we\'ll construct the logo path directly.
-# PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-# LOGO_PATH = os.path.join(PROJECT_ROOT, "public", "sf-icon.png")
-# Simpler approach for now, assuming execution context allows relative path from project root:
 LOGO_PATH = "public/sf-icon.png"
 
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
-    import os # Keep os import here as it might check paths
+    import os
     font_style_suffix = "Italic" if style.lower() == "italic" else ""
-    # pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Only for Inter
 
     font_path = ""
     if font_family == "Mono":
@@ -38,25 +25,21 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "mono", f"IBMPlexMono-{ibm_plex_weight}.ttf")
     elif font_family == "Caveat":
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "caveat", f"Caveat-{weight}.ttf") 
-        # font_style_suffix = "" # Caveat is naturally cursive, Italic suffix might not be in filenames, ensure `weight` includes any style variant if needed e.g. Caveat-Bold might be only option
     elif font_family == "IBMPlexSerif":
         if weight == "Regular" and style.lower() == "italic":
-            # Handle the specific case where "Regular" is omitted for standard italic
             serif_font_filename = "IBMPlexSerif-Italic.ttf"
         else:
             serif_font_filename = f"IBMPlexSerif-{weight}{font_style_suffix}.ttf"
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "serif", serif_font_filename)
     elif font_family == "Inter":
-        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Specific to Inter
+        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
         inter_font_filename = ""
         if style.lower() == "italic":
-            # Try specific italic files first (e.g., Inter-Italic.ttf, Inter-MediumItalic.ttf)
-            # This covers cases where pt_suffix might not be part of the filename for some italic fonts
             specific_italic_variations = [
-                f"Inter-{weight}Italic.ttf", # Inter-BoldItalic.ttf
-                f"Inter-Italic.ttf", # Generic Italic, often Regular weight
-                f"Inter_{pt_suffix}-{weight}Italic.ttf", # Inter_18pt-BoldItalic.ttf
-                f"Inter_{pt_suffix}-Italic.ttf" # Inter_18pt-Italic.ttf
+                f"Inter-{weight}Italic.ttf",
+                f"Inter-Italic.ttf",
+                f"Inter_{pt_suffix}-{weight}Italic.ttf",
+                f"Inter_{pt_suffix}-Italic.ttf"
             ]
             for fname_candidate in specific_italic_variations:
                 potential_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", fname_candidate)
@@ -64,13 +47,14 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
                     inter_font_filename = fname_candidate
                     debug(f"Found specific Inter Italic font: {inter_font_filename}", request_id=request_id)
                     break
-            if not inter_font_filename: # Fallback to original pattern if specific not found
+            if not inter_font_filename:
                 inter_font_filename = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
-        else: # Non-italic Inter
-            inter_font_filename = f"Inter_{pt_suffix}-{weight}.ttf" # Removed font_style_suffix for non-italic
+        else:
+            inter_font_filename = f"Inter_{pt_suffix}-{weight}.ttf"
         
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", inter_font_filename)
-    else: # Default to Inter if family is unknown, or use a truly generic fallback
+    else:
+        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf")
 
     try:
@@ -79,10 +63,7 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         return loaded_font
     except IOError as e:
         log(f"Failed to load font '{font_path}': {e}. Falling back. (Details: Family='{font_family}', Weight='{weight}', Style='{style}')", level="WARNING", request_id=request_id)
-        # Try a more generic Inter fallback first
         try:
-            # Fallback to a very common Inter font if the requested one fails
-            # This might not be the desired style, but better than a bitmap default usually
             generic_inter_fallback_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", "Inter-Regular.ttf") 
             if os.path.exists(generic_inter_fallback_path):
                 log(f"Attempting Inter-Regular fallback: {generic_inter_fallback_path}", level="DEBUG", request_id=request_id)
@@ -186,7 +167,7 @@ async def generate_card_image_bytes(
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_brand = get_font(int(56 * base_font_scale), "Bold", request_id=request_id)
+    f_brand = get_font(int(38 * base_font_scale), "Bold", request_id=request_id)  # Same size as ID
     f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
@@ -239,14 +220,12 @@ async def generate_card_image_bytes(
     _, brand_h = get_text_dimensions(brand_text, f_brand)
     id_display_for_height_calc = card_details["extendedId"]
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
-    # _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines (old)
-    # Use a representative string for new metric line height calculation
     _, h_new_metric_line = get_text_dimensions("Location: Wonderland", f_metrics_label) 
 
     # Define vertical spacing
-    space_between_brand_id = int(swatch_h * 0.02) # Adjusted spacing
-    space_between_id_metrics = int(swatch_h * 0.03) # Adjusted spacing
-    line_spacing_new_metrics = int(swatch_h * 0.015) # Spacing between new metric lines
+    space_between_brand_id = int(swatch_h * 0.02)
+    space_between_id_metrics = int(swatch_h * 0.03)
+    line_spacing_new_metrics = int(swatch_h * 0.015)
 
     # --- Y-Positioning Logic for Bottom Elements (Revised) ---
     # Calculate height of the new metrics block dynamically based on available data
@@ -293,21 +272,14 @@ async def generate_card_image_bytes(
     new_metric_data = []
     if photo_location:
         new_metric_data.append(("Location:", photo_location))
-    # else:
-    #     new_metric_data.append(("Location:", "Unknown")) # Placeholder REMOVED
         
     if photo_date:
         new_metric_data.append(("Date:", photo_date))
-    # else:
-    #     new_metric_data.append(("Date:", "Unknown")) # Placeholder REMOVED
 
     if new_metric_data: # Only draw if there is data
         current_new_metrics_y = new_metrics_start_y
         metrics_label_start_x = pad_l
         # Calculate where the metric values start, to the right of the labels
-        # Use a fixed offset or calculate max label width if labels vary significantly (here they are fixed)
-        # max_new_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in new_metric_data)
-        # For "Location:" and "Date:", "Location:" is likely longer.
         max_new_label_w = 0
         if any(item[0] == "Location:" for item in new_metric_data):
             max_new_label_w = get_text_dimensions("Location:", f_metrics_label)[0]
@@ -322,36 +294,6 @@ async def generate_card_image_bytes(
             # Increment Y position using the pre-calculated h_new_metric_line and spacing for consistency
             current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics 
     # --- End New Metrics Rendering ---
-
-    # Align metrics to the left (pad_l) # This comment is now slightly out of place, part of old metrics
-    # metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
-    
-    # Check if metrics are provided in card_details, otherwise calculate them # OLD METRICS LOGIC - TO BE REMOVED/COMMENTED
-    # if "metrics" in card_details:
-    #     hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
-    #     rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
-    #     cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
-    # else:
-    #     hex_val = hex_color_input.upper()
-    #     cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
-    #     rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
-    
-    # metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)] # OLD METRICS LOGIC
-    # Calculate where the metric values start, to the right of the labels # OLD METRICS LOGIC
-    # max_label_w = 0 # OLD METRICS LOGIC
-    # if metric_data: # Ensure metric_data is not empty # OLD METRICS LOGIC
-    #     max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data) # OLD METRICS LOGIC
-    
-    # val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.06) # Increased gap after longest label # OLD METRICS LOGIC
-    
-    # current_metrics_y = metrics_start_y # OLD METRICS LOGIC
-
-    # for label, value in metric_data: # OLD METRICS LOGIC
-    #     draw.text((metrics_labels_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color) # OLD METRICS LOGIC
-    #     draw.text((val_x_start, current_metrics_y), value, font=f_metrics_val, fill=text_color) # OLD METRICS LOGIC
-    #     # Use the actual height of the current label for incrementing Y # OLD METRICS LOGIC
-    #     _, h_current_metric_label = get_text_dimensions(label, f_metrics_label) # OLD METRICS LOGIC
-    #     current_metrics_y += h_current_metric_label + line_spacing_metrics # OLD METRICS LOGIC
     
     debug("Text rendering complete", request_id=request_id)
 
