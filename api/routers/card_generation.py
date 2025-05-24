@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Form
 from supabase import Client as SupabaseClient
 from typing import Dict, Any, Optional
 import base64
+import io
 
 from ..config import (
     SUPABASE_URL, SUPABASE_SERVICE_KEY, BLOB_READ_WRITE_TOKEN,
@@ -71,7 +72,9 @@ async def initiate_card_generation(payload: CardGenerationCreateRequest):
 async def finalize_card_generation(
     db_id: int, 
     user_image: UploadFile = File(...),
-    card_name: str = Body(...), # This will be a fallback if AI is off or fails
+    card_name: str = Form(...),
+    photo_date: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
+    photo_location: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
     user_prompt: Optional[str] = Body(None), # Stored in metadata, not currently used for AI call generation
     # ai_generated_details: Optional[Dict[str, Any]] = Body(None) # This param is now redundant if backend calls AI
 ):
@@ -112,10 +115,18 @@ async def finalize_card_generation(
         
         # Prepare image data
         user_image_bytes = await user_image.read()
+        log(f"finalize_card_generation: Received user_image.filename: {user_image.filename}, user_image.content_type: {user_image.content_type}", request_id=str(db_id))
+
         # Convert user_image_bytes to data URL for generate_card_image_bytes
         # Assuming user_image.content_type is available and correct (e.g., 'image/png', 'image/jpeg')
         user_image_content_type = user_image.content_type or 'image/png' # Default if not provided
         user_image_data_url = f"data:{user_image_content_type};base64,{base64.b64encode(user_image_bytes).decode('utf-8')}"
+
+        # Log the received EXIF data
+        if photo_date or photo_location:
+            log(f"Client-side EXIF data for DB ID {db_id}: Date='{photo_date}', Location='{photo_location}'", request_id=str(db_id))
+        else:
+            log(f"No EXIF data received from client for DB ID {db_id}", request_id=str(db_id))
 
         # --- AI Details Generation Step --- 
         processed_ai_details = {} # Store details from AI or fallback
@@ -172,7 +183,9 @@ async def finalize_card_generation(
                 card_details=card_details_for_image_gen,
                 hex_color_input=hex_color,
                 orientation=orientation,
-                request_id=str(db_id) 
+                request_id=str(db_id),
+                photo_date=photo_date,
+                photo_location=photo_location
             )
             random_suffix = generate_random_suffix()
             
@@ -207,7 +220,11 @@ async def finalize_card_generation(
                 "ai_info": raw_ai_response_for_metadata, # Store AI call outcome/details
                 "original_filename": user_image.filename,
                 "image_generation_details": card_details_for_image_gen,
-                "uploaded_blob_info": uploaded_image_info # This correctly stores the dict with horizontal/vertical URLs
+                "uploaded_blob_info": uploaded_image_info, # This correctly stores the dict with horizontal/vertical URLs
+                "exif_data_extracted": {
+                    "photo_date": photo_date,
+                    "photo_location_country": photo_location
+                }
             },
         }
 

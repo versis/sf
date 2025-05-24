@@ -10,12 +10,20 @@ When working on:
 - bug fixing
 - and similar
 
-1. Do not start immedaitely.
+1. Do not start immediately.
 2. State the problem (rephrase it).
 3. Take a step back, think at the bigger picture and what possibly you are missing.
-4. Take your time to think about.
-3. Think about at least 3 possible solutions that are very different. They cannot be temporary solutions (band aids), we don't want to technical dept, we can spend some time on the refactor if needed.
-5. Describe all solutions.
+4. Check the full code structure and list possible files that might be involved in the changes.
+5. Read them to have context.
+6. Take your time to think about.
+7. Think about at least 3 possible solutions that are very different. They cannot be temporary solutions (band aids), we don't want to technical dept, we can spend some time on the refactor if needed.
+8. Describe all solutions.
 6. Is any one those solutions the most prominent? Or maybe you have new idea based on those solutions?
-7. Craft a multi step plan.
-7. Start the implementation, step by step.
+9. Craft a multi step plan.
+10. Start the implementation, step by step.
+
+
+When making multi-steps plans:
+1. Add them to `docs/plans` in markdown file.
+2. Use date as prefix, e.g. `20230322-<description>md`
+3. Use checkmarks to mark tasks as one.

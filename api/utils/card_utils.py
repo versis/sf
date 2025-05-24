@@ -1,13 +1,18 @@
 import io
 import base64
 from typing import Tuple, Dict, Any, Optional
+
+# Attempt to move logger import earlier to resolve NameError
+from api.utils.logger import log, debug, error # MOVED EARLIER
+
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+
 from datetime import datetime
 import os # Added for path joining
 import math # Import math for trigonometric functions if we attempt arced text later
 import random # Ensure random is imported
 
-from api.utils.logger import log, debug, error # Ensure error is imported if used
+# from api.utils.logger import log, debug, error # Ensure error is imported if used # MOVED EARLIER
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
@@ -104,9 +109,11 @@ async def generate_card_image_bytes(
     card_details: Dict[str, Any],
     hex_color_input: str,
     orientation: str,
-    request_id: Optional[str] = None
+    request_id: Optional[str] = None,
+    photo_date: Optional[str] = None,
+    photo_location: Optional[str] = None
 ) -> bytes:
-    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}", request_id=request_id)
+    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}", request_id=request_id)
     
     rgb_color = hex_to_rgb(hex_color_input, request_id)
     if rgb_color is None:
@@ -178,8 +185,8 @@ async def generate_card_image_bytes(
     f_phonetic = get_font(int(30 * base_font_scale), "Light", "Italic", request_id=request_id)
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
-    f_brand = get_font(int(64 * base_font_scale), "Bold", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_brand = get_font(int(56 * base_font_scale), "Bold", request_id=request_id)
     f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
@@ -232,29 +239,46 @@ async def generate_card_image_bytes(
     _, brand_h = get_text_dimensions(brand_text, f_brand)
     id_display_for_height_calc = card_details["extendedId"]
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
-    _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
+    # _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines (old)
+    # Use a representative string for new metric line height calculation
+    _, h_new_metric_line = get_text_dimensions("Location: Wonderland", f_metrics_label) 
 
-    # Define vertical spacing (increased spacing between bottom elements)
-    space_between_brand_id = int(swatch_h * 0.03) # Reduced from 0.035
-    space_between_id_metrics = int(swatch_h * 0.05) # Reduced from 0.065
-    line_spacing_metrics = int(swatch_h * 0.02) # Reduced from 0.025
+    # Define vertical spacing
+    space_between_brand_id = int(swatch_h * 0.02) # Adjusted spacing
+    space_between_id_metrics = int(swatch_h * 0.03) # Adjusted spacing
+    line_spacing_new_metrics = int(swatch_h * 0.015) # Spacing between new metric lines
 
-    # --- Y-Positioning Logic for Bottom Elements ---
+    # --- Y-Positioning Logic for Bottom Elements (Revised) ---
+    # Calculate height of the new metrics block dynamically based on available data
+    num_metric_lines = 0
+    if photo_location: num_metric_lines += 1
+    if photo_date: num_metric_lines += 1
 
-    # 1. Position Brand ("shadefreude") higher up - moved from 63% to 58% to move text higher
-    brand_y_pos = int(swatch_h * 0.62) # Moved up from 0.63 to add more padding at bottom
+    if num_metric_lines > 0:
+        total_new_metrics_block_height = (num_metric_lines * h_new_metric_line) + ((num_metric_lines - 1) * line_spacing_new_metrics if num_metric_lines > 1 else 0)
+        # Total height of the entire bottom text block (Brand + ID + New Metrics)
+        total_bottom_block_height = brand_h + space_between_brand_id + id_h + space_between_id_metrics + total_new_metrics_block_height
+    else: # No metrics lines
+        total_new_metrics_block_height = 0
+        total_bottom_block_height = brand_h + space_between_brand_id + id_h
+    
+    # Start Y position for the entire bottom block, aiming to keep a similar bottom margin (pad_b)
+    bottom_elements_start_y_overall = swatch_h - pad_b - total_bottom_block_height
+
+    # 1. Position Brand ("shadefreude")
+    brand_y_pos = bottom_elements_start_y_overall 
 
     # 2. Position Card ID below the brand
     id_y_pos = brand_y_pos + brand_h + space_between_brand_id
 
-    # 3. Position Metrics block below the Card ID
-    metrics_start_y = id_y_pos + id_h + space_between_id_metrics
-
-    # --- End Y-Positioning Logic ---
+    # 3. Position New Metrics block below the Card ID
+    new_metrics_start_y = id_y_pos + id_h + space_between_id_metrics
+    # --- End Y-Positioning Logic (Revised) ---
 
     for i, line_d in enumerate(wrapped_desc):
         # Ensure description does not overlap with the new, higher brand position
-        if i < 5 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.06)):
+        # Adjusted condition to check against brand_y_pos
+        if i < 5 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.04)):
             draw.text((pad_l, current_y), line_d, font=f_desc, fill=text_color)
             current_y += desc_line_h + int(swatch_h * 0.004)
         else: break
@@ -265,35 +289,69 @@ async def generate_card_image_bytes(
     id_display = card_details["extendedId"]
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    # Align metrics to the left (pad_l)
-    metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
-    
-    # Check if metrics are provided in card_details, otherwise calculate them
-    if "metrics" in card_details:
-        hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
-        rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
-        cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
-    else:
-        hex_val = hex_color_input.upper()
-        cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
-        rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
-    
-    metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)]
-    # Calculate where the metric values start, to the right of the labels
-    max_label_w = 0
-    if metric_data: # Ensure metric_data is not empty
-        max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data)
-    
-    val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.06) # Increased gap after longest label
-    
-    current_metrics_y = metrics_start_y
+    # --- New Metrics Rendering ---
+    new_metric_data = []
+    if photo_location:
+        new_metric_data.append(("Location:", photo_location))
+    # else:
+    #     new_metric_data.append(("Location:", "Unknown")) # Placeholder REMOVED
+        
+    if photo_date:
+        new_metric_data.append(("Date:", photo_date))
+    # else:
+    #     new_metric_data.append(("Date:", "Unknown")) # Placeholder REMOVED
 
-    for label, value in metric_data:
-        draw.text((metrics_labels_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color)
-        draw.text((val_x_start, current_metrics_y), value, font=f_metrics_val, fill=text_color)
-        # Use the actual height of the current label for incrementing Y
-        _, h_current_metric_label = get_text_dimensions(label, f_metrics_label)
-        current_metrics_y += h_current_metric_label + line_spacing_metrics
+    if new_metric_data: # Only draw if there is data
+        current_new_metrics_y = new_metrics_start_y
+        metrics_label_start_x = pad_l
+        # Calculate where the metric values start, to the right of the labels
+        # Use a fixed offset or calculate max label width if labels vary significantly (here they are fixed)
+        # max_new_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in new_metric_data)
+        # For "Location:" and "Date:", "Location:" is likely longer.
+        max_new_label_w = 0
+        if any(item[0] == "Location:" for item in new_metric_data):
+            max_new_label_w = get_text_dimensions("Location:", f_metrics_label)[0]
+        elif any(item[0] == "Date:" for item in new_metric_data):
+            max_new_label_w = get_text_dimensions("Date:", f_metrics_label)[0]
+            
+        val_new_x_start = metrics_label_start_x + max_new_label_w + int(swatch_w * 0.03) # Gap after longest label
+
+        for label, value in new_metric_data:
+            draw.text((metrics_label_start_x, current_new_metrics_y), label, font=f_metrics_label, fill=text_color)
+            draw.text((val_new_x_start, current_new_metrics_y), value, font=f_metrics_val, fill=text_color)
+            # Increment Y position using the pre-calculated h_new_metric_line and spacing for consistency
+            current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics 
+    # --- End New Metrics Rendering ---
+
+    # Align metrics to the left (pad_l) # This comment is now slightly out of place, part of old metrics
+    # metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
+    
+    # Check if metrics are provided in card_details, otherwise calculate them # OLD METRICS LOGIC - TO BE REMOVED/COMMENTED
+    # if "metrics" in card_details:
+    #     hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
+    #     rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
+    #     cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
+    # else:
+    #     hex_val = hex_color_input.upper()
+    #     cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
+    #     rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
+    
+    # metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)] # OLD METRICS LOGIC
+    # Calculate where the metric values start, to the right of the labels # OLD METRICS LOGIC
+    # max_label_w = 0 # OLD METRICS LOGIC
+    # if metric_data: # Ensure metric_data is not empty # OLD METRICS LOGIC
+    #     max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data) # OLD METRICS LOGIC
+    
+    # val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.06) # Increased gap after longest label # OLD METRICS LOGIC
+    
+    # current_metrics_y = metrics_start_y # OLD METRICS LOGIC
+
+    # for label, value in metric_data: # OLD METRICS LOGIC
+    #     draw.text((metrics_labels_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color) # OLD METRICS LOGIC
+    #     draw.text((val_x_start, current_metrics_y), value, font=f_metrics_val, fill=text_color) # OLD METRICS LOGIC
+    #     # Use the actual height of the current label for incrementing Y # OLD METRICS LOGIC
+    #     _, h_current_metric_label = get_text_dimensions(label, f_metrics_label) # OLD METRICS LOGIC
+    #     current_metrics_y += h_current_metric_label + line_spacing_metrics # OLD METRICS LOGIC
     
     debug("Text rendering complete", request_id=request_id)
 
