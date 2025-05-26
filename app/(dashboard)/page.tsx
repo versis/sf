@@ -68,6 +68,7 @@ export default function HomePage() {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
   const [isHeroVisible, setIsHeroVisible] = useState(true);
+  const [wizardVisible, setWizardVisible] = useState(false); // New state for wizard visibility
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -128,6 +129,7 @@ export default function HomePage() {
   const [photoLocationCountry, setPhotoLocationCountry] = useState<string | null>(null);
 
   const mainContainerRef = useRef<HTMLDivElement>(null); // Ref for the main content container
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the ImageUpload input
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
 
@@ -511,8 +513,57 @@ export default function HomePage() {
 
   const handleImageSelectedForUpload = (file: File) => {
     // Reset relevant parts of the wizard when a new image is selected
-    resetWizard(); // Call full reset and then set new state
-    setCurrentWizardStep('upload'); // Will be set by resetWizard, but to be explicit
+    // resetWizard(); // Call full reset and then set new state - NO, resetWizard makes hero visible.
+    // We need a more targeted reset here if a user is already in the wizard and re-uploads.
+    // For the new flow, resetWizard() would have been called if they clicked the logo,
+    // or this is the first interaction.
+
+    // If called from the new button flow, wizardVisible is false.
+    // If called from within an already visible wizard (e.g. user clicks step 1 again), wizardVisible is true.
+
+    if (!wizardVisible) { // Coming from the new "Create Your Card" button flow
+        setUploadStepPreviewUrl(null);
+        setCroppedImageDataUrl(null);
+        // setSelectedHexColor('#000000'); // Keep if user was playing with color picker before
+        setGeneratedVerticalImageUrl(null);
+        setGeneratedHorizontalImageUrl(null);
+        setGeneratedExtendedId(null);
+        // setCurrentDisplayOrientation('horizontal'); // Keep user's preference
+        setIsGenerating(false);
+        setGenerationError(null);
+        // setColorNameInput(''); // Keep if user typed
+        setGenerationProgress(0);
+        setSelectedFileName(null);
+        // setUserHasInteractedWithColor(false); // Keep if user was playing
+
+        // setCurrentWizardStep('upload'); // Will be set to 'crop' below
+        setIsUploadStepCompleted(false); // Will be set to true below
+        setIsCropStepCompleted(false);
+        setIsColorStepCompleted(false);
+        setIsResultsStepCompleted(false);
+        setNoteText("");
+        setCurrentDbId(null);
+        setIsNoteStepActive(false);
+        setPhotoDate(null);
+        setPhotoLatitude(null);
+        setPhotoLongitude(null);
+        setPhotoLocationCountry(null);
+    } else { // User is re-uploading from within the wizard
+        // Minimal reset for re-upload:
+        setCroppedImageDataUrl(null);
+        setGeneratedVerticalImageUrl(null);
+        setGeneratedHorizontalImageUrl(null);
+        setGeneratedExtendedId(null);
+        setIsGenerating(false);
+        setGenerationError(null);
+        setGenerationProgress(0);
+        // Keep selected file name for a moment, it will be updated
+        // Keep color, name input, etc.
+        setIsCropStepCompleted(false);
+        setIsColorStepCompleted(false);
+        setIsResultsStepCompleted(false);
+        setCurrentWizardStep('upload'); // Start from upload again if re-uploading
+    }
 
     console.log(`STEP 1.1: Original file selected - Name: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
     setSelectedFileName(file.name);
@@ -535,6 +586,8 @@ export default function HomePage() {
       setUploadStepPreviewUrl(dataUrl);
       setIsUploadStepCompleted(true);
       setCurrentWizardStep('crop'); // Move to next step
+      setWizardVisible(true); // << NEW: Show the wizard
+      setIsHeroVisible(false); // << NEW: Hide the hero content (text & example card)
     };
     reader.onerror = () => {
       console.error('Error reading file for preview.');
@@ -1212,6 +1265,26 @@ export default function HomePage() {
     // Removing setIsAnimating(false) here to avoid interfering with potential flip animations.
   };
 
+  const handleCreateYourCardClick = () => {
+    if (fileInputRef.current) {
+      // Potentially reset parts of the wizard if the user had interacted with a previous session's form
+      // For a fresh start via this button, ensure critical things are reset before triggering upload.
+      // Minimal reset before triggering file dialog:
+      setUploadStepPreviewUrl(null);
+      setCroppedImageDataUrl(null);
+      setIsUploadStepCompleted(false);
+      setIsCropStepCompleted(false);
+      setIsColorStepCompleted(false);
+      setIsResultsStepCompleted(false);
+      setCurrentWizardStep('upload'); // Ensure wizard logic starts from a clean 'upload' state
+      setGenerationError(null);
+      setGeneratedExtendedId(null);
+      
+      fileInputRef.current.value = ''; // Clear previous selection from input
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
@@ -1258,6 +1331,16 @@ export default function HomePage() {
                 <p className="text-md md:text-lg text-muted-foreground">
                   Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
                 </p>
+                {/* New "Create Your Card" Button */}
+                <div className="mt-6 mb-2 md:mb-0">
+                  <button
+                    onClick={handleCreateYourCardClick}
+                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-150 ease-in-out flex items-center justify-center text-lg w-full md:w-auto"
+                  >
+                    <UploadCloud size={20} className="mr-2" />
+                    Create Your Card
+                  </button>
+                </div>
               </div>
 
               {/* Right Column: Example Card with Navigation - takes 3/5ths */}
@@ -1395,6 +1478,7 @@ export default function HomePage() {
           <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your postcard</h2>
         </div>
 
+        {wizardVisible && ( // << NEW: Conditional rendering for the entire wizard
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
@@ -1405,6 +1489,7 @@ export default function HomePage() {
               onHeaderClick={isStepHeaderClickable('upload') ? () => setStep('upload') : undefined}
             >
               <ImageUpload 
+                ref={fileInputRef} // Pass the ref to ImageUpload
                 onImageSelect={handleImageSelectedForUpload} 
                 onImageCropped={handleCroppedImage}
                 showUploader={true}
@@ -1657,6 +1742,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
+        )} {/* << NEW: End of conditional rendering for wizard */}
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
+import React, { useState, ChangeEvent, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactCrop, { type Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
@@ -39,15 +39,15 @@ interface ImageUploadProps {
 const REQUIRED_MIN_DIMENSION = 900; // Required for the AI processing
 const MAX_DIMENSION = 1200; // Maximum for very large crops
 
-const ImageUpload: React.FC<ImageUploadProps> = ({ 
-  onImageSelect, 
-  onImageCropped, 
-  showUploader, 
-  showCropper, 
-  initialPreviewUrl, 
+const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
+  onImageSelect,
+  onImageCropped,
+  showUploader,
+  showCropper,
+  initialPreviewUrl,
   currentFileName,
-  aspectRatio = 1/1 
-}) => {
+  aspectRatio = 1/1
+}, ref) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -57,7 +57,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [processingMessage, setProcessingMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
-  
+
+  const localInputRef = useRef<HTMLInputElement>(null);
+
+  // Expose the localInputRef to the parent component via the passed ref
+  useImperativeHandle(ref, () => localInputRef.current as HTMLInputElement);
+
   // Reset states when initial preview URL changes
   useEffect(() => {
     if (showCropper && initialPreviewUrl && initialPreviewUrl !== previewUrl) {
@@ -407,6 +412,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               accept="image/*"
               onChange={internalHandleFileChange}
               className="hidden"
+              ref={localInputRef}
             />
           </div>
           
@@ -481,6 +487,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       <canvas ref={previewCanvasRef} style={{ display: 'none' }} />
     </div>
   );
-};
+});
+
+ImageUpload.displayName = 'ImageUpload';
 
 export default ImageUpload; 
