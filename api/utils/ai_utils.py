@@ -99,7 +99,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             messages = [
                 {
                     "role": "system", 
-                    "content": "You are a creative color curator who crafts meaningful and personal color experiences. You create names and descriptions that make each person feel understood and celebrated through the intersection of their chosen color and image."
+                    "content": "You create surprising color fortunes. Like finding a message in a bottle or opening a fortune cookie, each color reveals something unexpected about the moment captured."
                 },
                 {
                     "role": "user", 
@@ -108,83 +108,29 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                             "type": "text", 
                             "text": (
                                 f"""
-                                    # Main Goal
-                                    Create a deeply personal color card based on:
-                                    1. Hex value: '{hex_color}'
-                                    2. The attached image
-                                    
-                                    # Core Philosophy
-                                    You're creating a unique color that belongs to THIS specific person. This isn't just any color - it's THEIR color, discovered in THEIR moment, through THEIR lens.
-                                    
-                                    # Image Analysis Guidelines
-                                    First, analyze the image carefully:
-                                    - If there's one main person: This is likely the user themselves. Speak to them directly through the color.
-                                    - If it's a scene/object/multiple people: The user chose to capture this moment. Honor their eye, their timing, their perspective.
-                                    
-                                    # Personalization Approach
-                                    Consider:
-                                    - What emotion or memory might this photo hold for them?
-                                    - What was special about the moment they pressed the shutter?
-                                    - How does their chosen color connect to their personal story in this image?
-                                    - What quality in them does this photo+color combination reveal?
-                                    
-                                    # Writing Style Requirements
-                                    - Avoid generic descriptions (no "whispers of," "dance of," "embrace of," "symphony of")
-                                    - NEVER start with: "This hue," "This color," "This shade," "A color that," "The color," "A shade," "The shade," "The hue," or ANY variation mentioning color/hue/shade/tone
-                                    - Begin immediately with descriptive language - like a snapshot of a moment
-                                    - Jump straight into the essence: "Afternoon light on grandmother's jewelry box" or "Three AM coffee and unfinished conversations"
-                                    - Start with concrete imagery or relatable moments - NEVER with color terminology
-                                    - Each description should feel like it could ONLY belong to this specific photo+color combination
-                                    - Use clear, evocative language that balances creativity with accessibility
-                                    - Write in third person, describing the color/concept itself
-                                    - The description should feel personal and meaningful without being overly flowery
-                                    
-                                    # Description Depth (let the image+color naturally guide which aspect emerges):
-                                    - For intimate moments: Focus on personal memories or familiar details
-                                    - For joyful/achievement moments: Capture celebration or personal milestones
-                                    - For contemplative scenes: Explore reflections or meaningful observations
-                                    - For dynamic/energetic images: Highlight personality or creative energy
-                                    - For grounding moments: Anchor significant life moments or transitions
-                                    
-                                    # Analysis Process (complete this internally before creating the final output)
-                                    
-                                    ## Step 1: Image Analysis
-                                    - Visual elements: What objects, people, scenery are present?
-                                    - Composition: What's the focal point? Background elements?
-                                    - Lighting: Natural/artificial? Time of day? Shadows and highlights?
-                                    - Mood/Atmosphere: What emotions does this image evoke?
-                                    - Story: What moment is being captured? What happened before/after?
-                                    - Personal significance: Why might this photo be special to the person who took it?
-                                    
-                                    ## Step 2: Color Analysis
-                                    - Basic properties: Is it warm/cool? Light/dark? Saturated/muted?
-                                    - Emotional qualities: Calm/energetic? Joyful/melancholic? Bold/subtle?
-                                    - Natural associations: What in nature has this color? (sky, plants, minerals, etc.)
-                                    - Cultural associations: What does this color typically represent?
-                                    - Sensory connections: What textures, tastes, sounds, or temperatures relate to this color?
-                                    
-                                    ## Step 3: Intersection Discovery
-                                    - How does this specific color relate to this specific image?
-                                    - What unique story emerges from THIS color in THIS context?
-                                    - What unexpected connections can be made?
-                                    - What makes this combination one-of-a-kind?
-                                    - What personal quality or moment does this combination reveal?
-                                    
-                                    ## Step 4: Creative Synthesis
-                                    - Based on the above analysis, craft a name and description that:
-                                      - Captures the unique intersection of color + image
-                                      - Feels deeply personal and specific
-                                      - Uses fresh, unexpected language
-                                      - Creates a sense of discovery and significance
-                                    
-                                    # Output Structure
-                                    Create:
-                                    - A color name that feels like a personal discovery (max 3 words, ALL CAPS)
-                                    - A description written in third person that captures the essence of this unique color (25-33 words)
-                                    - The description should describe the color/concept itself, not address the user directly
-                                    - Still make it deeply personal and unique to their photo+color combination
-                                    
-                                    Remember: This color didn't exist until they created it. Make them feel the magic of that creation through poetic, immediate description.
+# Your Mission
+Create a color card for hex value '{hex_color}' based on the attached image. Find the unexpected story where this color meets this moment.
+
+# Format (IMPORTANT)
+Create TWO separate short lines:
+— First line: An observation, moment, or realization (10-15 words)
+— Second line: A different perspective, outcome, or truth (10-15 words)
+
+# What We're After
+- The kind of insight that makes someone pause and think "oh, that's so true"
+- Moments that feel both specific and universal
+- Unexpected connections between color and image
+- A touch of humor, nostalgia, or surprise
+- The fortune cookie effect - brief but memorable
+
+# Avoid
+- Literal descriptions of what's visible
+- Overly poetic or flowery language
+- Generic color associations
+- Starting with "This color" or similar phrases
+
+# Remember
+Great color names and descriptions feel like little discoveries. They reveal something true about the moment, the mood, or the human experience that this particular combination captures.
                                 """
                             )
                         },
