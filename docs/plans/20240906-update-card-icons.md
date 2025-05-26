@@ -1,19 +1,25 @@
 # Plan for Updating Card Icons
 
-- [x] **State the problem**: Rephrased the user's request to ensure understanding.
-- [x] **Identify relevant files**: Searched for files related to card design and icons. (`api/utils/card_utils.py`, `components/CardDisplay.tsx`)
-- [x] **Read relevant files**: Understood the current implementation in `api/utils/card_utils.py`.
-- [ ] **Propose solutions**:
-    - [x] Solution 1: Directly replace the existing icon rendering logic with PIL image pasting in `api/utils/card_utils.py`.
-    - [ ] Solution 2: Create a new reusable `Icon` component (N/A for backend Python image generation).
-    - [ ] Solution 3: Use an icon library (N/A for backend Python image generation).
-- [x] **Choose a solution**: Solution 1 was chosen.
+- [x] **State the problem**: Render PNG icon and text value on the same visual line, with icon alignment relative to the specific text on that line.
+- [x] **Identify relevant files**: `api/utils/card_utils.py`.
+- [x] **Read relevant files**: Understood current structure.
+- [x] **Chosen Solution**: Dynamic Icon-to-Text Centering for PNGs.
+    - For each metric line:
+        - Text is drawn with its top at `current_new_metrics_y`.
+        - Icon's vertical center is aligned with the vertical center of the drawn text's bounding box for that specific line.
+        - Icon on left, then gap, then text.
+        - `current_new_metrics_y` advances by a fixed amount for uniform inter-line spacing.
 - [ ] **Implement the plan**:
-    - [x] Located the component responsible for rendering card details (location, date) - this is handled in `api/utils/card_utils.py`.
-    - [x] Identified the current icon rendering mechanism (`draw_pin_icon`, `draw_calendar_icon` in Python).
-    - [x] Replaced the current rendering with PIL `Image.open()` and `canvas.paste()` for `public/icon_pin.png` and `public/icon_calendar.png` in `api/utils/card_utils.py`.
-    - [x] Adjusted styling (size, alignment) for the new icons within the Python script.
-    - [x] Verified the paths to the icons (`public/icon_pin.png` and `public/icon_calendar.png`) - hardcoded, with error logging.
-    - [ ] Mark old drawing functions as deprecated.
-- [ ] **Test**: Manually trigger card generation to ensure the new PNG icons are displayed correctly and that errors are logged if icons are missing.
-- [ ] **Cleanup (Optional)**: Remove the deprecated `draw_pin_icon` and `draw_calendar_icon` functions from `api/utils/card_utils.py` after successful testing. 
+    - [ ] Rewrite metrics rendering section in `generate_card_image_bytes` in `api/utils/card_utils.py`.
+        - [ ] Load PNG icons (`public/icon_pin.png`, `public/icon_calendar.png`).
+        - [ ] Use user-specified icon size (`icon_size = int(base_font_scale * 18)`).
+        - [ ] For each metric:
+            - Draw text value with its top at `current_new_metrics_y`.
+            - Calculate actual height of this drawn text.
+            - Calculate icon's Y position to center-align with this text.
+            - Paste icon.
+        - [ ] Ensure correct horizontal positioning of icon and text with a gap.
+    - [x] User-defined spacing (e.g., `space_between_id_metrics`) and font changes (e.g., `f_brand`) are preserved.
+    - [x] Old icon drawing functions (`draw_pin_icon`, `draw_calendar_icon`) remain removed.
+- [ ] **Test**: Manually trigger card generation. Verify icon-text alignment for each metric, overall sizing, and spacing.
+- [ ] **Cleanup**: None anticipated if this approach is final. 

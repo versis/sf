@@ -167,8 +167,7 @@ async def generate_card_image_bytes(
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_brand = get_font(int(38 * base_font_scale), "Semibold", font_family="Mono", request_id=request_id)  # Same size as ID
-    f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_brand = get_font(int(40 * base_font_scale), "Semibold", request_id=request_id)  # User updated
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Color Name (from AI or default)
@@ -223,9 +222,9 @@ async def generate_card_image_bytes(
     _, h_new_metric_line = get_text_dimensions("United States", f_metrics_val)
 
     # Define vertical spacing
-    space_between_brand_id = int(swatch_h * 0.02)
-    space_between_id_metrics = int(swatch_h * 0.07) # Increased from 0.03
-    line_spacing_new_metrics = int(swatch_h * 0.015)
+    space_between_brand_id = int(swatch_h * 0.02) # between brand, id AND metrics
+    space_between_id_metrics = int(swatch_h * 0.06) # User adjusted
+    line_spacing_new_metrics = int(swatch_h * 0.02) # between EACH metric
 
     # --- Y-Positioning Logic for Bottom Elements (Revised) ---
     # Calculate height of the new metrics block dynamically based on available data
@@ -268,61 +267,60 @@ async def generate_card_image_bytes(
     id_display = card_details["extendedId"]
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    # --- New Metrics Rendering with PNG Icons ---
-    new_metric_data = []
+    # --- New Metrics Rendering (PNG Icon + Text, Dynamic Alignment) ---
+    metric_items_to_render = []
     if photo_location:
-        new_metric_data.append(("pin", photo_location))
-        
+        metric_items_to_render.append({"type": "pin", "value": photo_location})
     if photo_date:
-        new_metric_data.append(("calendar", photo_date))
+        metric_items_to_render.append({"type": "calendar", "value": photo_date})
 
-    if new_metric_data:
-        current_new_metrics_y = new_metrics_start_y
-        metrics_label_start_x = pad_l
+    if metric_items_to_render:
+        current_y_for_metric_line = new_metrics_start_y
+        icon_start_x = pad_l
         
-        icon_size = int(base_font_scale * 18) # Reduced from 24
-        icon_to_text_gap = int(swatch_w * 0.03) 
-        val_new_x_start = metrics_label_start_x + icon_size + icon_to_text_gap
+        # General gap, icon-specific sizes will determine text_start_x in the loop
+        gap_after_icon = int(swatch_w * 0.02)
 
+        # Load icon images once
+        icon_pin_img_orig, icon_calendar_img_orig = None, None
         try:
-            icon_pin_img = Image.open("public/icon_pin.png").convert("RGBA")
-        except FileNotFoundError:
-            log("public/icon_pin.png not found", level="ERROR", request_id=request_id)
-            icon_pin_img = None
+            icon_pin_img_orig = Image.open("public/icon_pin.png").convert("RGBA")
         except Exception as e:
             log(f"Error loading public/icon_pin.png: {e}", level="ERROR", request_id=request_id)
-            icon_pin_img = None
-
         try:
-            icon_calendar_img = Image.open("public/icon_calendar.png").convert("RGBA")
-        except FileNotFoundError:
-            log("public/icon_calendar.png not found", level="ERROR", request_id=request_id)
-            icon_calendar_img = None
+            icon_calendar_img_orig = Image.open("public/icon_calendar.png").convert("RGBA")
         except Exception as e:
             log(f"Error loading public/icon_calendar.png: {e}", level="ERROR", request_id=request_id)
-            icon_calendar_img = None
 
-        for icon_type, value in new_metric_data:
-            # Center icon vertically with the middle of the text line slot
-            icon_center_y = current_new_metrics_y + (h_new_metric_line / 2)
-            icon_y_pos_pil = int(icon_center_y - (icon_size / 2))
-
-            # Calculate actual height of the current text value
-            _, actual_value_height = get_text_dimensions(value, f_metrics_val)
+        for item_info in metric_items_to_render:
+            icon_type = item_info["type"]
+            text_value = item_info["value"]
             
-            # Calculate Y position for the text to be centered in the line slot
-            # The line slot starts at current_new_metrics_y and has height h_new_metric_line
-            text_draw_y = current_new_metrics_y + (h_new_metric_line - actual_value_height) / 2.0
+            current_icon_image_to_use = None
+            current_icon_size = 0 # Default/placeholder
 
-            if icon_type == "pin" and icon_pin_img:
-                resized_icon = icon_pin_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-                canvas.paste(resized_icon, (metrics_label_start_x, int(icon_y_pos_pil)), resized_icon)
-            elif icon_type == "calendar" and icon_calendar_img:
-                resized_icon = icon_calendar_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-                canvas.paste(resized_icon, (metrics_label_start_x, int(icon_y_pos_pil)), resized_icon)
+            if icon_type == "pin" and icon_pin_img_orig:
+                current_icon_image_to_use = icon_pin_img_orig
+                current_icon_size = int(base_font_scale * 20) # Pin icon size
+            elif icon_type == "calendar" and icon_calendar_img_orig:
+                current_icon_image_to_use = icon_calendar_img_orig
+                current_icon_size = int(base_font_scale * 22) # Calendar icon size
             
-            draw.text((val_new_x_start, int(text_draw_y)), value, font=f_metrics_val, fill=text_color)
-            current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics
+            # Dynamically calculate text_start_x based on current icon size
+            text_start_x = icon_start_x + current_icon_size + gap_after_icon
+
+            # Draw the text first to get its dimensions and position
+            draw.text((text_start_x, current_y_for_metric_line), text_value, font=f_metrics_val, fill=text_color)
+            
+            _text_w, text_h = get_text_dimensions(text_value, f_metrics_val)
+            
+            if current_icon_image_to_use and current_icon_size > 0:
+                resized_icon = current_icon_image_to_use.resize((current_icon_size, current_icon_size), Image.Resampling.LANCZOS)
+                icon_paste_y = current_y_for_metric_line + (text_h / 1.0) - (current_icon_size / 1.6)
+                canvas.paste(resized_icon, (icon_start_x, int(icon_paste_y)), resized_icon)
+            
+            current_y_for_metric_line += h_new_metric_line + line_spacing_new_metrics
+            
     # --- End New Metrics Rendering ---
     
     debug("Text rendering complete", request_id=request_id)
@@ -598,24 +596,8 @@ async def generate_back_card_image_bytes(
     log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
 
-# --- Helper Functions for Drawing Custom Icons ---
-def draw_pin_icon(draw, x, y, size, color):
-    """
-    Draws a simplified map pin icon.
-    This function is deprecated and will be removed.
-    """
-    log("draw_pin_icon is deprecated and will be removed.", level="WARNING")
-    # Simplified or empty implementation as it's being replaced
-    pass
-
-def draw_calendar_icon(draw, x, y, size, color):
-    """
-    Draws a simplified calendar icon.
-    This function is deprecated and will be removed.
-    """
-    log("draw_calendar_icon is deprecated and will be removed.", level="WARNING")
-    # Simplified or empty implementation as it's being replaced
-    pass
+# --- Helper Functions for Drawing Custom Icons (REMOVED) ---
+# draw_pin_icon and draw_calendar_icon functions are now removed.
 
 def create_color_swatch_image_bytes(hex_color: str, width: int = 200, height: int = 200, request_id: Optional[str] = None) -> bytes:
     log(f"Creating color swatch for {hex_color}", request_id=request_id)
