@@ -566,14 +566,19 @@ async def generate_back_card_image_bytes(
         rule_x_end = note_text_area_end_x # Rules span the full available note width
         
         for line_text in lines:
-            # Position of the text baseline for the current line
-            current_text_baseline_y = y_cursor + rule_spacing_above_text + ascent
+            # Calculate the Y for the TOP of the text line
+            text_top_y = y_cursor + rule_spacing_above_text
+            
+            # The baseline is text_top_y + ascent
+            current_text_baseline_y = text_top_y + ascent
             
             if line_text: # Draw text only if line is not empty
-                 draw.text((text_block_x_start, current_text_baseline_y), line_text, font=f_note, fill=text_color)
+                 # Pilar draw.text uses the top-left coordinate.
+                 # To align text so its baseline is at current_text_baseline_y, we draw at (current_text_baseline_y - ascent), which is text_top_y.
+                 draw.text((text_block_x_start, text_top_y), line_text, font=f_note, fill=text_color)
 
-            # Draw the rule line associated with this text line (even if text is empty, to maintain ruled paper look)
-            # The rule line should be slightly below the text baseline
+            # Draw the rule line associated with this text line
+            # The rule line should be slightly below the text baseline (current_text_baseline_y)
             current_rule_y = current_text_baseline_y + rule_spacing_below_text
             draw.line([(rule_x_start, current_rule_y), (rule_x_end, current_rule_y)], fill=rule_line_color, width=1)
             
