@@ -317,7 +317,13 @@ async def generate_card_image_bytes(
             if current_icon_image_to_use and current_icon_size > 0:
                 resized_icon = current_icon_image_to_use.resize((current_icon_size, current_icon_size), Image.Resampling.LANCZOS)
                 icon_paste_y = current_y_for_metric_line + (text_h / 1.0) - (current_icon_size / 1.6)
-                canvas.paste(resized_icon, (icon_start_x, int(icon_paste_y)), resized_icon)
+                
+                # Create a solid color image with the text_color
+                color_fill_temp = Image.new('RGBA', resized_icon.size, text_color)
+                
+                # Paste the solid color image, using the original resized icon's alpha as the mask
+                # This effectively recolors the icon shape with text_color
+                canvas.paste(color_fill_temp, (icon_start_x, int(icon_paste_y)), resized_icon)
             
             current_y_for_metric_line += h_new_metric_line + line_spacing_new_metrics
             
