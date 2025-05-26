@@ -119,6 +119,7 @@ TOTAL: 20-25 words maximum
 
 BOTH lines must relate directly to the chosen color's characteristics, location, or meaning.
 NEVER start lines with "It knows", "It predicts", "This color", "This shade" or similar.
+NEVER repeat or reference the color name in the description.
 Jump straight into the observation like you're continuing a conversation.
 
 # Connect Color to Message
