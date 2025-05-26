@@ -1263,9 +1263,9 @@ export default function HomePage() {
                   {/* Card Image Container */}
                   <div
                     ref={heroImageContainerRef}
-                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'w-96 mx-auto' : 'w-full'}`}
+                    className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-6 mt-2 mb-2 ${isMobile ? 'w-11/12 mx-auto' : 'w-full'}`}
                     style={{
-                      aspectRatio: isMobile ? '3/4' : '80/33', // Use stable aspect ratio for mobile instead of vh units
+                      aspectRatio: isMobile ? '1/2' : '80/33', // Use stable aspect ratio for mobile, adjusted for vertical cards
                     }}
                   >
                     <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
@@ -1288,7 +1288,7 @@ export default function HomePage() {
                                 key={`primary-${primaryImage.src}-${currentExampleCardIndex}`}
                                 src={primaryImage.src}
                                 alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
-                                className={`w-full h-full rounded-lg object-cover example-card-image ${primaryImage.animationClass} mx-auto`}
+                                className={`w-full h-full rounded-lg object-contain example-card-image ${primaryImage.animationClass} mx-auto`}
                                 style={{
                                   // transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined, // Removed
                                   zIndex: 10, 
@@ -1306,7 +1306,7 @@ export default function HomePage() {
                                   key={`secondary-${secondaryImage.src}`}
                                   src={secondaryImage.src}
                                   alt="Next example card image"
-                                  className={`w-full h-full rounded-lg object-cover example-card-image absolute top-0 left-0 ${secondaryImage.animationClass} mx-auto`}
+                                  className={`w-full h-full rounded-lg object-contain example-card-image absolute top-0 left-0 ${secondaryImage.animationClass} mx-auto`}
                                   style={{
                                     transform: secondaryImage.initialTranslate,
                                     zIndex: 5,
@@ -1333,7 +1333,7 @@ export default function HomePage() {
                                 : currentCardData.bh || currentCardData.bv;
 
                               if (backImageUrl) {
-                                return <img src={backImageUrl} alt="Hero card back" className="w-full h-full object-cover" />;
+                                return <img src={backImageUrl} alt="Hero card back" className="w-full h-full object-contain" />;
                               }
                             }
                             // Fallback if no specific back image for hero card

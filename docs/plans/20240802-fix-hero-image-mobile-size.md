@@ -1,0 +1,22 @@
+# Plan: Fix Hero Image Mobile Size (2024-08-02)
+
+- [ ] **State the Problem:** The example card images in the hero section on mobile are not utilizing available screen space effectively, appearing smaller than desired. Previous attempts using percentage-based viewport height (`80vh`) led to layout shifts with the browser's UI (like Chrome's address bar).
+- [ ] **Bigger Picture:** This is a responsive design and CSS layout challenge. We need a solution that adapts to screen size, maximizes image visibility, but remains stable during viewport changes caused by browser UI elements appearing/disappearing.
+- [ ] **File Identification:**
+    - The main page is likely `app/page.tsx` or a component imported into it.
+    - Hero section styles could be in this file, a dedicated CSS module, or a shared component.
+    - Tailwind CSS is used, so classes will be the primary styling mechanism.
+- [ ] **Read Files:** Examine identified files to see how hero images are structured and styled.
+- [ ] **Think About Solutions & Prominent Solution:**
+    - Favored approach: Aspect Ratio Styling. Create a container that maintains a specific aspect ratio. The width could be a percentage of the screen width, and the height would be set using Tailwind's aspect ratio classes or the CSS `aspect-ratio` property. The image inside would use `object-fit: contain`.
+- [ ] **Implementation Steps:**
+    - [ ] Locate the hero section component and the rendering of example images.
+    - [ ] Analyze current Tailwind classes applied to the images and their containers.
+    - [ ] Implement the aspect ratio approach:
+        - [ ] Wrap the image in a container if not already structured suitably.
+        - [ ] Apply Tailwind's aspect ratio classes to this container (e.g., `aspect-w-9 aspect-h-16` or similar, adjusting based on typical card dimensions).
+        - [ ] Set the container's width to be responsive (e.g., `w-11/12 mx-auto` or `w-full` if the parent has padding).
+        - [ ] Ensure the image uses `w-full h-full object-contain` (or `object-cover`) to fill the aspect ratio container.
+    - [ ] Test on various mobile viewports.
+    - [ ] Adjust the container's width and aspect ratio as needed.
+- [ ] **Verification:** Confirm the images are larger on mobile and the Chrome navbar issue is not present. 
