@@ -91,6 +91,7 @@ export default function HomePage() {
   // State for hero card flip
   const [isHeroCardFlipped, setIsHeroCardFlipped] = useState(false);
   const [heroCardSwipeDirection, setHeroCardSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [heroFlipCount, setHeroFlipCount] = useState<number>(0); // ADD THIS LINE
 
   const heroImageContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1089,6 +1090,7 @@ export default function HomePage() {
     }
     setHeroCardSwipeDirection(swipeDir);
     setIsHeroCardFlipped(!isHeroCardFlipped);
+    setHeroFlipCount(prevCount => prevCount + 1); // ADD THIS LINE
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -1179,8 +1181,9 @@ export default function HomePage() {
     };
     clearCurrentInterval(); // Clear any existing interval immediately
 
-    if (isHeroVisible && fetchedHeroCards.length > 0 && !isAnimating) {
-      const currentFlipDelay = isHeroCardFlipped ? 3000 : 5000; // 2.5s if back is shown, 5s if front is shown
+    // MODIFIED CONDITION: Check heroFlipCount
+    if (isHeroVisible && fetchedHeroCards.length > 0 && !isAnimating && heroFlipCount < 2) {
+      const currentFlipDelay = isHeroCardFlipped ? 3000 : 5000;
       
       flipInterval = setInterval(() => {
         handleHeroCardFlip(); 
@@ -1190,7 +1193,8 @@ export default function HomePage() {
     return () => {
       clearCurrentInterval(); // Clear interval on cleanup
     };
-  }, [isHeroVisible, fetchedHeroCards.length, isAnimating, isHeroCardFlipped, handleHeroCardFlip]); // Added isHeroCardFlipped to deps
+    // Ensure heroFlipCount is in the dependency array
+  }, [isHeroVisible, fetchedHeroCards.length, isAnimating, isHeroCardFlipped, handleHeroCardFlip, heroFlipCount]);
 
   // New touch cancel handler for the hero card
   const handleHeroCardTouchCancel = (e: React.TouchEvent<HTMLDivElement>) => {
