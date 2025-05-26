@@ -91,6 +91,7 @@ export default function HomePage() {
   const [isHeroCardFlipped, setIsHeroCardFlipped] = useState(false);
   const [heroCardSwipeDirection, setHeroCardSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [heroFlipCount, setHeroFlipCount] = useState<number>(0);
+  const [shouldScrollToWizard, setShouldScrollToWizard] = useState<boolean>(false); // For scroll timing
 
   const heroImageContainerRef = useRef<HTMLDivElement>(null);
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
@@ -125,6 +126,7 @@ export default function HomePage() {
 
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ensure this is present
+  const wizardSectionRef = useRef<HTMLDivElement>(null); // Ref for the wizard section
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
   const [pendingExampleCardIndex, setPendingExampleCardIndex] = useState<number | null>(null);
@@ -555,6 +557,7 @@ export default function HomePage() {
       setIsUploadStepCompleted(true);
       setCurrentWizardStep('crop'); // Move to next step
       setWizardVisible(true); 
+      setShouldScrollToWizard(true); // New: trigger scroll via useEffect
     };
     reader.onerror = () => {
       console.error('Error reading file for preview.');
@@ -563,6 +566,23 @@ export default function HomePage() {
     };
     reader.readAsDataURL(file);
   };
+
+  // New useEffect for scrolling to wizard when shouldScrollToWizard becomes true
+  useEffect(() => {
+    if (shouldScrollToWizard && wizardVisible && wizardSectionRef.current) {
+      // More aggressive scroll approach
+      const element = wizardSectionRef.current;
+      const elementTop = element.offsetTop;
+      const offset = 20; // Small offset from the very top
+      
+      window.scrollTo({
+        top: elementTop - offset,
+        behavior: 'smooth'
+      });
+      
+      setShouldScrollToWizard(false); // Reset the trigger
+    }
+  }, [shouldScrollToWizard, wizardVisible]);
 
   // Make sure this matches the same ratio as in the backend (square for better card display)
   const aspectRatio = 1/1; // 1:1 ratio (square) for better alignment with the card layout
@@ -1427,280 +1447,279 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* HR Separator and Title for Wizard Section - only visible with wizard */}
         {wizardVisible && (
-          <>
+          <div ref={wizardSectionRef}> {/* REF MOVED HERE - to new parent div for whole wizard section */}
+            {/* HR Separator and Title for Wizard Section - now part of the ref'd element */}
             <hr className="w-full border-t-2 border-foreground my-3" />
             <div className="w-full flex flex-col items-start my-2">
               <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
             </div>
-          </>
-        )}
-
-        {wizardVisible && ( // Conditional rendering for the entire wizard steps
-        <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
-          <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
-            <WizardStep 
-              title="1: Take a photo"
-              stepNumber={1} 
-              isActive={currentWizardStep === 'upload'} 
-              isCompleted={isUploadStepCompleted}
-              onHeaderClick={isStepHeaderClickable('upload') ? () => setStep('upload') : undefined}
-            >
-              <ImageUpload 
-                ref={fileInputRef}
-                onImageSelect={handleImageSelectedForUpload} 
-                onImageCropped={handleCroppedImage}
-                showUploader={true}
-                showCropper={false}
-                initialPreviewUrl={uploadStepPreviewUrl}
-                currentFileName={selectedFileName}
-                key={`uploader-${selectedFileName}`}
-              />
-            </WizardStep>
-
-            {isUploadStepCompleted && (
-            <WizardStep 
-              title="2: Frame your focus"
-              stepNumber={2} 
-              isActive={currentWizardStep === 'crop'} 
-              isCompleted={isCropStepCompleted}
-                onHeaderClick={isStepHeaderClickable('crop') ? () => setStep('crop') : undefined}
-            >
-                {!isGenerating && (
+            
+            {/* Container for the wizard steps grid - REF REMOVED FROM HERE */}
+            <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
+              <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
+                <WizardStep 
+                  title="1: Take a photo"
+                  stepNumber={1} 
+                  isActive={currentWizardStep === 'upload'} 
+                  isCompleted={isUploadStepCompleted}
+                  onHeaderClick={isStepHeaderClickable('upload') ? () => setStep('upload') : undefined}
+                >
                   <ImageUpload 
-                    onImageSelect={() => {}} // No-op since we're not handling file selection here
-                    onImageCropped={handleCroppedImage} 
-                    showUploader={false}
-                    showCropper={true}
+                    ref={fileInputRef}
+                    onImageSelect={handleImageSelectedForUpload} 
+                    onImageCropped={handleCroppedImage}
+                    showUploader={true}
+                    showCropper={false}
                     initialPreviewUrl={uploadStepPreviewUrl}
                     currentFileName={selectedFileName}
-                    aspectRatio={aspectRatio} // Pass the aspect ratio to the cropper
-                    key={`cropper-${uploadStepPreviewUrl}`}
+                    key={`uploader-${selectedFileName}`}
                   />
-              )}
-            </WizardStep>
-            )}
+                </WizardStep>
 
-            {isCropStepCompleted && (
-            <WizardStep 
-              title="3: Pick your signature shade"
-              stepNumber={3} 
-              isActive={currentWizardStep === 'color'} 
-              isCompleted={isColorStepCompleted}
-                onHeaderClick={isStepHeaderClickable('color') ? () => setStep('color') : undefined}
-            >
-                  <ColorTools 
-                    initialHex={selectedHexColor}
-                    onHexChange={handleHexColorChange}
-                    croppedImageDataUrl={croppedImageDataUrl}
-                  onColorPickedFromCanvas={() => {
-                    setUserHasInteractedWithColor(true);
-                    setShowColorInstructionHighlight(false);
-                  }}
-                />
-                <p 
-                  key={colorInstructionKey}
-                  className={`text-sm text-center mt-4 mb-2 transition-colors duration-300 ${
-                    showColorInstructionHighlight ? 'text-red-500 font-medium shake-animation' : 'text-muted-foreground'
-                  }`}
+                {isUploadStepCompleted && (
+                <WizardStep 
+                  title="2: Frame your focus"
+                  stepNumber={2} 
+                  isActive={currentWizardStep === 'crop'} 
+                  isCompleted={isCropStepCompleted}
+                    onHeaderClick={isStepHeaderClickable('crop') ? () => setStep('crop') : undefined}
                 >
-                  Click on the image to pick the color.
-                </p>
-                <div className="flex justify-center w-full gap-4 mt-2">
-                  <button
-                    type="button"
-                    onClick={handleGenerateImageClick}
-                    className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 
-                      ${(!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor || isGenerating) ? 
-                        'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : 
-                        '' // Active styles (already part of the base string)
-                      }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
-                    {isGenerating ? 'Working the magic...' : 'Reveal Its Story'}
-                  </button>
-                </div>
-              </WizardStep>
-            )}
-
-            {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
-              <WizardStep
-                title="4: Your card takes form..."
-                stepNumber={4}
-                isActive={currentWizardStep === 'results'}
-                isCompleted={isResultsStepCompleted}
-                onHeaderClick={isStepHeaderClickable('results') ? () => setStep('results') : undefined}
-              >
-                {isGenerating && (
-                  <div className="w-full mb-6">
-                    <div className="text-xs text-left text-blue-600 min-h-[1.875rem]">
-                      {(() => {
-                        const logic = typingLogicRef.current;
-                        let lineToDisplay: string | undefined;
-                        let currentMessageContent: string | undefined;
-                        let showCursor = false;
-                        const pClassName = "m-0 p-0 leading-tight";
-                        if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
-                          const prevLineIdx = logic.lineIdx - 1;
-                          currentMessageContent = DUMMY_MESSAGES[prevLineIdx];
-                          lineToDisplay = typedLines[prevLineIdx] || currentMessageContent;
-                          if (lineToDisplay && lineToDisplay.length === (currentMessageContent?.length || 0)) {
-                            showCursor = true;
-                          }
-                        } else {
-                          currentMessageContent = DUMMY_MESSAGES[logic.lineIdx];
-                          lineToDisplay = typedLines[logic.lineIdx] || "";
-                          if (logic.lineIdx < DUMMY_MESSAGES.length) {
-                            if (lineToDisplay.length < (currentMessageContent?.length || 0)) {
-                                showCursor = true;
-                            } else if (lineToDisplay === "" && currentMessageContent) {
-                                showCursor = true;
-                            }
-                          }
-                        }
-                        if (logic.lineIdx >= DUMMY_MESSAGES.length && logic.intervalId && DUMMY_MESSAGES.length > 0) {
-                            const lastMessageIndex = DUMMY_MESSAGES.length - 1;
-                            const lastTypedLine = typedLines[lastMessageIndex];
-                            const lastDummyMessage = DUMMY_MESSAGES[lastMessageIndex];
-                            if (lastTypedLine && lastDummyMessage && lastTypedLine.length === lastDummyMessage.length) {
-                                lineToDisplay = lastTypedLine;
-                                showCursor = true; 
-                            }
-                        }
-                        if (lineToDisplay !== undefined) { 
-                          return (
-                            <p className={pClassName}>
-                              {lineToDisplay}
-                              {showCursor && <span className="blinking-cursor">_</span>}
-                            </p>
-                          );
-                        } 
-                        else if (isGenerating && logic.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && typedLines.length > 0 && typedLines[0] === "") {
-                           return (
-                            <p className={pClassName}>
-                                <span className="blinking-cursor">_</span>
-                            </p>
-                           );
-                        }
-                        return <p className={pClassName}>&nbsp;</p>;
-                      })()}
-                    </div>
-                    <div className="h-2 w-full bg-muted overflow-hidden rounded mt-1">
-                      <div 
-                        className="h-full bg-blue-700 transition-all duration-150 ease-in-out" 
-                        style={{ width: `${generationProgress}%` }}
-                      ></div>
-                    </div>
-                  </div>
+                    {!isGenerating && (
+                      <ImageUpload 
+                        onImageSelect={() => {}} // No-op since we're not handling file selection here
+                        onImageCropped={handleCroppedImage} 
+                        showUploader={false}
+                        showCropper={true}
+                        initialPreviewUrl={uploadStepPreviewUrl}
+                        currentFileName={selectedFileName}
+                        aspectRatio={aspectRatio} // Pass the aspect ratio to the cropper
+                        key={`cropper-${uploadStepPreviewUrl}`}
+                      />
+                  )}
+                </WizardStep>
                 )}
-                {!isGenerating && generationError && currentWizardStep === 'results' && (
-                  <div className="p-4 text-center">
-                    <p
-                      className="text-base text-red-500 mb-4"
-                      dangerouslySetInnerHTML={{ __html: (typeof generationError === 'string' ? generationError : (generationError as any).message || 'An unexpected error occurred').replace(/<br\s*\/?b?>/gi, '<br />') }}
+
+                {isCropStepCompleted && (
+                <WizardStep 
+                  title="3: Pick your signature shade"
+                  stepNumber={3} 
+                  isActive={currentWizardStep === 'color'} 
+                  isCompleted={isColorStepCompleted}
+                    onHeaderClick={isStepHeaderClickable('color') ? () => setStep('color') : undefined}
+                >
+                      <ColorTools 
+                        initialHex={selectedHexColor}
+                        onHexChange={handleHexColorChange}
+                        croppedImageDataUrl={croppedImageDataUrl}
+                      onColorPickedFromCanvas={() => {
+                        setUserHasInteractedWithColor(true);
+                        setShowColorInstructionHighlight(false);
+                      }}
                     />
-                    <div className="flex justify-center w-full mt-2">
-                      <button type="button" onClick={handleGenerateImageClick} className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`} disabled={isGenerating}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                        Retry Generation
+                    <p 
+                      key={colorInstructionKey}
+                      className={`text-sm text-center mt-4 mb-2 transition-colors duration-300 ${
+                        showColorInstructionHighlight ? 'text-red-500 font-medium shake-animation' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Click on the image to pick the color.
+                    </p>
+                    <div className="flex justify-center w-full gap-4 mt-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateImageClick}
+                        className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 
+                            ${(!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor || isGenerating) ? 
+                              'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : 
+                              '' // Active styles (already part of the base string)
+                            }`}
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
+                        {isGenerating ? 'Working the magic...' : 'Reveal Its Story'}
                       </button>
                     </div>
-                  </div>
+                  </WizardStep>
                 )}
 
-                {/* Conditional Block for Note Input (or Success Message) */}
-                {!isGenerating && !generationError && isResultsStepCompleted && currentWizardStep === 'results' && (
-                  <>
-                    {isNoteStepActive && currentDbId ? (
-                      // If Note Step is Active: Show Card Front + Note Form
-                      <div className="w-full p-1 md:p-2 space-y-4">
-                        <div ref={cardDisplayControlsRef} className="w-full mx-auto mb-4">
-                          {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
-                            <img src={generatedHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-auto object-contain rounded-md aspect-[2/1]" />
-                          ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
-                            <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2]" />
-                          ) : (
-                            <div className="w-full aspect-[2/1] flex justify-center items-center bg-muted rounded-md">
-                              <p className="text-muted-foreground">Front image not available.</p>
-                            </div>
-                          )}
-                        </div>
-                        {/* New wrapper for textarea and char counter */}
-                        <div> 
-                          <textarea
-                            value={noteText}
-                            onChange={(e) => setNoteText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
+                {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
+                  <WizardStep
+                    title="4: Your card takes form..."
+                    stepNumber={4}
+                    isActive={currentWizardStep === 'results'}
+                    isCompleted={isResultsStepCompleted}
+                    onHeaderClick={isStepHeaderClickable('results') ? () => setStep('results') : undefined}
+                  >
+                    {isGenerating && (
+                      <div className="w-full mb-6">
+                        <div className="text-xs text-left text-blue-600 min-h-[1.875rem]">
+                          {(() => {
+                            const logic = typingLogicRef.current;
+                            let lineToDisplay: string | undefined;
+                            let currentMessageContent: string | undefined;
+                            let showCursor = false;
+                            const pClassName = "m-0 p-0 leading-tight";
+                            if (logic.isWaitingForNewLineDelay && logic.lineIdx > 0) {
+                              const prevLineIdx = logic.lineIdx - 1;
+                              currentMessageContent = DUMMY_MESSAGES[prevLineIdx];
+                              lineToDisplay = typedLines[prevLineIdx] || currentMessageContent;
+                              if (lineToDisplay && lineToDisplay.length === (currentMessageContent?.length || 0)) {
+                                showCursor = true;
                               }
-                            }}
-                            placeholder="Add your note here (optional, max 500 characters). It will be placed on the back of the card..."
-                            maxLength={500}
-                            className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
-                            aria-label="Note for the back of the card"
-                          />
-                          <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
-                            <p className="text-xs text-muted-foreground">
-                              {noteText.length}/500 characters
-                            </p>
-                          </div>
+                            } else {
+                              currentMessageContent = DUMMY_MESSAGES[logic.lineIdx];
+                              lineToDisplay = typedLines[logic.lineIdx] || "";
+                              if (logic.lineIdx < DUMMY_MESSAGES.length) {
+                                if (lineToDisplay.length < (currentMessageContent?.length || 0)) {
+                                    showCursor = true;
+                                } else if (lineToDisplay === "" && currentMessageContent) {
+                                    showCursor = true;
+                                }
+                              }
+                            }
+                            if (logic.lineIdx >= DUMMY_MESSAGES.length && logic.intervalId && DUMMY_MESSAGES.length > 0) {
+                                const lastMessageIndex = DUMMY_MESSAGES.length - 1;
+                                const lastTypedLine = typedLines[lastMessageIndex];
+                                const lastDummyMessage = DUMMY_MESSAGES[lastMessageIndex];
+                                if (lastTypedLine && lastDummyMessage && lastTypedLine.length === lastDummyMessage.length) {
+                                    lineToDisplay = lastTypedLine;
+                                    showCursor = true; 
+                                }
+                            }
+                            if (lineToDisplay !== undefined) { 
+                              return (
+                                <p className={pClassName}>
+                                  {lineToDisplay}
+                                  {showCursor && <span className="blinking-cursor">_</span>}
+                                </p>
+                              );
+                            } 
+                            else if (isGenerating && logic.lineIdx === 0 && DUMMY_MESSAGES.length > 0 && typedLines.length > 0 && typedLines[0] === "") {
+                               return (
+                                <p className={pClassName}>
+                                    <span className="blinking-cursor">_</span>
+                                </p>
+                               );
+                            }
+                            return <p className={pClassName}>&nbsp;</p>;
+                          })()}
                         </div>
-                        {noteSubmissionError && (
-                          <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
-                        )}
-                        <div className="flex flex-col sm:flex-row gap-4 mt-4"> {/* Reverted container style */}
-                          <button
-                            onClick={() => handleNoteSubmission(noteText)}
-                            disabled={isSubmittingNote || noteText.length > 500}
-                            className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
-                          >
-                            <PenSquare size={20} className="mr-2" /> {/* Reverted icon and text */}
-                            Save The Note
-                          </button>
-                          <button
-                            onClick={() => handleNoteSubmission()} 
-                            disabled={isSubmittingNote}
-                            className="px-6 py-3 font-semibold bg-background text-foreground border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none sm:w-auto"
-                          >
-                            <SkipForward size={20} className="mr-2" />
-                            Skip Forever
-                          </button>
+                        <div className="h-2 w-full bg-muted overflow-hidden rounded mt-1">
+                          <div 
+                            className="h-full bg-blue-700 transition-all duration-150 ease-in-out" 
+                            style={{ width: `${generationProgress}%` }}
+                          ></div>
                         </div>
-                      </div>
-                    ) : (
-                      // If Note Step is NOT Active (but results are complete and no error)
-                      <div className="p-2 text-center">
-                        <p className="text-base">Your unique shadefreude card is ready.</p>
-                        <p className="text-base">Now with its own story.</p>
                       </div>
                     )}
-                  </>
-                )}
+                    {!isGenerating && generationError && currentWizardStep === 'results' && (
+                      <div className="p-4 text-center">
+                        <p
+                          className="text-base text-red-500 mb-4"
+                          dangerouslySetInnerHTML={{ __html: (typeof generationError === 'string' ? generationError : (generationError as any).message || 'An unexpected error occurred').replace(/<br\s*\/?b?>/gi, '<br />') }}
+                        />
+                        <div className="flex justify-center w-full mt-2">
+                          <button type="button" onClick={handleGenerateImageClick} className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 rounded-md shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 justify-center ${isGenerating ? 'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : ''}`} disabled={isGenerating}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                            Retry Generation
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Message for when color step is done, but results not yet generated */}
-                {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
-                  <div className="p-4 text-center">
-                    <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
-                  </div>
+                    {/* Conditional Block for Note Input (or Success Message) */}
+                    {!isGenerating && !generationError && isResultsStepCompleted && currentWizardStep === 'results' && (
+                      <>
+                        {isNoteStepActive && currentDbId ? (
+                          // If Note Step is Active: Show Card Front + Note Form
+                          <div className="w-full p-1 md:p-2 space-y-4">
+                            <div ref={cardDisplayControlsRef} className="w-full mx-auto mb-4">
+                              {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
+                                <img src={generatedHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-auto object-contain rounded-md aspect-[2/1]" />
+                              ) : (currentDisplayOrientation === 'vertical' && generatedVerticalImageUrl) ? (
+                                <img src={generatedVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-auto object-contain rounded-md aspect-[1/2]" />
+                              ) : (
+                                <div className="w-full aspect-[2/1] flex justify-center items-center bg-muted rounded-md">
+                                  <p className="text-muted-foreground">Front image not available.</p>
+                                </div>
+                              )}
+                            </div>
+                            {/* New wrapper for textarea and char counter */}
+                            <div> 
+                              <textarea
+                                value={noteText}
+                                onChange={(e) => setNoteText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                placeholder="Add your note here (optional, max 500 characters). It will be placed on the back of the card..."
+                                maxLength={500}
+                                className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
+                                aria-label="Note for the back of the card"
+                              />
+                              <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
+                                <p className="text-xs text-muted-foreground">
+                                  {noteText.length}/500 characters
+                                </p>
+                              </div>
+                            </div>
+                            {noteSubmissionError && (
+                              <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
+                            )}
+                            <div className="flex flex-col sm:flex-row gap-4 mt-4"> {/* Reverted container style */}
+                              <button
+                                onClick={() => handleNoteSubmission(noteText)}
+                                disabled={isSubmittingNote || noteText.length > 500}
+                                className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                              >
+                                <PenSquare size={20} className="mr-2" /> {/* Reverted icon and text */}
+                                Save The Note
+                              </button>
+                              <button
+                                onClick={() => handleNoteSubmission()} 
+                                disabled={isSubmittingNote}
+                                className="px-6 py-3 font-semibold bg-background text-foreground border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none sm:w-auto"
+                              >
+                                <SkipForward size={20} className="mr-2" />
+                                Skip Forever
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // If Note Step is NOT Active (but results are complete and no error)
+                          <div className="p-2 text-center">
+                            <p className="text-base">Your unique shadefreude card is ready.</p>
+                            <p className="text-base">Now with its own story.</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Message for when color step is done, but results not yet generated */}
+                    {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
+                      <div className="p-4 text-center">
+                        <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
+                      </div>
+                    )}
+                  </WizardStep>
                 )}
-              </WizardStep>
-            )}
-          </section>
-          {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
-          {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
-            <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
-              <button
-                onClick={resetWizard}
-                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
-                title="Create New Card"
-              >
-                + Create New Card
-              </button>
+              </section>
+              {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
+              {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
+                <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
+                  <button
+                    onClick={resetWizard}
+                    className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
+                    title="Create New Card"
+                  >
+                    + Create New Card
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
         )}
       </div>
     </main>
