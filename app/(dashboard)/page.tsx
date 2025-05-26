@@ -1226,23 +1226,35 @@ export default function HomePage() {
   };
 
   const handleCreateYourCardClick = () => {
-    if (fileInputRef.current) {
-      // Minimal reset before triggering file dialog:
-      setUploadStepPreviewUrl(null);
-      setCroppedImageDataUrl(null);
-      setIsUploadStepCompleted(false);
-      setIsCropStepCompleted(false);
-      setIsColorStepCompleted(false);
-      setIsResultsStepCompleted(false);
-      setCurrentWizardStep('upload'); 
-      setGenerationError(null);
-      setGeneratedExtendedId(null);
-      setWizardVisible(false); // Ensure wizard is not yet visible
-      setIsHeroVisible(true); // Ensure hero is visible before file dialog
-      
-      fileInputRef.current.value = ''; 
-      fileInputRef.current.click();
-    }
+    console.log('handleCreateYourCardClick called');
+
+    // Reset state for the new card flow first
+    setUploadStepPreviewUrl(null);
+    setCroppedImageDataUrl(null);
+    setIsUploadStepCompleted(false);
+    setIsCropStepCompleted(false);
+    setIsColorStepCompleted(false);
+    setIsResultsStepCompleted(false);
+    setCurrentWizardStep('upload'); 
+    setGenerationError(null);
+    setGeneratedExtendedId(null);
+    
+    // Make wizard visible first, then trigger file input after component renders
+    setWizardVisible(true);
+    setIsHeroVisible(false);
+
+    console.log('Making wizard visible, then attempting to click file input...');
+    // Use a longer timeout to ensure the component has rendered
+    setTimeout(() => {
+      console.log('Inside setTimeout, fileInputRef.current:', fileInputRef.current);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; 
+        fileInputRef.current.click();
+        console.log('Clicked file input.');
+      } else {
+        console.error('fileInputRef.current is still null inside setTimeout');
+      }
+    }, 100); // Increased timeout to allow for component rendering
   };
 
   return (
