@@ -1306,7 +1306,7 @@ export default function HomePage() {
                 <div className="mt-6 mb-2 md:mb-0 flex justify-center">
                   <button
                     onClick={handleCreateYourCardClick}
-                    className="px-6 py-3 text-lg font-semibold border-2 border-blue-700 bg-blue-600 text-white shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] hover:bg-blue-700 active:bg-blue-800 active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center w-full md:w-auto rounded-md"
+                    className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center w-full md:w-auto rounded-md"
                   >
                     <ImagePlus size={22} className="mr-2" /> {/* Changed icon and size slightly */}
                     Create Your Card
@@ -1669,7 +1669,7 @@ export default function HomePage() {
                           <button
                             onClick={() => handleNoteSubmission(noteText)}
                             disabled={isSubmittingNote || noteText.length > 500}
-                            className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-gray-700 shadow-[4px_4px_0_0_#4A5568] hover:shadow-[2px_2px_0_0_#4A5568] active:shadow-[1px_1px_0_0_#4A5568] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                            className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                           >
                             <PenSquare size={20} className="mr-2" /> {/* Reverted icon and text */}
                             Save The Note
