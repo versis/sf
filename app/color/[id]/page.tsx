@@ -252,7 +252,7 @@ export default function ColorCardPage() {
           <div 
             ref={combinedRefCallback} // Use our combined ref callback
             {...eventHandlersToSpread} // Spread only the event handlers
-            className="w-full flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing"
+            className={`w-full flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing ${!isMobile && currentDisplayOrientation === 'vertical' ? 'md:max-w-xs lg:max-w-sm' : ''}`}
           >
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
@@ -279,6 +279,7 @@ export default function ColorCardPage() {
               swipeDirection={swipeDirection}
               hexColor={cardDetails?.hexColor}
               createdAt={cardDetails?.createdAt}
+              isMobile={isMobile}
             />
           </div>
           

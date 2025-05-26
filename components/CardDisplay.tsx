@@ -33,6 +33,7 @@ interface CardDisplayProps {
   swipeDirection?: 'left' | 'right' | null;
   hexColor?: string | null;
   createdAt?: string | null;
+  isMobile?: boolean;
 }
 
 // Define known dimensions (assuming these are correct, adjust if needed)
@@ -67,6 +68,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   swipeDirection,
   hexColor,
   createdAt,
+  isMobile,
 }) => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -201,8 +203,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         }
       `}</style>
 
-      <div className="space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl">
-        <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''}`}>
+      <div className={`space-y-6 flex flex-col items-center w-full max-w-2xl lg:max-w-4xl`}>
+        <div className={`w-full perspective-container ${isFlippable ? 'flippable-card-wrapper' : ''} ${currentOrientation === 'vertical' && !isMobile ? 'md:max-w-sm lg:max-w-md xl:max-w-lg' : ''}`}>
           <div 
             className={`${flipperBaseClasses} ${ 
               isFlippable && isFlipped
