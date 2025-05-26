@@ -126,6 +126,7 @@ export default function HomePage() {
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ensure this is present
   const wizardSectionRef = useRef<HTMLDivElement>(null); // Ref for the wizard section
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null); // Always-present hidden file input
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
   const [pendingExampleCardIndex, setPendingExampleCardIndex] = useState<number | null>(null);
@@ -1260,42 +1261,48 @@ export default function HomePage() {
     setGenerationError(null);
     setGeneratedExtendedId(null);
     
-    // Make wizard visible and trigger file input
-    setWizardVisible(true);
-    
-    // Trigger file input after a short delay to ensure DOM is updated
-    setTimeout(() => {
-      if (fileInputRef.current) {
-        console.log('Triggering file input from handleCreateYourCardClick');
-        fileInputRef.current.value = '';
-        fileInputRef.current.click();
-      }
-    }, 100);
+    // Only trigger file input - don't show wizard yet
+    if (hiddenFileInputRef.current) {
+      console.log('Triggering hidden file input from handleCreateYourCardClick');
+      hiddenFileInputRef.current.value = '';
+      hiddenFileInputRef.current.click();
+    }
   };
 
   const handleCreateNewCard = () => {
     console.log('handleCreateNewCard called');
     
-    // First reset everything
+    // First reset everything (this will hide the wizard)
     resetWizard();
     
-    // Then make wizard visible and trigger file input
+    // Only trigger file input - don't show wizard yet
     setTimeout(() => {
-      setWizardVisible(true);
-      
-      // Trigger file input after wizard is visible
-      setTimeout(() => {
-        if (fileInputRef.current) {
-          console.log('Triggering file input from handleCreateNewCard');
-          fileInputRef.current.value = '';
-          fileInputRef.current.click();
-        }
-      }, 100);
+      if (hiddenFileInputRef.current) {
+        console.log('Triggering hidden file input from handleCreateNewCard');
+        hiddenFileInputRef.current.value = '';
+        hiddenFileInputRef.current.click();
+      }
     }, 50);
+  };
+
+  const handleHiddenFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImageSelectedForUpload(file);
+    }
   };
 
   return (
     <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none">
+      {/* Hidden file input that's always present */}
+      <input
+        ref={hiddenFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleHiddenFileInputChange}
+        style={{ display: 'none' }}
+        capture="environment"
+      />
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
         <header className="py-4 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
