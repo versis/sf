@@ -1293,24 +1293,30 @@ export default function HomePage() {
         {/* Hero Section Text & Example Card */}
         {isHeroVisible && (
           <section className="w-full md:pt-1 md:pb-2 py-3">
-            <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 items-start">
+            <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6"> {/* Removed md:items-end */}
               {/* Left Column: Text - takes 2/5ths */}
-              <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2">
-                <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mt-6">
-                  <span className="text-lg md:text-xl font-normal text-muted-foreground">turn </span>Your everyday moment<br /><span className="text-lg md:text-xl font-normal text-muted-foreground">into </span>Extraordinary AI postcard
-                </h2>
-                <p className="text-md md:text-lg text-muted-foreground">
-                  Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
-                </p>
-                {/* New "Create Your Card" Button - Centered and Styled */}
-                <div className="mt-6 mb-2 md:mb-0 flex justify-center">
-                  <button
-                    onClick={handleCreateYourCardClick}
-                    className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center w-full md:w-auto rounded-md"
-                  >
-                    <ImagePlus size={22} className="mr-2" /> {/* Changed icon and size slightly */}
-                    Create Your Card
-                  </button>
+              <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
+                {/* Wrapper for text content that should grow */}
+                <div className="flex-grow">
+                  <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mt-6">
+                    <span className="text-lg md:text-xl font-normal text-muted-foreground">turn </span>Your everyday moment<br /><span className="text-lg md:text-xl font-normal text-muted-foreground">into </span>Extraordinary AI postcard
+                  </h2>
+                  <p className="text-md md:text-lg text-muted-foreground">
+                    Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
+                  </p>
+                </div>
+
+                {/* Container for "Create Your Card" Button - Adjusted for alignment and mobile spacing */}
+                <div className="mt-6"> {/* Simplified this wrapper */}
+                  <div className="mb-4 md:mb-0 flex justify-center"> {/* Changed md:justify-start to justify-center for desktop centering */}
+                    <button
+                      onClick={handleCreateYourCardClick}
+                      className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center md:w-auto rounded-md"
+                    >
+                      <ImagePlus size={22} className="mr-2" />
+                      Create Your Card
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1447,7 +1453,7 @@ export default function HomePage() {
           <>
             <hr className="w-full border-t-2 border-foreground my-3" />
             <div className="w-full flex flex-col items-start my-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your postcard</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
             </div>
           </>
         )}
@@ -1456,7 +1462,7 @@ export default function HomePage() {
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
-              title="1: Begin with an Image"
+              title="1: Take a photo"
               stepNumber={1} 
               isActive={currentWizardStep === 'upload'} 
               isCompleted={isUploadStepCompleted}
@@ -1476,7 +1482,7 @@ export default function HomePage() {
 
             {isUploadStepCompleted && (
             <WizardStep 
-              title="2: Frame Your Focus"
+              title="2: Frame your focus"
               stepNumber={2} 
               isActive={currentWizardStep === 'crop'} 
               isCompleted={isCropStepCompleted}
@@ -1499,7 +1505,7 @@ export default function HomePage() {
 
             {isCropStepCompleted && (
             <WizardStep 
-              title="3: Pick Your Signature Shade"
+              title="3: Pick your signature shade"
               stepNumber={3} 
               isActive={currentWizardStep === 'color'} 
               isCompleted={isColorStepCompleted}
@@ -1541,7 +1547,7 @@ export default function HomePage() {
 
             {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
               <WizardStep
-                title="4: Your Shade Takes Form..."
+                title="4: Your card takes form..."
                 stepNumber={4}
                 isActive={currentWizardStep === 'results'}
                 isCompleted={isResultsStepCompleted}
