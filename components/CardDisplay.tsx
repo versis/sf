@@ -290,7 +290,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                     <MoreHorizontal size={20} />
                   </button>
                   {isActionsMenuOpen && (
-                    <div className="absolute top-full mt-2 right-0 bg-card border-2 border-foreground shadow-lg rounded-md py-1 z-10 flex flex-col min-w-[240px]">
+                    <div className="absolute bottom-full mb-2 right-0 bg-card border-2 border-foreground shadow-lg rounded-md py-1 z-10 flex flex-col min-w-[240px]">
                       <button
                         onClick={() => handleSetOrientation('horizontal')}
                         disabled={!frontHorizontalImageUrl}
