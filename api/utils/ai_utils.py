@@ -117,6 +117,7 @@ Create TWO separate short lines:
 — Second line: A consequence, twist, or revelation (8-12 words)
 TOTAL: 20-25 words maximum
 
+BOTH lines must relate directly to the chosen color's characteristics, location, or meaning.
 NEVER start lines with "It knows", "It predicts", "This color", "This shade" or similar.
 Jump straight into the observation like you're continuing a conversation.
 
@@ -133,11 +134,19 @@ The name should make sense for THIS specific shade:
 - If it's olive, the name should evoke olive things
 - If it's crimson, the name should feel crimson
 
-# Good Example Structure (like OIL TAP GOLD):
-"Kneeling at the station while midday sun floods empty jugs..." - sets a scene
-"...speaks of cheerful resourcefulness and the thrill of..." - adds meaning
+# Handling Different Color Sources
+- If the color dominates the image: Draw from the main story
+- If the color is from a small detail: That detail becomes the secret key to understanding the whole moment
+- If the color appears in multiple places: Find the unexpected connection between them
+- If the color is barely visible: This color chose to hide - what does it know that made it stay in the shadows?
 
-Notice: No "it knows" or "this color" - just direct observation and insight.
+# The Small Detail Advantage
+Sometimes the best fortunes come from the tiny things:
+- The color of a watch face might reveal more about time than a clock tower
+- A shoelace color might know more about the journey than the path
+- The shade of a button could hold the whole story
+
+Remember: Colors from small details often see everything precisely because they're overlooked.
 
 # Color Fortune Telling Approach
 - Each color has a personality - usually slightly sarcastic or knowingly amused
@@ -160,7 +169,7 @@ Notice: No "it knows" or "this color" - just direct observation and insight.
 - That exact blue remembers what you promised yourself in January
 
 # Remember
-You're revealing what THIS COLOR noticed while nobody was paying attention. Make it feel like finding an easter egg in a video game - surprising, specific, and slightly ridiculous but somehow true.
+Both sentences must connect to the specific color chosen - its properties, where it appears, what it represents, or how it behaves. The color is the main character of this fortune, not the overall scene.
                                 """
                             )
                         },
