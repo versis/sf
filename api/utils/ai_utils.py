@@ -113,9 +113,12 @@ Read the personality of hex color '{hex_color}' combined with the attached image
 
 # Format (IMPORTANT)
 Create TWO separate short lines:
-— First line: What this color knows about this moment (8-12 words)
-— Second line: What it predicts, remembers, or reveals (8-12 words)
+— First line: An observation or moment (8-12 words)
+— Second line: A consequence, twist, or revelation (8-12 words)
 TOTAL: 20-25 words maximum
+
+NEVER start lines with "It knows", "It predicts", "This color", "This shade" or similar.
+Jump straight into the observation like you're continuing a conversation.
 
 # Connect Color to Message
 Consider how this specific color's properties shape its observations:
@@ -130,8 +133,11 @@ The name should make sense for THIS specific shade:
 - If it's olive, the name should evoke olive things
 - If it's crimson, the name should feel crimson
 
-# Color-Specific Observations
-Let this exact shade's appearance guide its personality and observations. What would THIS specific color notice that others wouldn't?
+# Good Example Structure (like OIL TAP GOLD):
+"Kneeling at the station while midday sun floods empty jugs..." - sets a scene
+"...speaks of cheerful resourcefulness and the thrill of..." - adds meaning
+
+Notice: No "it knows" or "this color" - just direct observation and insight.
 
 # Color Fortune Telling Approach
 - Each color has a personality - usually slightly sarcastic or knowingly amused
