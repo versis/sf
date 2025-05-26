@@ -69,6 +69,7 @@ export default function HomePage() {
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [wizardVisible, setWizardVisible] = useState(false); // Ensure this is present
+  const [shouldTriggerFileInput, setShouldTriggerFileInput] = useState(false);
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -211,6 +212,16 @@ export default function HomePage() {
       document.body.style.overflow = '';
     }
   };
+
+  // Effect to trigger file input when wizard becomes visible and shouldTriggerFileInput is true
+  useEffect(() => {
+    if (wizardVisible && shouldTriggerFileInput && fileInputRef.current) {
+      console.log('Triggering file input immediately after wizard render');
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+      setShouldTriggerFileInput(false); // Reset the trigger
+    }
+  }, [wizardVisible, shouldTriggerFileInput]);
 
   // Effect to reset overflow on hero image container after flip animation
   useEffect(() => {
@@ -1239,22 +1250,10 @@ export default function HomePage() {
     setGenerationError(null);
     setGeneratedExtendedId(null);
     
-    // Make wizard visible first, then trigger file input after component renders
+    // Set the trigger flag and make wizard visible - useEffect will handle the file input click
+    setShouldTriggerFileInput(true);
     setWizardVisible(true);
     setIsHeroVisible(false);
-
-    console.log('Making wizard visible, then attempting to click file input...');
-    // Use a longer timeout to ensure the component has rendered
-    setTimeout(() => {
-      console.log('Inside setTimeout, fileInputRef.current:', fileInputRef.current);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''; 
-        fileInputRef.current.click();
-        console.log('Clicked file input.');
-      } else {
-        console.error('fileInputRef.current is still null inside setTimeout');
-      }
-    }, 100); // Increased timeout to allow for component rendering
   };
 
   return (
