@@ -68,7 +68,7 @@ export default function HomePage() {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
   const [wizardVisible, setWizardVisible] = useState(false); // Ensure this is present
-  const [shouldTriggerFileInput, setShouldTriggerFileInput] = useState(false);
+  const [shouldScrollToWizard, setShouldScrollToWizard] = useState<boolean>(false); // For scroll timing
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -91,7 +91,6 @@ export default function HomePage() {
   const [isHeroCardFlipped, setIsHeroCardFlipped] = useState(false);
   const [heroCardSwipeDirection, setHeroCardSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [heroFlipCount, setHeroFlipCount] = useState<number>(0);
-  const [shouldScrollToWizard, setShouldScrollToWizard] = useState<boolean>(false); // For scroll timing
 
   const heroImageContainerRef = useRef<HTMLDivElement>(null);
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
@@ -214,15 +213,7 @@ export default function HomePage() {
     }
   };
 
-  // Effect to trigger file input when wizard becomes visible and shouldTriggerFileInput is true
-  useEffect(() => {
-    if (wizardVisible && shouldTriggerFileInput && fileInputRef.current) {
-      console.log('Triggering file input immediately after wizard render');
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
-      setShouldTriggerFileInput(false); // Reset the trigger
-    }
-  }, [wizardVisible, shouldTriggerFileInput]);
+
 
   // Effect to reset overflow on hero image container after flip animation
   useEffect(() => {
@@ -492,6 +483,9 @@ export default function HomePage() {
     setIsAnimating(false);
     setPrimaryImage({ src: primaryImage.src, animationClass: '' });
     setSecondaryImage({ src: null, animationClass: '', initialTranslate: '' });
+
+    // Reset wizard visibility
+    setWizardVisible(false);
   };
 
   const handleImageSelectedForUpload = (file: File) => {
@@ -1266,9 +1260,38 @@ export default function HomePage() {
     setGenerationError(null);
     setGeneratedExtendedId(null);
     
-    // Set the trigger flag and make wizard visible - useEffect will handle the file input click
-    setShouldTriggerFileInput(true);
+    // Make wizard visible and trigger file input
     setWizardVisible(true);
+    
+    // Trigger file input after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        console.log('Triggering file input from handleCreateYourCardClick');
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+    }, 100);
+  };
+
+  const handleCreateNewCard = () => {
+    console.log('handleCreateNewCard called');
+    
+    // First reset everything
+    resetWizard();
+    
+    // Then make wizard visible and trigger file input
+    setTimeout(() => {
+      setWizardVisible(true);
+      
+      // Trigger file input after wizard is visible
+      setTimeout(() => {
+        if (fileInputRef.current) {
+          console.log('Triggering file input from handleCreateNewCard');
+          fileInputRef.current.value = '';
+          fileInputRef.current.click();
+        }
+      }, 100);
+    }, 50);
   };
 
   return (
@@ -1708,15 +1731,15 @@ export default function HomePage() {
               </section>
               {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
               {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
-                <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
-                  <button
-                    onClick={resetWizard}
-                    className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
-                    title="Create New Card"
-                  >
-                    + Create New Card
-                  </button>
-                </div>
+                            <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
+              <button
+                onClick={handleCreateNewCard}
+                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
+                title="Create New Card"
+              >
+                + Create New Card
+              </button>
+            </div>
               )}
             </div>
           </div>
