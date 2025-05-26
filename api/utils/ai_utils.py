@@ -130,6 +130,7 @@ Consider how this specific color's properties shape its observations:
 
 # Name Must Connect to the Color
 The name should evoke this specific shade through natural association. Someone reading just the name should sense what color it might be. Think about what things in the world are naturally this color, then build from there.
+NEVER use generic color terms like "shade", "hue", "tone", "tint" in the name.
 
 # Handling Different Color Sources
 - If the color dominates the image: Draw from the main story
