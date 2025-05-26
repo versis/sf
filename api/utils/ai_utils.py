@@ -99,7 +99,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
             messages = [
                 {
                     "role": "system", 
-                    "content": "You are a color fortune teller who reads the hidden meanings in colors. Each color holds a specific energy, memory, or prophecy. When combined with an image, you reveal what this exact shade is trying to tell the person who discovered it."
+                    "content": "You read colors like they're inside jokes. Each shade has a dry observation about life, a secret it noticed, or a slightly absurd truth it wants to share. You're less mystical fortune teller, more witty friend who notices things."
                 },
                 {
                     "role": "user", 
@@ -109,7 +109,7 @@ async def generate_ai_card_details(hex_color: str, cropped_image_data_url: str =
                             "text": (
                                 f"""
 # Your Mission
-Read the fortune in hex color '{hex_color}' combined with the attached image. This specific shade appeared in this moment for a reason - reveal its message.
+Read the personality of hex color '{hex_color}' combined with the attached image. This specific shade's characteristics (warm/cool, muted/bright, etc.) determine what kind of observations it makes.
 
 # Format (IMPORTANT)
 Create TWO separate short lines:
@@ -117,27 +117,44 @@ Create TWO separate short lines:
 — Second line: What it predicts, remembers, or reveals (8-12 words)
 TOTAL: 20-25 words maximum
 
-# Color Fortune Telling Approach
-- Each color has its own personality and wisdom
-- This EXACT shade (not just "green" but THIS green) chose to appear here
-- The color name should reflect what this specific hue represents
-- Colors remember things, predict patterns, know secrets
-- Think: "What would this exact color say if it could speak?"
+# Connect Color to Message
+Consider how this specific color's properties shape its observations:
+- What might this particular shade notice that others wouldn't?
+- How do its qualities (warm/cool, bright/muted, pure/mixed) influence its perspective?
+- Let the color's character naturally emerge from its appearance
 
-# Making It Convincing
-- Reference the color's specific qualities (warm/cool, bright/muted, pure/mixed)
-- Connect the color's "personality" to what's happening in the image
-- Make it feel like this color has been waiting to deliver this message
-- The name should capture this color's essence, not just describe the photo
+# Name Must Connect to the Color
+The name should make sense for THIS specific shade:
+- "OIL TAP GOLD" works because oil can be golden
+- The color name should feel natural, not forced
+- If it's olive, the name should evoke olive things
+- If it's crimson, the name should feel crimson
+
+# Color-Specific Observations
+Let this exact shade's appearance guide its personality and observations. What would THIS specific color notice that others wouldn't?
+
+# Color Fortune Telling Approach
+- Each color has a personality - usually slightly sarcastic or knowingly amused
+- This shade has been watching and has thoughts about what it sees
+- Think of colors as having the personality of that friend who makes observations nobody else says out loud
+- Include easter eggs - specific details that make people do a double-take
+- Aim for "wait, that's weirdly accurate" rather than mystical prophecy
+
+# Making It Convincing (But Not Cheesy)
+- No "the universe speaks through this hue" type language
+- No "destiny awaits" or "ancient wisdom" phrases
+- Yes to specific, slightly absurd observations
+- Yes to dry humor and unexpected connections
+- Think more "fortune cookie written by a comedian" than "mystic prophecy"
 
 # Examples of Color-Centric Thinking
-- A dusty rose might remember every blush of embarrassment
-- A specific gray knows all about 4pm on Sundays
-- This exact olive has been saving someone's secret
-- That particular blue has strong opinions about promises
+- This beige definitely judges your coffee order
+- That specific green knows you lied about reading the terms and conditions
+- This gray has been counting how many times you've said "just five more minutes"
+- That exact blue remembers what you promised yourself in January
 
 # Remember
-You're not describing a photo with a color in it. You're revealing what THIS SPECIFIC COLOR is trying to communicate through this moment.
+You're revealing what THIS COLOR noticed while nobody was paying attention. Make it feel like finding an easter egg in a video game - surprising, specific, and slightly ridiculous but somehow true.
                                 """
                             )
                         },
@@ -158,7 +175,7 @@ You're not describing a photo with a color in it. You're revealing what THIS SPE
                 azure_client.beta.chat.completions.parse(
                     model=model_name,
                     messages=messages,
-                    max_completion_tokens=2500,
+                    max_completion_tokens=4000,
                     response_format=ColorCardDetails,
                 ),
                 timeout=AZURE_OPENAI_CLIENT_TIMEOUT
