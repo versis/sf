@@ -56,6 +56,10 @@
     - [X] **4.2.2.** Cleaned up import comments and removed outdated inline comments.
     - [X] **4.2.3.** Simplified logging messages and removed redundant explanatory comments.
 
+- [X] **4.3. Design Enhancement:**
+    - [X] **4.3.1.** Replaced text labels "Location:" and "Date:" with symbols (📍 for location, 📅 for date).
+    - [X] **4.3.2.** Updated metric line height calculations to use the new symbol format.
+
 ## Additional Notes
 
 *   **Privacy-Conscious:** Only the country name is sent to the backend, not raw GPS coordinates.

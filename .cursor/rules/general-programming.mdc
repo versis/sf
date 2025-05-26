@@ -27,3 +27,10 @@ When making multi-steps plans:
 1. Add them to `docs/plans` in markdown file.
 2. Use date as prefix, e.g. `20230322-<description>md`
 3. Use checkmarks to mark tasks as one.
+
+
+
+What to (not) run:
+1. Use linters to check the code.
+2. Do not run data migration scripts.
+3. If you run app to check if it works - remember to close it after you are done.

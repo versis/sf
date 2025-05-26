@@ -220,7 +220,7 @@ async def generate_card_image_bytes(
     _, brand_h = get_text_dimensions(brand_text, f_brand)
     id_display_for_height_calc = card_details["extendedId"]
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
-    _, h_new_metric_line = get_text_dimensions("Location: Wonderland", f_metrics_label) 
+    _, h_new_metric_line = get_text_dimensions("United States", f_metrics_val)
 
     # Define vertical spacing
     space_between_brand_id = int(swatch_h * 0.02)
@@ -268,31 +268,58 @@ async def generate_card_image_bytes(
     id_display = card_details["extendedId"]
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    # --- New Metrics Rendering ---
+    # --- New Metrics Rendering with PNG Icons ---
     new_metric_data = []
     if photo_location:
-        new_metric_data.append(("Location:", photo_location))
+        new_metric_data.append(("pin", photo_location))
         
     if photo_date:
-        new_metric_data.append(("Date:", photo_date))
+        new_metric_data.append(("calendar", photo_date))
 
-    if new_metric_data: # Only draw if there is data
+    if new_metric_data:
         current_new_metrics_y = new_metrics_start_y
         metrics_label_start_x = pad_l
-        # Calculate where the metric values start, to the right of the labels
-        max_new_label_w = 0
-        if any(item[0] == "Location:" for item in new_metric_data):
-            max_new_label_w = get_text_dimensions("Location:", f_metrics_label)[0]
-        elif any(item[0] == "Date:" for item in new_metric_data):
-            max_new_label_w = get_text_dimensions("Date:", f_metrics_label)[0]
-            
-        val_new_x_start = metrics_label_start_x + max_new_label_w + int(swatch_w * 0.03) # Gap after longest label
+        
+        icon_size = int(base_font_scale * 24)
+        icon_to_text_gap = int(swatch_w * 0.03) 
+        val_new_x_start = metrics_label_start_x + icon_size + icon_to_text_gap
 
-        for label, value in new_metric_data:
-            draw.text((metrics_label_start_x, current_new_metrics_y), label, font=f_metrics_label, fill=text_color)
+        try:
+            icon_pin_img = Image.open("public/icon_pin.png").convert("RGBA")
+        except FileNotFoundError:
+            log("public/icon_pin.png not found", level="ERROR", request_id=request_id)
+            icon_pin_img = None
+        except Exception as e:
+            log(f"Error loading public/icon_pin.png: {e}", level="ERROR", request_id=request_id)
+            icon_pin_img = None
+
+        try:
+            icon_calendar_img = Image.open("public/icon_calendar.png").convert("RGBA")
+        except FileNotFoundError:
+            log("public/icon_calendar.png not found", level="ERROR", request_id=request_id)
+            icon_calendar_img = None
+        except Exception as e:
+            log(f"Error loading public/icon_calendar.png: {e}", level="ERROR", request_id=request_id)
+            icon_calendar_img = None
+
+        for icon_type, value in new_metric_data:
+            try:
+                font_ascent, font_descent = f_metrics_val.getmetrics()
+            except AttributeError: # Fallback for fonts without getmetrics
+                font_ascent = int(f_metrics_val.size * 0.8)
+            
+            text_baseline_y = current_new_metrics_y + font_ascent
+            icon_y_pos_pil = text_baseline_y - (icon_size // 2) # PIL uses top-left for paste
+
+            if icon_type == "pin" and icon_pin_img:
+                resized_icon = icon_pin_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+                canvas.paste(resized_icon, (metrics_label_start_x, icon_y_pos_pil), resized_icon)
+            elif icon_type == "calendar" and icon_calendar_img:
+                resized_icon = icon_calendar_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+                canvas.paste(resized_icon, (metrics_label_start_x, icon_y_pos_pil), resized_icon)
+            
             draw.text((val_new_x_start, current_new_metrics_y), value, font=f_metrics_val, fill=text_color)
-            # Increment Y position using the pre-calculated h_new_metric_line and spacing for consistency
-            current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics 
+            current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics
     # --- End New Metrics Rendering ---
     
     debug("Text rendering complete", request_id=request_id)
@@ -469,70 +496,92 @@ async def generate_back_card_image_bytes(
     note_text_area_end_x = stamp_x_start - pad_x # Notes to the left of rectangular stamp
     available_width_for_note = note_text_area_end_x - note_text_area_start_x
 
-    # ... (The rest of the note text processing, line drawing, vertical centering, and final image saving logic) ...
-    # This includes: note_line_h, lines array calculation, text_block_x_start, total_note_block_height, current_elements_y, rule_line_color, ascent, y_cursor, and the loops to draw text and rules.
-    # Ensure these calculations use the `available_width_for_note` derived from `stamp_x_start`.
+    # --- Start of Note and Rule Drawing Logic (Integrate from previous version if needed) ---
+    if note_text:
+        lines = []
+        max_chars_per_line = int(available_width_for_note / (f_note.size * 0.45)) # Approx char width
+        
+        # Split note_text into paragraphs first, then wrap each paragraph
+        paragraphs = note_text.split('\n')
+        for paragraph in paragraphs:
+            if not paragraph.strip(): # Handle empty lines (e.g., double newlines)
+                lines.append("") # Add an empty line to preserve paragraph spacing
+                continue
 
-    # Placeholder for where the detailed note drawing logic (from previous state) would go
-    # For brevity, not fully re-pasting the entire note/rule drawing loop here, but it should be integrated using the recalculated
-    # note_text_area_end_x and available_width_for_note.
-    # Key variables to use for drawing notes: text_block_x_start, y_cursor, lines, f_note, text_color, rule_line_color, ascent, note_line_h, rule_x_start, rule_x_end
-    
-    # For example, starting the note drawing section:
-    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.65
-    lines = [] # This would be recalculated based on new available_width_for_note
-    if note_text and note_text.strip():
-        words = note_text.split(' ')
-        current_line_for_note = ""
-        for word in words:
-            word_width, _ = get_text_dimensions(word, f_note)
-            if current_line_for_note == "" and word_width > available_width_for_note:
-                lines.append(word); current_line_for_note = ""
-            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= available_width_for_note:
-                current_line_for_note += word + " "
-            else:
-                lines.append(current_line_for_note.strip()); current_line_for_note = word + " "
-        if current_line_for_note.strip(): lines.append(current_line_for_note.strip())
-        lines = [line for line in lines if line]
+            words = paragraph.split(' ')
+            current_line = ''
+            for word in words:
+                test_line = current_line + word + ' '
+                line_width, _ = get_text_dimensions(test_line.strip(), f_note)
+                if line_width <= available_width_for_note:
+                    current_line = test_line
+                else:
+                    lines.append(current_line.strip())
+                    current_line = word + ' '
+            lines.append(current_line.strip()) # Add the last line of the paragraph
+            
+        # Remove trailing empty lines that might result from splitting/wrapping
+        while lines and not lines[-1]:
+            lines.pop()
+            
+        # Vertical Centering Logic for Text Block and Ruled Lines
+        note_line_h_approx, _ = get_text_dimensions("Tg", f_note) # Height of a single line of text
+        # Get ascent for more precise vertical alignment to baseline
+        try:
+            ascent, _ = f_note.getmetrics() # (ascent, descent)
+        except AttributeError:
+            ascent = int(f_note.size * 0.75) # Fallback if getmetrics not available
 
-    text_block_x_start = note_text_area_start_x
-    total_note_block_h = (len(lines) * note_line_h) + (2 * note_line_h) # Incl extra lines
-    if total_note_block_h > 0: total_note_block_h -= (note_line_h * 0.65) # Adjust last line spacing
+        num_lines = len(lines)
+        total_text_height = num_lines * note_line_h_approx
+        
+        # Calculate total block height including rules (fixed spacing between text and rule)
+        rule_spacing_above_text = int(note_font_size_val * 0.2) # Space above text line before rule
+        rule_spacing_below_text = int(note_font_size_val * 0.3) # Space below text baseline after rule
+        # The effective height of one ruled line including text and spacing for rules
+        single_ruled_line_effective_height = note_line_h_approx + rule_spacing_above_text + rule_spacing_below_text
+        total_ruled_block_height = num_lines * single_ruled_line_effective_height
 
-    available_h_for_elements = card_h - pad_y - pad_y
-    current_elements_y = pad_y
-    if total_note_block_h < available_h_for_elements:
-        current_elements_y = pad_y + (available_h_for_elements - total_note_block_h) / 2
-    current_elements_y = max(pad_y, current_elements_y)
+        # Calculate starting Y position to center the block in the available vertical space
+        # The available vertical space is from pad_y to (card_h - pad_y)
+        available_vertical_space_for_note = card_h - (2 * pad_y)
+        
+        # If the stamp is on the right, the note area might be constrained vertically if horizontal card.
+        # Here, we assume note area has full vertical space from top to bottom padding.
+        # If text block is taller than available space, it will just start from pad_y.
+        y_cursor_start_centered = pad_y + (available_vertical_space_for_note - total_ruled_block_height) / 2
+        y_cursor_start_centered = max(pad_y, y_cursor_start_centered) # Ensure it doesn't go above top padding
 
-    rule_x_start = note_text_area_start_x
-    rule_x_end = note_text_area_end_x
-    ascent, _ = f_note.getmetrics()
-    y_cursor = current_elements_y
+        y_cursor = y_cursor_start_centered
+        
+        text_block_x_start = note_text_area_start_x # Text starts at the beginning of its allowed area
 
-    if text_color == (20, 20, 20): # Dark text
-        rule_line_color = (80, 80, 80)  # Darker grey lines, was (190,190,190)
-    else: # Light text (white)
-        rule_line_color = (210, 210, 210)  # Remains a darker grey for contrast on dark card backgrounds
-    rule_line_thickness = 1
+        rule_line_color = desaturate_hex_color(hex_color_input, 0.3, 0.6) # Lighter, less saturated version of card color
+        if rule_line_color is None: # Fallback if color conversion failed
+             rule_line_color = (200,200,200) if sum(solid_lightened_bg_rgb) > 384 else (100,100,100)
 
-    if lines:
-        for line_content in lines:
-            if y_cursor + note_line_h <= card_h - pad_y:
-                draw.text((text_block_x_start, y_cursor), line_content, font=f_note, fill=text_color)
-                rule_y = y_cursor + ascent + 3
-                if rule_y < card_h - pad_y -1: draw.line([(rule_x_start, rule_y), (rule_x_end, rule_y)], fill=rule_line_color, width=1)
-                y_cursor += note_line_h
-            else: break
-    for _ in range(2):
-        rule_y = y_cursor + ascent + 3
-        if rule_y < card_h - pad_y -1: 
-            draw.line([(rule_x_start, rule_y), (rule_x_end, rule_y)], fill=rule_line_color, width=1)
-            y_cursor += note_line_h
-        else: break
-    # --- End of note drawing section example ---
 
-    # Finalize Image (Rounded Corners, Save)
+        rule_x_start = text_block_x_start
+        rule_x_end = note_text_area_end_x # Rules span the full available note width
+        
+        for line_text in lines:
+            # Position of the text baseline for the current line
+            current_text_baseline_y = y_cursor + rule_spacing_above_text + ascent
+            
+            if line_text: # Draw text only if line is not empty
+                 draw.text((text_block_x_start, current_text_baseline_y), line_text, font=f_note, fill=text_color)
+
+            # Draw the rule line associated with this text line (even if text is empty, to maintain ruled paper look)
+            # The rule line should be slightly below the text baseline
+            current_rule_y = current_text_baseline_y + rule_spacing_below_text
+            draw.line([(rule_x_start, current_rule_y), (rule_x_end, current_rule_y)], fill=rule_line_color, width=1)
+            
+            y_cursor += single_ruled_line_effective_height # Move to the start of the next line block
+
+    log(f"Back card note processing complete. Request ID: {request_id if request_id else 'N/A'}", request_id=request_id)
+    # --- End of Note and Rule Drawing Logic ---
+
+    # Rounded corners and save
     radius = 40
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
     ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
@@ -545,3 +594,26 @@ async def generate_back_card_image_bytes(
     image_bytes = img_byte_arr.getvalue()
     log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
+
+# --- Helper Functions for Drawing Custom Icons ---
+def draw_pin_icon(draw, x, y, size, color):
+    """
+    Draws a simplified map pin icon.
+    This function is deprecated and will be removed.
+    """
+    log("draw_pin_icon is deprecated and will be removed.", level="WARNING")
+    # Simplified or empty implementation as it's being replaced
+    pass
+
+def draw_calendar_icon(draw, x, y, size, color):
+    """
+    Draws a simplified calendar icon.
+    This function is deprecated and will be removed.
+    """
+    log("draw_calendar_icon is deprecated and will be removed.", level="WARNING")
+    # Simplified or empty implementation as it's being replaced
+    pass
+
+def create_color_swatch_image_bytes(hex_color: str, width: int = 200, height: int = 200, request_id: Optional[str] = None) -> bytes:
+    log(f"Creating color swatch for {hex_color}", request_id=request_id)
+    # ... existing code ... 
