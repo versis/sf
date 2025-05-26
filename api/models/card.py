@@ -29,5 +29,5 @@ class ColorCardDetails(BaseModel):
         description="The part of speech for the colorName (e.g., noun, adjective). Do not use the word `phrase`. It's just `noun`, and not `noun phrase`."
     )
     description: str = Field(
-        description="Two short lines separated by ' /// ': First line (8-12 words), second line (8-12 words). Total 20-25 words max. Each line is what this color knows/reveals. Each line is a full sentence that ends with dot."
+        description="Two short lines separated by ' — ': First line (8-12 words), second line (8-12 words). Total 20-25 words max. Each line is what this color knows/reveals. Each line is a full sentence that ends with dot."
     )
