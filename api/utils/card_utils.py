@@ -167,7 +167,7 @@ async def generate_card_image_bytes(
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_brand = get_font(int(38 * base_font_scale), "Bold", request_id=request_id)  # Same size as ID
+    f_brand = get_font(int(38 * base_font_scale), "Semibold", font_family="Mono", request_id=request_id)  # Same size as ID
     f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
@@ -224,7 +224,7 @@ async def generate_card_image_bytes(
 
     # Define vertical spacing
     space_between_brand_id = int(swatch_h * 0.02)
-    space_between_id_metrics = int(swatch_h * 0.03)
+    space_between_id_metrics = int(swatch_h * 0.07) # Increased from 0.03
     line_spacing_new_metrics = int(swatch_h * 0.015)
 
     # --- Y-Positioning Logic for Bottom Elements (Revised) ---
@@ -280,7 +280,7 @@ async def generate_card_image_bytes(
         current_new_metrics_y = new_metrics_start_y
         metrics_label_start_x = pad_l
         
-        icon_size = int(base_font_scale * 24)
+        icon_size = int(base_font_scale * 18) # Reduced from 24
         icon_to_text_gap = int(swatch_w * 0.03) 
         val_new_x_start = metrics_label_start_x + icon_size + icon_to_text_gap
 
@@ -303,22 +303,25 @@ async def generate_card_image_bytes(
             icon_calendar_img = None
 
         for icon_type, value in new_metric_data:
-            try:
-                font_ascent, font_descent = f_metrics_val.getmetrics()
-            except AttributeError: # Fallback for fonts without getmetrics
-                font_ascent = int(f_metrics_val.size * 0.8)
+            # Center icon vertically with the middle of the text line slot
+            icon_center_y = current_new_metrics_y + (h_new_metric_line / 2)
+            icon_y_pos_pil = int(icon_center_y - (icon_size / 2))
+
+            # Calculate actual height of the current text value
+            _, actual_value_height = get_text_dimensions(value, f_metrics_val)
             
-            text_baseline_y = current_new_metrics_y + font_ascent
-            icon_y_pos_pil = text_baseline_y - (icon_size // 2) # PIL uses top-left for paste
+            # Calculate Y position for the text to be centered in the line slot
+            # The line slot starts at current_new_metrics_y and has height h_new_metric_line
+            text_draw_y = current_new_metrics_y + (h_new_metric_line - actual_value_height) / 2.0
 
             if icon_type == "pin" and icon_pin_img:
                 resized_icon = icon_pin_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-                canvas.paste(resized_icon, (metrics_label_start_x, icon_y_pos_pil), resized_icon)
+                canvas.paste(resized_icon, (metrics_label_start_x, int(icon_y_pos_pil)), resized_icon)
             elif icon_type == "calendar" and icon_calendar_img:
                 resized_icon = icon_calendar_img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-                canvas.paste(resized_icon, (metrics_label_start_x, icon_y_pos_pil), resized_icon)
+                canvas.paste(resized_icon, (metrics_label_start_x, int(icon_y_pos_pil)), resized_icon)
             
-            draw.text((val_new_x_start, current_new_metrics_y), value, font=f_metrics_val, fill=text_color)
+            draw.text((val_new_x_start, int(text_draw_y)), value, font=f_metrics_val, fill=text_color)
             current_new_metrics_y += h_new_metric_line + line_spacing_new_metrics
     # --- End New Metrics Rendering ---
     
