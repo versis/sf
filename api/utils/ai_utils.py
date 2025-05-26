@@ -128,11 +128,7 @@ Consider how this specific color's properties shape its observations:
 - Let the color's character naturally emerge from its appearance
 
 # Name Must Connect to the Color
-The name should make sense for THIS specific shade:
-- "OIL TAP GOLD" works because oil can be golden
-- The color name should feel natural, not forced
-- If it's olive, the name should evoke olive things
-- If it's crimson, the name should feel crimson
+The name should evoke this specific shade through natural association. Someone reading just the name should sense what color it might be. Think about what things in the world are naturally this color, then build from there.
 
 # Handling Different Color Sources
 - If the color dominates the image: Draw from the main story
