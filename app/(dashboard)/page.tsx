@@ -1301,7 +1301,6 @@ export default function HomePage() {
         accept="image/*"
         onChange={handleHiddenFileInputChange}
         style={{ display: 'none' }}
-        capture="environment"
       />
       <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
         <header className="py-4 border-b-2 border-foreground">
