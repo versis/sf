@@ -8,9 +8,9 @@ import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
-import { Save, SkipForward, PenSquare, /*ChevronDown, ChevronUp,*/ Palette, UploadCloud, Wand2, Eye, RotateCcw,
+import { Save, SkipForward, PenSquare, /*ChevronDown, ChevronUp,*/ UploadCloud, Wand2, Eye, RotateCcw,
   Copy, Check, Share2, Download, AlertTriangle, MoreHorizontal, X, ExternalLink,
-  Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText } from 'lucide-react';
+  Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText, ImagePlus } from 'lucide-react';
 import * as exifr from 'exifr'; // Import exifr for client-side EXIF extraction
 
 // Define types for wizard steps
@@ -68,7 +68,7 @@ export default function HomePage() {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
   const [isHeroVisible, setIsHeroVisible] = useState(true);
-  const [wizardVisible, setWizardVisible] = useState(false); // New state for wizard visibility
+  const [wizardVisible, setWizardVisible] = useState(false); // Ensure this is present
 
   // State for wizard completion
   const [currentWizardStep, setCurrentWizardStep] = useState<WizardStepName>('upload');
@@ -82,20 +82,17 @@ export default function HomePage() {
   const [swipeDeltaX, setSwipeDeltaX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   
-  // New states for button press handling
   const [pressedButtonIndex, setPressedButtonIndex] = useState<number | null>(null);
   const [mouseIsDown, setMouseIsDown] = useState(false);
   
   const [primaryImage, setPrimaryImage] = useState<{ src: string; animationClass: string }>({ src: '', animationClass: '' });
   const [secondaryImage, setSecondaryImage] = useState<{ src: string | null; animationClass: string; initialTranslate: string }>({ src: null, animationClass: '', initialTranslate: '' });
   
-  // State for hero card flip
   const [isHeroCardFlipped, setIsHeroCardFlipped] = useState(false);
   const [heroCardSwipeDirection, setHeroCardSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const [heroFlipCount, setHeroFlipCount] = useState<number>(0); // ADD THIS LINE
+  const [heroFlipCount, setHeroFlipCount] = useState<number>(0);
 
   const heroImageContainerRef = useRef<HTMLDivElement>(null);
-
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
   
   const [typedLines, setTypedLines] = useState<string[]>([]);
@@ -116,27 +113,22 @@ export default function HomePage() {
   const [heroCardsLoading, setHeroCardsLoading] = useState<boolean>(true);
   const [fetchedHeroCards, setFetchedHeroCards] = useState<Array<{ id: string; v: string | null; h: string | null; bv: string | null; bh: string | null }>>([]);
 
-  // New states for note feature
   const [noteText, setNoteText] = useState<string>("");
   const [isNoteStepActive, setIsNoteStepActive] = useState<boolean>(false);
   const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
   const [noteSubmissionError, setNoteSubmissionError] = useState<string | null>(null);
 
-  // New states for EXIF data
   const [photoDate, setPhotoDate] = useState<string | null>(null);
   const [photoLatitude, setPhotoLatitude] = useState<number | null>(null);
   const [photoLongitude, setPhotoLongitude] = useState<number | null>(null);
   const [photoLocationCountry, setPhotoLocationCountry] = useState<string | null>(null);
 
-  const mainContainerRef = useRef<HTMLDivElement>(null); // Ref for the main content container
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the ImageUpload input
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ensure this is present
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
-
-  // Add new state for pending selection
   const [pendingExampleCardIndex, setPendingExampleCardIndex] = useState<number | null>(null);
 
-  // EXIF Extraction Helper Functions
   const extractExifData = async (file: File): Promise<{
     date: string | null;
     latitude: number | null;
@@ -145,26 +137,14 @@ export default function HomePage() {
   }> => {
     try {
       console.log(`[EXIF] Starting EXIF extraction for file: ${file.name}`);
-      
-      // Extract EXIF data using exifr
       const exifData = await exifr.parse(file, {
-        gps: true,
-        exif: true,
-        tiff: true,
-        icc: false, // Skip ICC data to speed up parsing
-        iptc: false, // Skip IPTC data
-        jfif: false, // Skip JFIF data
-        ihdr: false  // Skip IHDR data
+        gps: true, exif: true, tiff: true, icc: false, iptc: false, jfif: false, ihdr: false
       });
-
       console.log('[EXIF] Raw EXIF data:', exifData);
-
       let date: string | null = null;
       let latitude: number | null = null;
       let longitude: number | null = null;
       let country: string | null = null;
-
-      // Extract date
       if (exifData?.DateTimeOriginal) {
         const dateObj = new Date(exifData.DateTimeOriginal);
         if (!isNaN(dateObj.getTime())) {
@@ -178,16 +158,11 @@ export default function HomePage() {
           console.log(`[EXIF] Extracted date from DateTime: ${date}`);
         }
       }
-
-      // Extract GPS coordinates
       if (exifData?.latitude && exifData?.longitude) {
         latitude = exifData.latitude;
         longitude = exifData.longitude;
         console.log(`[EXIF] Extracted GPS: ${latitude}, ${longitude}`);
-
-        // Simple reverse geocoding using a free service
         try {
-          // Ensure latitude and longitude are not null before calling reverseGeocode
           if (latitude !== null && longitude !== null) {
             country = await reverseGeocode(latitude, longitude);
             console.log(`[EXIF] Reverse geocoded country: ${country}`);
@@ -198,7 +173,6 @@ export default function HomePage() {
       } else {
         console.log('[EXIF] No GPS coordinates found in EXIF data');
       }
-
       return { date, latitude, longitude, country };
     } catch (error) {
       console.warn('[EXIF] Failed to extract EXIF data:', error);
@@ -206,7 +180,6 @@ export default function HomePage() {
     }
   };
 
-  // Simple reverse geocoding function using OpenStreetMap Nominatim (free service)
   const reverseGeocode = async (lat: number, lon: number): Promise<string | null> => {
     try {
       const response = await fetch(
@@ -512,32 +485,20 @@ export default function HomePage() {
   };
 
   const handleImageSelectedForUpload = (file: File) => {
-    // Reset relevant parts of the wizard when a new image is selected
-    // resetWizard(); // Call full reset and then set new state - NO, resetWizard makes hero visible.
-    // We need a more targeted reset here if a user is already in the wizard and re-uploads.
-    // For the new flow, resetWizard() would have been called if they clicked the logo,
-    // or this is the first interaction.
-
     // If called from the new button flow, wizardVisible is false.
     // If called from within an already visible wizard (e.g. user clicks step 1 again), wizardVisible is true.
 
     if (!wizardVisible) { // Coming from the new "Create Your Card" button flow
         setUploadStepPreviewUrl(null);
         setCroppedImageDataUrl(null);
-        // setSelectedHexColor('#000000'); // Keep if user was playing with color picker before
         setGeneratedVerticalImageUrl(null);
         setGeneratedHorizontalImageUrl(null);
         setGeneratedExtendedId(null);
-        // setCurrentDisplayOrientation('horizontal'); // Keep user's preference
         setIsGenerating(false);
         setGenerationError(null);
-        // setColorNameInput(''); // Keep if user typed
         setGenerationProgress(0);
         setSelectedFileName(null);
-        // setUserHasInteractedWithColor(false); // Keep if user was playing
-
-        // setCurrentWizardStep('upload'); // Will be set to 'crop' below
-        setIsUploadStepCompleted(false); // Will be set to true below
+        setIsUploadStepCompleted(false); 
         setIsCropStepCompleted(false);
         setIsColorStepCompleted(false);
         setIsResultsStepCompleted(false);
@@ -548,6 +509,7 @@ export default function HomePage() {
         setPhotoLatitude(null);
         setPhotoLongitude(null);
         setPhotoLocationCountry(null);
+        setCurrentWizardStep('upload'); // Ensure it's reset for the new flow
     } else { // User is re-uploading from within the wizard
         // Minimal reset for re-upload:
         setCroppedImageDataUrl(null);
@@ -557,12 +519,10 @@ export default function HomePage() {
         setIsGenerating(false);
         setGenerationError(null);
         setGenerationProgress(0);
-        // Keep selected file name for a moment, it will be updated
-        // Keep color, name input, etc.
         setIsCropStepCompleted(false);
         setIsColorStepCompleted(false);
         setIsResultsStepCompleted(false);
-        setCurrentWizardStep('upload'); // Start from upload again if re-uploading
+        setCurrentWizardStep('upload'); 
     }
 
     console.log(`STEP 1.1: Original file selected - Name: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
@@ -586,8 +546,8 @@ export default function HomePage() {
       setUploadStepPreviewUrl(dataUrl);
       setIsUploadStepCompleted(true);
       setCurrentWizardStep('crop'); // Move to next step
-      setWizardVisible(true); // << NEW: Show the wizard
-      setIsHeroVisible(false); // << NEW: Hide the hero content (text & example card)
+      setWizardVisible(true); // << Restore logic
+      setIsHeroVisible(false); // << Restore logic
     };
     reader.onerror = () => {
       console.error('Error reading file for preview.');
@@ -1267,8 +1227,6 @@ export default function HomePage() {
 
   const handleCreateYourCardClick = () => {
     if (fileInputRef.current) {
-      // Potentially reset parts of the wizard if the user had interacted with a previous session's form
-      // For a fresh start via this button, ensure critical things are reset before triggering upload.
       // Minimal reset before triggering file dialog:
       setUploadStepPreviewUrl(null);
       setCroppedImageDataUrl(null);
@@ -1276,11 +1234,13 @@ export default function HomePage() {
       setIsCropStepCompleted(false);
       setIsColorStepCompleted(false);
       setIsResultsStepCompleted(false);
-      setCurrentWizardStep('upload'); // Ensure wizard logic starts from a clean 'upload' state
+      setCurrentWizardStep('upload'); 
       setGenerationError(null);
       setGeneratedExtendedId(null);
+      setWizardVisible(false); // Ensure wizard is not yet visible
+      setIsHeroVisible(true); // Ensure hero is visible before file dialog
       
-      fileInputRef.current.value = ''; // Clear previous selection from input
+      fileInputRef.current.value = ''; 
       fileInputRef.current.click();
     }
   };
@@ -1331,13 +1291,13 @@ export default function HomePage() {
                 <p className="text-md md:text-lg text-muted-foreground">
                   Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
                 </p>
-                {/* New "Create Your Card" Button */}
-                <div className="mt-6 mb-2 md:mb-0">
+                {/* New "Create Your Card" Button - Centered and Styled */}
+                <div className="mt-6 mb-2 md:mb-0 flex justify-center">
                   <button
                     onClick={handleCreateYourCardClick}
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-150 ease-in-out flex items-center justify-center text-lg w-full md:w-auto"
+                    className="px-6 py-3 text-lg font-semibold border-2 border-blue-700 bg-blue-600 text-white shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] hover:bg-blue-700 active:bg-blue-800 active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center w-full md:w-auto rounded-md"
                   >
-                    <UploadCloud size={20} className="mr-2" />
+                    <ImagePlus size={22} className="mr-2" /> {/* Changed icon and size slightly */}
                     Create Your Card
                   </button>
                 </div>
@@ -1471,14 +1431,17 @@ export default function HomePage() {
           </section>
         )}
 
-        <hr className="w-full border-t-2 border-foreground my-3" />
+        {/* HR Separator and Title for Wizard Section - only visible with wizard */}
+        {wizardVisible && (
+          <>
+            <hr className="w-full border-t-2 border-foreground my-3" />
+            <div className="w-full flex flex-col items-start my-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your postcard</h2>
+            </div>
+          </>
+        )}
 
-        {/* Inserted Title and HR */}
-        <div className="w-full flex flex-col items-start my-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your postcard</h2>
-        </div>
-
-        {wizardVisible && ( // << NEW: Conditional rendering for the entire wizard
+        {wizardVisible && ( // Conditional rendering for the entire wizard steps
         <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
           <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
             <WizardStep 
@@ -1489,7 +1452,7 @@ export default function HomePage() {
               onHeaderClick={isStepHeaderClickable('upload') ? () => setStep('upload') : undefined}
             >
               <ImageUpload 
-                ref={fileInputRef} // Pass the ref to ImageUpload
+                ref={fileInputRef}
                 onImageSelect={handleImageSelectedForUpload} 
                 onImageCropped={handleCroppedImage}
                 showUploader={true}
@@ -1742,7 +1705,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
-        )} {/* << NEW: End of conditional rendering for wizard */}
+        )}
       </div>
     </main>
   );
