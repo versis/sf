@@ -638,6 +638,13 @@ export default function HomePage() {
     // Immediately move to step 4 (results) to show progress bar there
     setCurrentWizardStep('results');
     
+    // On mobile, scroll to step 4 immediately to prevent jumping to top
+    if (isMobile) {
+      setTimeout(() => {
+        wizardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+    
     // Clear previous images before new generation
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
@@ -797,8 +804,8 @@ export default function HomePage() {
       }
       setCurrentDisplayOrientation(initialOrientation);
 
-      // Preload the initially displayed image and scroll after it loads
-      if (initialDisplayUrl) {
+      // Preload the initially displayed image and scroll after it loads (desktop only)
+      if (initialDisplayUrl && !isMobile) {
         const img = new Image();
         img.onload = () => {
           console.log('Frontend: Initial image loaded, scrolling to controls.');
@@ -809,9 +816,9 @@ export default function HomePage() {
           cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         img.src = initialDisplayUrl;
-      } else {
+      } else if (!isMobile) {
         // If no specific image to preload (should not happen if URLs are present),
-        // scroll immediately (or with a small delay as a fallback)
+        // scroll immediately (or with a small delay as a fallback) - desktop only
         setTimeout(() => {
             cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },100);
@@ -823,9 +830,17 @@ export default function HomePage() {
       
       // Activate the note input step instead of immediately redirecting
       setIsNoteStepActive(true);
-      // Scroll to the note input section (we might need a ref for this later)
-      // For now, the card display controls ref might be close enough or we adjust scroll target later.
-      cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+      
+      // On mobile, ensure we stay at the wizard section, don't scroll to card controls
+      if (isMobile) {
+        // Small delay to ensure state updates are complete
+        setTimeout(() => {
+          wizardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+      } else {
+        // Desktop: scroll to card display controls
+        cardDisplayControlsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } 
 
     } catch (error) {
       // Ensure we log a string message from the error object for console
