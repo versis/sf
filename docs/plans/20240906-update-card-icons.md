@@ -1,0 +1,25 @@
+# Plan for Updating Card Icons
+
+- [x] **State the problem**: Render PNG icon and text value on the same visual line, with icon alignment relative to the specific text on that line.
+- [x] **Identify relevant files**: `api/utils/card_utils.py`.
+- [x] **Read relevant files**: Understood current structure.
+- [x] **Chosen Solution**: Dynamic Icon-to-Text Centering for PNGs.
+    - For each metric line:
+        - Text is drawn with its top at `current_new_metrics_y`.
+        - Icon's vertical center is aligned with the vertical center of the drawn text's bounding box for that specific line.
+        - Icon on left, then gap, then text.
+        - `current_new_metrics_y` advances by a fixed amount for uniform inter-line spacing.
+- [ ] **Implement the plan**:
+    - [ ] Rewrite metrics rendering section in `generate_card_image_bytes` in `api/utils/card_utils.py`.
+        - [ ] Load PNG icons (`public/icon_pin.png`, `public/icon_calendar.png`).
+        - [ ] Use user-specified icon size (`icon_size = int(base_font_scale * 18)`).
+        - [ ] For each metric:
+            - Draw text value with its top at `current_new_metrics_y`.
+            - Calculate actual height of this drawn text.
+            - Calculate icon's Y position to center-align with this text.
+            - Paste icon.
+        - [ ] Ensure correct horizontal positioning of icon and text with a gap.
+    - [x] User-defined spacing (e.g., `space_between_id_metrics`) and font changes (e.g., `f_brand`) are preserved.
+    - [x] Old icon drawing functions (`draw_pin_icon`, `draw_calendar_icon`) remain removed.
+- [ ] **Test**: Manually trigger card generation. Verify icon-text alignment for each metric, overall sizing, and spacing.
+- [ ] **Cleanup**: None anticipated if this approach is final. 

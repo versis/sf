@@ -1,31 +1,23 @@
 import io
 import base64
 from typing import Tuple, Dict, Any, Optional
+
+from api.utils.logger import log, debug, error
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from datetime import datetime
-import os # Added for path joining
-import math # Import math for trigonometric functions if we attempt arced text later
-import random # Ensure random is imported
+import os
+import math
+import random
 
-from api.utils.logger import log, debug, error # Ensure error is imported if used
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
-# Corrected path assuming api/utils/card_utils.py is run in context of api/index.py
-# and assets folder is at the project root (sf/assets)
 ASSETS_BASE_PATH = "assets"
-# Define project root for robust path construction, assuming 'api' is a top-level dir or similar
-# This might need adjustment based on actual execution context.
-# For now, we\'ll construct the logo path directly.
-# PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-# LOGO_PATH = os.path.join(PROJECT_ROOT, "public", "sf-icon.png")
-# Simpler approach for now, assuming execution context allows relative path from project root:
 LOGO_PATH = "public/sf-icon.png"
 
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
-    import os # Keep os import here as it might check paths
+    import os
     font_style_suffix = "Italic" if style.lower() == "italic" else ""
-    # pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Only for Inter
 
     font_path = ""
     if font_family == "Mono":
@@ -33,25 +25,21 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "mono", f"IBMPlexMono-{ibm_plex_weight}.ttf")
     elif font_family == "Caveat":
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "caveat", f"Caveat-{weight}.ttf") 
-        # font_style_suffix = "" # Caveat is naturally cursive, Italic suffix might not be in filenames, ensure `weight` includes any style variant if needed e.g. Caveat-Bold might be only option
     elif font_family == "IBMPlexSerif":
         if weight == "Regular" and style.lower() == "italic":
-            # Handle the specific case where "Regular" is omitted for standard italic
             serif_font_filename = "IBMPlexSerif-Italic.ttf"
         else:
             serif_font_filename = f"IBMPlexSerif-{weight}{font_style_suffix}.ttf"
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "serif", serif_font_filename)
     elif font_family == "Inter":
-        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt") # Specific to Inter
+        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
         inter_font_filename = ""
         if style.lower() == "italic":
-            # Try specific italic files first (e.g., Inter-Italic.ttf, Inter-MediumItalic.ttf)
-            # This covers cases where pt_suffix might not be part of the filename for some italic fonts
             specific_italic_variations = [
-                f"Inter-{weight}Italic.ttf", # Inter-BoldItalic.ttf
-                f"Inter-Italic.ttf", # Generic Italic, often Regular weight
-                f"Inter_{pt_suffix}-{weight}Italic.ttf", # Inter_18pt-BoldItalic.ttf
-                f"Inter_{pt_suffix}-Italic.ttf" # Inter_18pt-Italic.ttf
+                f"Inter-{weight}Italic.ttf",
+                f"Inter-Italic.ttf",
+                f"Inter_{pt_suffix}-{weight}Italic.ttf",
+                f"Inter_{pt_suffix}-Italic.ttf"
             ]
             for fname_candidate in specific_italic_variations:
                 potential_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", fname_candidate)
@@ -59,13 +47,14 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
                     inter_font_filename = fname_candidate
                     debug(f"Found specific Inter Italic font: {inter_font_filename}", request_id=request_id)
                     break
-            if not inter_font_filename: # Fallback to original pattern if specific not found
+            if not inter_font_filename:
                 inter_font_filename = f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf"
-        else: # Non-italic Inter
-            inter_font_filename = f"Inter_{pt_suffix}-{weight}.ttf" # Removed font_style_suffix for non-italic
+        else:
+            inter_font_filename = f"Inter_{pt_suffix}-{weight}.ttf"
         
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", inter_font_filename)
-    else: # Default to Inter if family is unknown, or use a truly generic fallback
+    else:
+        pt_suffix = "18pt" if size <= 20 else ("24pt" if size <= 25 else "28pt")
         font_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", f"Inter_{pt_suffix}-{weight}{font_style_suffix}.ttf")
 
     try:
@@ -74,10 +63,7 @@ def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_fam
         return loaded_font
     except IOError as e:
         log(f"Failed to load font '{font_path}': {e}. Falling back. (Details: Family='{font_family}', Weight='{weight}', Style='{style}')", level="WARNING", request_id=request_id)
-        # Try a more generic Inter fallback first
         try:
-            # Fallback to a very common Inter font if the requested one fails
-            # This might not be the desired style, but better than a bitmap default usually
             generic_inter_fallback_path = os.path.join(ASSETS_BASE_PATH, "fonts", "inter", "Inter-Regular.ttf") 
             if os.path.exists(generic_inter_fallback_path):
                 log(f"Attempting Inter-Regular fallback: {generic_inter_fallback_path}", level="DEBUG", request_id=request_id)
@@ -104,9 +90,11 @@ async def generate_card_image_bytes(
     card_details: Dict[str, Any],
     hex_color_input: str,
     orientation: str,
-    request_id: Optional[str] = None
+    request_id: Optional[str] = None,
+    photo_date: Optional[str] = None,
+    photo_location: Optional[str] = None
 ) -> bytes:
-    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}", request_id=request_id)
+    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}", request_id=request_id)
     
     rgb_color = hex_to_rgb(hex_color_input, request_id)
     if rgb_color is None:
@@ -178,9 +166,8 @@ async def generate_card_image_bytes(
     f_phonetic = get_font(int(30 * base_font_scale), "Light", "Italic", request_id=request_id)
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
-    f_brand = get_font(int(64 * base_font_scale), "Bold", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_metrics_label = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
+    f_brand = get_font(int(40 * base_font_scale), "Semibold", request_id=request_id)  # User updated
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Color Name (from AI or default)
@@ -232,29 +219,44 @@ async def generate_card_image_bytes(
     _, brand_h = get_text_dimensions(brand_text, f_brand)
     id_display_for_height_calc = card_details["extendedId"]
     _, id_h = get_text_dimensions(id_display_for_height_calc, f_id)
-    _, h_metric_label = get_text_dimensions("XYZ", f_metrics_label) # Approx height for metric lines
+    _, h_new_metric_line = get_text_dimensions("United States", f_metrics_val)
 
-    # Define vertical spacing (increased spacing between bottom elements)
-    space_between_brand_id = int(swatch_h * 0.03) # Reduced from 0.035
-    space_between_id_metrics = int(swatch_h * 0.05) # Reduced from 0.065
-    line_spacing_metrics = int(swatch_h * 0.02) # Reduced from 0.025
+    # Define vertical spacing
+    space_between_brand_id = int(swatch_h * 0.02) # between brand, id AND metrics
+    space_between_id_metrics = int(swatch_h * 0.06) # User adjusted
+    line_spacing_new_metrics = int(swatch_h * 0.02) # between EACH metric
 
-    # --- Y-Positioning Logic for Bottom Elements ---
+    # --- Y-Positioning Logic for Bottom Elements (Revised) ---
+    # Calculate height of the new metrics block dynamically based on available data
+    num_metric_lines = 0
+    if photo_location: num_metric_lines += 1
+    if photo_date: num_metric_lines += 1
 
-    # 1. Position Brand ("shadefreude") higher up - moved from 63% to 58% to move text higher
-    brand_y_pos = int(swatch_h * 0.62) # Moved up from 0.63 to add more padding at bottom
+    if num_metric_lines > 0:
+        total_new_metrics_block_height = (num_metric_lines * h_new_metric_line) + ((num_metric_lines - 1) * line_spacing_new_metrics if num_metric_lines > 1 else 0)
+        # Total height of the entire bottom text block (Brand + ID + New Metrics)
+        total_bottom_block_height = brand_h + space_between_brand_id + id_h + space_between_id_metrics + total_new_metrics_block_height
+    else: # No metrics lines
+        total_new_metrics_block_height = 0
+        total_bottom_block_height = brand_h + space_between_brand_id + id_h
+    
+    # Start Y position for the entire bottom block, aiming to keep a similar bottom margin (pad_b)
+    bottom_elements_start_y_overall = swatch_h - pad_b - total_bottom_block_height
+
+    # 1. Position Brand ("shadefreude")
+    brand_y_pos = bottom_elements_start_y_overall 
 
     # 2. Position Card ID below the brand
     id_y_pos = brand_y_pos + brand_h + space_between_brand_id
 
-    # 3. Position Metrics block below the Card ID
-    metrics_start_y = id_y_pos + id_h + space_between_id_metrics
-
-    # --- End Y-Positioning Logic ---
+    # 3. Position New Metrics block below the Card ID
+    new_metrics_start_y = id_y_pos + id_h + space_between_id_metrics
+    # --- End Y-Positioning Logic (Revised) ---
 
     for i, line_d in enumerate(wrapped_desc):
         # Ensure description does not overlap with the new, higher brand position
-        if i < 5 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.06)):
+        # Adjusted condition to check against brand_y_pos
+        if i < 5 and (current_y + desc_line_h < brand_y_pos - int(swatch_h * 0.04)):
             draw.text((pad_l, current_y), line_d, font=f_desc, fill=text_color)
             current_y += desc_line_h + int(swatch_h * 0.004)
         else: break
@@ -265,35 +267,61 @@ async def generate_card_image_bytes(
     id_display = card_details["extendedId"]
     draw.text((pad_l, id_y_pos), id_display, font=f_id, fill=text_color)
 
-    # Align metrics to the left (pad_l)
-    metrics_labels_start_x = pad_l # Changed from pad_l + metrics_x_offset
-    
-    # Check if metrics are provided in card_details, otherwise calculate them
-    if "metrics" in card_details:
-        hex_val = card_details["metrics"].get("hex", hex_color_input.upper())
-        rgb_val = card_details["metrics"].get("rgb", f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}")
-        cmyk_val = card_details["metrics"].get("cmyk", "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2])))
-    else:
-        hex_val = hex_color_input.upper()
-        cmyk_val = "{} {} {} {}".format(*rgb_to_cmyk(rgb_color[0], rgb_color[1], rgb_color[2]))
-        rgb_val = f"{rgb_color[0]} {rgb_color[1]} {rgb_color[2]}"
-    
-    metric_data = [("HEX", hex_val), ("CMYK", cmyk_val), ("RGB", rgb_val)]
-    # Calculate where the metric values start, to the right of the labels
-    max_label_w = 0
-    if metric_data: # Ensure metric_data is not empty
-        max_label_w = max(get_text_dimensions(label_text[0], f_metrics_label)[0] for label_text in metric_data)
-    
-    val_x_start = metrics_labels_start_x + max_label_w + int(swatch_w * 0.06) # Increased gap after longest label
-    
-    current_metrics_y = metrics_start_y
+    # --- New Metrics Rendering (PNG Icon + Text, Dynamic Alignment) ---
+    metric_items_to_render = []
+    if photo_location:
+        metric_items_to_render.append({"type": "pin", "value": photo_location})
+    if photo_date:
+        metric_items_to_render.append({"type": "calendar", "value": photo_date})
 
-    for label, value in metric_data:
-        draw.text((metrics_labels_start_x, current_metrics_y), label, font=f_metrics_label, fill=text_color)
-        draw.text((val_x_start, current_metrics_y), value, font=f_metrics_val, fill=text_color)
-        # Use the actual height of the current label for incrementing Y
-        _, h_current_metric_label = get_text_dimensions(label, f_metrics_label)
-        current_metrics_y += h_current_metric_label + line_spacing_metrics
+    if metric_items_to_render:
+        current_y_for_metric_line = new_metrics_start_y
+        icon_start_x = pad_l
+        
+        # General gap, icon-specific sizes will determine text_start_x in the loop
+        gap_after_icon = int(swatch_w * 0.02)
+
+        # Load icon images once
+        icon_pin_img_orig, icon_calendar_img_orig = None, None
+        try:
+            icon_pin_img_orig = Image.open("public/icon_pin.png").convert("RGBA")
+        except Exception as e:
+            log(f"Error loading public/icon_pin.png: {e}", level="ERROR", request_id=request_id)
+        try:
+            icon_calendar_img_orig = Image.open("public/icon_calendar.png").convert("RGBA")
+        except Exception as e:
+            log(f"Error loading public/icon_calendar.png: {e}", level="ERROR", request_id=request_id)
+
+        for item_info in metric_items_to_render:
+            icon_type = item_info["type"]
+            text_value = item_info["value"]
+            
+            current_icon_image_to_use = None
+            current_icon_size = 0 # Default/placeholder
+
+            if icon_type == "pin" and icon_pin_img_orig:
+                current_icon_image_to_use = icon_pin_img_orig
+                current_icon_size = int(base_font_scale * 20) # Pin icon size
+            elif icon_type == "calendar" and icon_calendar_img_orig:
+                current_icon_image_to_use = icon_calendar_img_orig
+                current_icon_size = int(base_font_scale * 22) # Calendar icon size
+            
+            # Dynamically calculate text_start_x based on current icon size
+            text_start_x = icon_start_x + current_icon_size + gap_after_icon
+
+            # Draw the text first to get its dimensions and position
+            draw.text((text_start_x, current_y_for_metric_line), text_value, font=f_metrics_val, fill=text_color)
+            
+            _text_w, text_h = get_text_dimensions(text_value, f_metrics_val)
+            
+            if current_icon_image_to_use and current_icon_size > 0:
+                resized_icon = current_icon_image_to_use.resize((current_icon_size, current_icon_size), Image.Resampling.LANCZOS)
+                icon_paste_y = current_y_for_metric_line + (text_h / 1.0) - (current_icon_size / 1.6)
+                canvas.paste(resized_icon, (icon_start_x, int(icon_paste_y)), resized_icon)
+            
+            current_y_for_metric_line += h_new_metric_line + line_spacing_new_metrics
+            
+    # --- End New Metrics Rendering ---
     
     debug("Text rendering complete", request_id=request_id)
 
@@ -469,70 +497,92 @@ async def generate_back_card_image_bytes(
     note_text_area_end_x = stamp_x_start - pad_x # Notes to the left of rectangular stamp
     available_width_for_note = note_text_area_end_x - note_text_area_start_x
 
-    # ... (The rest of the note text processing, line drawing, vertical centering, and final image saving logic) ...
-    # This includes: note_line_h, lines array calculation, text_block_x_start, total_note_block_height, current_elements_y, rule_line_color, ascent, y_cursor, and the loops to draw text and rules.
-    # Ensure these calculations use the `available_width_for_note` derived from `stamp_x_start`.
+    # --- Start of Note and Rule Drawing Logic (Integrate from previous version if needed) ---
+    if note_text:
+        lines = []
+        max_chars_per_line = int(available_width_for_note / (f_note.size * 0.45)) # Approx char width
+        
+        # Split note_text into paragraphs first, then wrap each paragraph
+        paragraphs = note_text.split('\n')
+        for paragraph in paragraphs:
+            if not paragraph.strip(): # Handle empty lines (e.g., double newlines)
+                lines.append("") # Add an empty line to preserve paragraph spacing
+                continue
 
-    # Placeholder for where the detailed note drawing logic (from previous state) would go
-    # For brevity, not fully re-pasting the entire note/rule drawing loop here, but it should be integrated using the recalculated
-    # note_text_area_end_x and available_width_for_note.
-    # Key variables to use for drawing notes: text_block_x_start, y_cursor, lines, f_note, text_color, rule_line_color, ascent, note_line_h, rule_x_start, rule_x_end
-    
-    # For example, starting the note drawing section:
-    note_line_h = get_text_dimensions("Tg", f_note)[1] * 1.65
-    lines = [] # This would be recalculated based on new available_width_for_note
-    if note_text and note_text.strip():
-        words = note_text.split(' ')
-        current_line_for_note = ""
-        for word in words:
-            word_width, _ = get_text_dimensions(word, f_note)
-            if current_line_for_note == "" and word_width > available_width_for_note:
-                lines.append(word); current_line_for_note = ""
-            elif get_text_dimensions(current_line_for_note + word, f_note)[0] <= available_width_for_note:
-                current_line_for_note += word + " "
-            else:
-                lines.append(current_line_for_note.strip()); current_line_for_note = word + " "
-        if current_line_for_note.strip(): lines.append(current_line_for_note.strip())
-        lines = [line for line in lines if line]
+            words = paragraph.split(' ')
+            current_line = ''
+            for word in words:
+                test_line = current_line + word + ' '
+                line_width, _ = get_text_dimensions(test_line.strip(), f_note)
+                if line_width <= available_width_for_note:
+                    current_line = test_line
+                else:
+                    lines.append(current_line.strip())
+                    current_line = word + ' '
+            lines.append(current_line.strip()) # Add the last line of the paragraph
+            
+        # Remove trailing empty lines that might result from splitting/wrapping
+        while lines and not lines[-1]:
+            lines.pop()
+            
+        # Vertical Centering Logic for Text Block and Ruled Lines
+        note_line_h_approx, _ = get_text_dimensions("Tg", f_note) # Height of a single line of text
+        # Get ascent for more precise vertical alignment to baseline
+        try:
+            ascent, _ = f_note.getmetrics() # (ascent, descent)
+        except AttributeError:
+            ascent = int(f_note.size * 0.75) # Fallback if getmetrics not available
 
-    text_block_x_start = note_text_area_start_x
-    total_note_block_h = (len(lines) * note_line_h) + (2 * note_line_h) # Incl extra lines
-    if total_note_block_h > 0: total_note_block_h -= (note_line_h * 0.65) # Adjust last line spacing
+        num_lines = len(lines)
+        total_text_height = num_lines * note_line_h_approx
+        
+        # Calculate total block height including rules (fixed spacing between text and rule)
+        rule_spacing_above_text = int(note_font_size_val * 0.2) # Space above text line before rule
+        rule_spacing_below_text = int(note_font_size_val * 0.3) # Space below text baseline after rule
+        # The effective height of one ruled line including text and spacing for rules
+        single_ruled_line_effective_height = note_line_h_approx + rule_spacing_above_text + rule_spacing_below_text
+        total_ruled_block_height = num_lines * single_ruled_line_effective_height
 
-    available_h_for_elements = card_h - pad_y - pad_y
-    current_elements_y = pad_y
-    if total_note_block_h < available_h_for_elements:
-        current_elements_y = pad_y + (available_h_for_elements - total_note_block_h) / 2
-    current_elements_y = max(pad_y, current_elements_y)
+        # Calculate starting Y position to center the block in the available vertical space
+        # The available vertical space is from pad_y to (card_h - pad_y)
+        available_vertical_space_for_note = card_h - (2 * pad_y)
+        
+        # If the stamp is on the right, the note area might be constrained vertically if horizontal card.
+        # Here, we assume note area has full vertical space from top to bottom padding.
+        # If text block is taller than available space, it will just start from pad_y.
+        y_cursor_start_centered = pad_y + (available_vertical_space_for_note - total_ruled_block_height) / 2
+        y_cursor_start_centered = max(pad_y, y_cursor_start_centered) # Ensure it doesn't go above top padding
 
-    rule_x_start = note_text_area_start_x
-    rule_x_end = note_text_area_end_x
-    ascent, _ = f_note.getmetrics()
-    y_cursor = current_elements_y
+        y_cursor = y_cursor_start_centered
+        
+        text_block_x_start = note_text_area_start_x # Text starts at the beginning of its allowed area
 
-    if text_color == (20, 20, 20): # Dark text
-        rule_line_color = (80, 80, 80)  # Darker grey lines, was (190,190,190)
-    else: # Light text (white)
-        rule_line_color = (210, 210, 210)  # Remains a darker grey for contrast on dark card backgrounds
-    rule_line_thickness = 1
+        rule_line_color = desaturate_hex_color(hex_color_input, 0.3, 0.6) # Lighter, less saturated version of card color
+        if rule_line_color is None: # Fallback if color conversion failed
+             rule_line_color = (200,200,200) if sum(solid_lightened_bg_rgb) > 384 else (100,100,100)
 
-    if lines:
-        for line_content in lines:
-            if y_cursor + note_line_h <= card_h - pad_y:
-                draw.text((text_block_x_start, y_cursor), line_content, font=f_note, fill=text_color)
-                rule_y = y_cursor + ascent + 3
-                if rule_y < card_h - pad_y -1: draw.line([(rule_x_start, rule_y), (rule_x_end, rule_y)], fill=rule_line_color, width=1)
-                y_cursor += note_line_h
-            else: break
-    for _ in range(2):
-        rule_y = y_cursor + ascent + 3
-        if rule_y < card_h - pad_y -1: 
-            draw.line([(rule_x_start, rule_y), (rule_x_end, rule_y)], fill=rule_line_color, width=1)
-            y_cursor += note_line_h
-        else: break
-    # --- End of note drawing section example ---
 
-    # Finalize Image (Rounded Corners, Save)
+        rule_x_start = text_block_x_start
+        rule_x_end = note_text_area_end_x # Rules span the full available note width
+        
+        for line_text in lines:
+            # Position of the text baseline for the current line
+            current_text_baseline_y = y_cursor + rule_spacing_above_text + ascent
+            
+            if line_text: # Draw text only if line is not empty
+                 draw.text((text_block_x_start, current_text_baseline_y), line_text, font=f_note, fill=text_color)
+
+            # Draw the rule line associated with this text line (even if text is empty, to maintain ruled paper look)
+            # The rule line should be slightly below the text baseline
+            current_rule_y = current_text_baseline_y + rule_spacing_below_text
+            draw.line([(rule_x_start, current_rule_y), (rule_x_end, current_rule_y)], fill=rule_line_color, width=1)
+            
+            y_cursor += single_ruled_line_effective_height # Move to the start of the next line block
+
+    log(f"Back card note processing complete. Request ID: {request_id if request_id else 'N/A'}", request_id=request_id)
+    # --- End of Note and Rule Drawing Logic ---
+
+    # Rounded corners and save
     radius = 40
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
     ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
@@ -545,3 +595,10 @@ async def generate_back_card_image_bytes(
     image_bytes = img_byte_arr.getvalue()
     log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
+
+# --- Helper Functions for Drawing Custom Icons (REMOVED) ---
+# draw_pin_icon and draw_calendar_icon functions are now removed.
+
+def create_color_swatch_image_bytes(hex_color: str, width: int = 200, height: int = 200, request_id: Optional[str] = None) -> bytes:
+    log(f"Creating color swatch for {hex_color}", request_id=request_id)
+    # ... existing code ... 

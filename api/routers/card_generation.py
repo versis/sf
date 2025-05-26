@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Form
 from supabase import Client as SupabaseClient
 from typing import Dict, Any, Optional
 import base64
+import io
 
 from ..config import (
     SUPABASE_URL, SUPABASE_SERVICE_KEY, BLOB_READ_WRITE_TOKEN,
     DEFAULT_STATUS_PROCESSING, DEFAULT_STATUS_COMPLETED, DEFAULT_STATUS_FAILED,
-    ENABLE_AI_CARD_DETAILS # Added import for AI flag
+    ENABLE_AI_CARD_DETAILS
 )
 from ..models.card_generation_models import (
     CardGenerationCreateRequest, CardGenerationRecord, InitiateCardGenerationResponse,
-    CardGenerationUpdateRequest # Ensure this is imported if used directly
+    CardGenerationUpdateRequest
 )
 from ..services.supabase_service import create_card_generation_record, update_card_generation_status
 from ..services.blob_service import BlobService
@@ -18,13 +19,12 @@ from ..utils.logger import log, error
 from ..dependencies import verify_api_key
 from ..utils.card_utils import generate_card_image_bytes, generate_back_card_image_bytes
 from ..utils.color_utils import hex_to_rgb, rgb_to_cmyk
-from ..utils.ai_utils import generate_ai_card_details # Added import for AI function
-from ..utils.common_utils import generate_random_suffix # NEW IMPORT
+from ..utils.ai_utils import generate_ai_card_details
+from ..utils.common_utils import generate_random_suffix
 
 router = APIRouter()
 
 # Initialize Supabase client
-# This should ideally be managed via a dependency for better testing and reuse
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     supabase_client = SupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 else:
@@ -37,8 +37,6 @@ if BLOB_READ_WRITE_TOKEN:
 else:
     blob_service = None
     log("BlobService not initialized due to missing token.")
-
-# ImageProcessor initialization was here, now fully removed.
 
 @router.post("/initiate-card-generation", 
              response_model=InitiateCardGenerationResponse, 
@@ -71,9 +69,10 @@ async def initiate_card_generation(payload: CardGenerationCreateRequest):
 async def finalize_card_generation(
     db_id: int, 
     user_image: UploadFile = File(...),
-    card_name: str = Body(...), # This will be a fallback if AI is off or fails
+    card_name: str = Form(...),
+    photo_date: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
+    photo_location: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
     user_prompt: Optional[str] = Body(None), # Stored in metadata, not currently used for AI call generation
-    # ai_generated_details: Optional[Dict[str, Any]] = Body(None) # This param is now redundant if backend calls AI
 ):
     """
     Finalizes the card generation process:
@@ -112,10 +111,17 @@ async def finalize_card_generation(
         
         # Prepare image data
         user_image_bytes = await user_image.read()
+        log(f"finalize_card_generation: Received user_image.filename: {user_image.filename}, user_image.content_type: {user_image.content_type}", request_id=str(db_id))
+
         # Convert user_image_bytes to data URL for generate_card_image_bytes
-        # Assuming user_image.content_type is available and correct (e.g., 'image/png', 'image/jpeg')
-        user_image_content_type = user_image.content_type or 'image/png' # Default if not provided
+        user_image_content_type = user_image.content_type or 'image/png'
         user_image_data_url = f"data:{user_image_content_type};base64,{base64.b64encode(user_image_bytes).decode('utf-8')}"
+
+        # Log the received EXIF data
+        if photo_date or photo_location:
+            log(f"Client-side EXIF data for DB ID {db_id}: Date='{photo_date}', Location='{photo_location}'", request_id=str(db_id))
+        else:
+            log(f"No EXIF data received from client for DB ID {db_id}", request_id=str(db_id))
 
         # --- AI Details Generation Step --- 
         processed_ai_details = {} # Store details from AI or fallback
@@ -172,18 +178,11 @@ async def finalize_card_generation(
                 card_details=card_details_for_image_gen,
                 hex_color_input=hex_color,
                 orientation=orientation,
-                request_id=str(db_id) 
+                request_id=str(db_id),
+                photo_date=photo_date,
+                photo_location=photo_location
             )
             random_suffix = generate_random_suffix()
-            
-            # DEBUG: Save image locally before upload
-            # debug_filename = f"debug_front_{extended_id.replace(' ', '_')}_{orientation}_{random_suffix}.png"
-            # try:
-            #     with open(debug_filename, "wb") as f:
-            #         f.write(img_bytes)
-            #     log(f"DEBUG: Saved front image locally to {debug_filename}, size: {len(img_bytes)} bytes")
-            # except Exception as e_save:
-            #     error(f"DEBUG: Failed to save front image locally {debug_filename}: {e_save}")
             
             generated_images_for_blob.append({
                 "data": img_bytes,
@@ -194,25 +193,27 @@ async def finalize_card_generation(
 
         # Upload images to Vercel Blob (now a synchronous call)
         log(f"Uploading {len(generated_images_for_blob)} images for DB ID: {db_id}")
-        uploaded_image_info = blob_service.upload_multiple_images(generated_images_for_blob) # Removed await
+        uploaded_image_info = blob_service.upload_multiple_images(generated_images_for_blob)
         log(f"Images uploaded for DB ID: {db_id}. Result: {uploaded_image_info}")
         
         # Prepare metadata and image URLs for Supabase update
-        # Ensure keys here match actual column names in your Supabase table
         update_payload = {
             "metadata": {
-                "card_name": card_details_for_image_gen["colorName"], # Store the final name used
-                "user_provided_initial_name": card_name, # Keep track of original user input
+                "card_name": card_details_for_image_gen["colorName"],
+                "user_provided_initial_name": card_name,
                 "user_prompt": user_prompt,
-                "ai_info": raw_ai_response_for_metadata, # Store AI call outcome/details
+                "ai_info": raw_ai_response_for_metadata,
                 "original_filename": user_image.filename,
                 "image_generation_details": card_details_for_image_gen,
-                "uploaded_blob_info": uploaded_image_info # This correctly stores the dict with horizontal/vertical URLs
+                "uploaded_blob_info": uploaded_image_info,
+                "exif_data_extracted": {
+                    "photo_date": photo_date,
+                    "photo_location_country": photo_location
+                }
             },
         }
 
         # Add direct columns for horizontal and vertical URLs if they exist in the table
-        # These should match your actual table column names.
         if uploaded_image_info.get("horizontal", {}).get("url"):
             update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]
         if uploaded_image_info.get("vertical", {}).get("url"):
@@ -247,8 +248,6 @@ async def finalize_card_generation(
         except Exception as update_err:
             error(f"Additionally, failed to update status to 'failed' for DB ID {db_id}: {str(update_err)}")
         raise HTTPException(status_code=500, detail=error_msg)
-
-# Example router inclusion comment was here, now fully removed. 
 
 @router.post("/cards/{db_id}/add-note",
              response_model=CardGenerationRecord,
@@ -346,5 +345,3 @@ async def add_note_to_card(
         error(error_msg)
         # Potentially update status to a specific 'note_failed' status if desired, or just log
         raise HTTPException(status_code=500, detail=error_msg)
-
-# Example router inclusion comment was here, now fully removed. 

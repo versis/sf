@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Save, SkipForward, PenSquare, /*ChevronDown, ChevronUp,*/ Palette, UploadCloud, Wand2, Eye, RotateCcw,
   Copy, Check, Share2, Download, AlertTriangle, MoreHorizontal, X, ExternalLink,
   Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText } from 'lucide-react';
+import * as exifr from 'exifr'; // Import exifr for client-side EXIF extraction
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -119,12 +120,114 @@ export default function HomePage() {
   const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
   const [noteSubmissionError, setNoteSubmissionError] = useState<string | null>(null);
 
+  // New states for EXIF data
+  const [photoDate, setPhotoDate] = useState<string | null>(null);
+  const [photoLatitude, setPhotoLatitude] = useState<number | null>(null);
+  const [photoLongitude, setPhotoLongitude] = useState<number | null>(null);
+  const [photoLocationCountry, setPhotoLocationCountry] = useState<string | null>(null);
+
   const mainContainerRef = useRef<HTMLDivElement>(null); // Ref for the main content container
 
   const internalApiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY;
 
   // Add new state for pending selection
   const [pendingExampleCardIndex, setPendingExampleCardIndex] = useState<number | null>(null);
+
+  // EXIF Extraction Helper Functions
+  const extractExifData = async (file: File): Promise<{
+    date: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    country: string | null;
+  }> => {
+    try {
+      console.log(`[EXIF] Starting EXIF extraction for file: ${file.name}`);
+      
+      // Extract EXIF data using exifr
+      const exifData = await exifr.parse(file, {
+        gps: true,
+        exif: true,
+        tiff: true,
+        icc: false, // Skip ICC data to speed up parsing
+        iptc: false, // Skip IPTC data
+        jfif: false, // Skip JFIF data
+        ihdr: false  // Skip IHDR data
+      });
+
+      console.log('[EXIF] Raw EXIF data:', exifData);
+
+      let date: string | null = null;
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let country: string | null = null;
+
+      // Extract date
+      if (exifData?.DateTimeOriginal) {
+        const dateObj = new Date(exifData.DateTimeOriginal);
+        if (!isNaN(dateObj.getTime())) {
+          date = dateObj.toISOString().split('T')[0].replace(/-/g, '/');
+          console.log(`[EXIF] Extracted date: ${date}`);
+        }
+      } else if (exifData?.DateTime) {
+        const dateObj = new Date(exifData.DateTime);
+        if (!isNaN(dateObj.getTime())) {
+          date = dateObj.toISOString().split('T')[0].replace(/-/g, '/');
+          console.log(`[EXIF] Extracted date from DateTime: ${date}`);
+        }
+      }
+
+      // Extract GPS coordinates
+      if (exifData?.latitude && exifData?.longitude) {
+        latitude = exifData.latitude;
+        longitude = exifData.longitude;
+        console.log(`[EXIF] Extracted GPS: ${latitude}, ${longitude}`);
+
+        // Simple reverse geocoding using a free service
+        try {
+          // Ensure latitude and longitude are not null before calling reverseGeocode
+          if (latitude !== null && longitude !== null) {
+            country = await reverseGeocode(latitude, longitude);
+            console.log(`[EXIF] Reverse geocoded country: ${country}`);
+          }
+        } catch (geoError) {
+          console.warn('[EXIF] Reverse geocoding failed:', geoError);
+        }
+      } else {
+        console.log('[EXIF] No GPS coordinates found in EXIF data');
+      }
+
+      return { date, latitude, longitude, country };
+    } catch (error) {
+      console.warn('[EXIF] Failed to extract EXIF data:', error);
+      return { date: null, latitude: null, longitude: null, country: null };
+    }
+  };
+
+  // Simple reverse geocoding function using OpenStreetMap Nominatim (free service)
+  const reverseGeocode = async (lat: number, lon: number): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'shadefreude-app', // Required by Nominatim usage policy
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Nominatim API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      const country = data?.address?.country || data?.display_name?.split(',')?.pop()?.trim();
+      
+      return country || null;
+    } catch (error) {
+      console.warn('[EXIF] Reverse geocoding error:', error);
+      return null;
+    }
+  };
 
   // Helper to restore page scroll on mobile
   const restorePageScroll = () => {
@@ -386,6 +489,12 @@ export default function HomePage() {
     setIsSubmittingNote(false);
     setNoteSubmissionError(null);
 
+    // Reset EXIF data
+    setPhotoDate(null);
+    setPhotoLatitude(null);
+    setPhotoLongitude(null);
+    setPhotoLocationCountry(null);
+
     setIsHeroVisible(false);
 
     // Revoke URLs
@@ -406,6 +515,18 @@ export default function HomePage() {
 
     console.log(`STEP 1.1: Original file selected - Name: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
     setSelectedFileName(file.name);
+    
+    // Extract EXIF data in the background
+    extractExifData(file).then(({ date, latitude, longitude, country }) => {
+      console.log(`[EXIF] Extracted data - Date: ${date}, GPS: ${latitude}, ${longitude}, Country: ${country}`);
+      setPhotoDate(date);
+      setPhotoLatitude(latitude);
+      setPhotoLongitude(longitude);
+      setPhotoLocationCountry(country);
+    }).catch(error => {
+      console.warn('[EXIF] EXIF extraction failed:', error);
+      // Don't fail the upload if EXIF extraction fails
+    });
     
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -556,6 +677,17 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append('user_image', imageFile);
       formData.append('card_name', cardNameToSend);
+
+      // Add EXIF data as form fields if available
+      if (photoDate) {
+        formData.append('photo_date', photoDate);
+        console.log(`[EXIF] Adding photo_date to form: ${photoDate}`);
+      }
+      if (photoLocationCountry) {
+        formData.append('photo_location', photoLocationCountry);
+        console.log(`[EXIF] Adding photo_location to form: ${photoLocationCountry}`);
+      }
+      // Note: We're only sending the country, not raw coordinates for privacy
 
       const finalizeResponse = await fetch(`/api/finalize-card-generation/${dbId}`, {
         method: 'POST',
