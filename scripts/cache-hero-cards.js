@@ -30,18 +30,9 @@ function loadHeroCardIds() {
     return ids;
   } catch (error) {
     console.error('❌ Failed to load hero card IDs from config:', error.message);
-    console.log('📋 Falling back to hardcoded IDs');
-    // Fallback to hardcoded array if config loading fails
-    return [
-      "000000228 FE F",
-      "000000229 FE F", 
-      "000000216 FE F",
-      "000000225 FE F",
-      "000000206 FE F",
-      "000000221 FE F",
-      "000000222 FE F",
-      "000000236 FE F"
-    ];
+    console.error('💥 Cannot proceed without centralized configuration');
+    console.error('🔧 Please ensure lib/heroCardConfig.ts exists and is properly formatted');
+    process.exit(1);
   }
 }
 

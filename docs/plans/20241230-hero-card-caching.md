@@ -28,7 +28,7 @@ Implemented a pre-deployment caching system that downloads hero card images to l
 - ✅ Parallel image downloads for speed
 - ✅ Automatic cache directory cleanup
 - ✅ Enhanced logging with cache statistics
-- ✅ Error handling and fallback mechanisms
+- ✅ Error handling with fail-fast approach
 - ✅ Safe filename generation
 - ✅ Manifest-based image mapping
 
@@ -134,7 +134,7 @@ const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 ### Monitoring
 - Script provides detailed logging during cache generation
 - Shows number of cards cached, images downloaded, and total cache size
-- Centralized configuration loading with fallback
+- Centralized configuration loading with fail-fast validation
 - File count and size information in build output
 
 ## Benefits
