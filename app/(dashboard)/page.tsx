@@ -1349,11 +1349,14 @@ export default function HomePage() {
             <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
               {/* Wrapper for text content that should grow */}
               <div className="flex-grow">
-                <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mt-6">
-                  <span className="text-lg md:text-xl font-normal text-muted-foreground">turn </span>Your everyday moment<br /><span className="text-lg md:text-xl font-normal text-muted-foreground">into </span>Extraordinary AI postcard
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mt-6 text-foreground">
+                  Your Everyday Photo, Having Its Moment
                 </h2>
-                <p className="text-md md:text-lg text-muted-foreground">
-                  Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.
+                <p className="text-xl font-light md:text-2xl mb-4 text-muted-foreground/90 tracking-wide">
+                  / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
+                </p>
+                <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
+                  Pick a color from your photo. Watch it become a digital postcard with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
                 </p>
               </div>
 
