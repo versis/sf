@@ -121,9 +121,9 @@ async def generate_card_image_bytes(
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Card dimensions (optimized for performance - reduced from 700x1400 to 600x1200)
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 600, 1200
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1200, 600
+    # Card dimensions (reverted to original for better quality)
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
     bg_color_tuple = (0, 0, 0, 0) # Fully Transparent RGBA
 
     if orientation == "horizontal":
@@ -363,13 +363,13 @@ async def generate_back_card_image_bytes(
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
         fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
-    # 1. Determine card dimensions and base font sizes (optimized for performance)
+    # 1. Determine card dimensions and base font sizes (reverted to original)
     if orientation == "horizontal":
-        card_w, card_h = 1200, 600
-        note_font_size_val = 28  # Scaled down proportionally
+        card_w, card_h = 1400, 700
+        note_font_size_val = 32  # Reverted to original
     else: # vertical
-        card_w, card_h = 600, 1200
-        note_font_size_val = 28  # Scaled down proportionally
+        card_w, card_h = 700, 1400
+        note_font_size_val = 32  # Reverted to original
 
     # 2. Calculate effective background color
     solid_lightened_bg_rgb = fixed_back_card_rgb # Use the fixed color directly

@@ -47,6 +47,140 @@ class CardDetailsResponse(BaseModel):
     class Config:
         populate_by_name = True
 
+class BatchCardResponse(BaseModel):
+    """Response for batch card retrieval."""
+    cards: Dict[str, Optional[CardDetailsResponse]]  # Maps extended_id to card data (or None if not found)
+    
+@router.post("/batch-retrieve-cards", response_model=BatchCardResponse)
+async def batch_retrieve_cards(extended_ids: List[str]):
+    """
+    Retrieve multiple cards by their extended IDs in a single optimized query.
+    
+    Args:
+        extended_ids: List of extended IDs to retrieve
+        
+    Returns:
+        Dict mapping each extended_id to its card data (or None if not found)
+    """
+    if not supabase_client:
+        raise HTTPException(status_code=503, detail="Database service unavailable.")
+
+    if not extended_ids:
+        return BatchCardResponse(cards={})
+
+    info(f"Batch retrieving {len(extended_ids)} cards")
+    
+    # PERFORMANCE OPTIMIZATION: Extract IDs and use IN query with primary keys
+    from ..utils.id_utils import extract_id_from_extended_id
+    
+    # Build mapping of extended_id to db_id for fast lookup
+    id_mapping = {}
+    db_ids = []
+    fallback_extended_ids = []
+    
+    for extended_id in extended_ids:
+        db_id = extract_id_from_extended_id(extended_id)
+        if db_id is not None:
+            id_mapping[db_id] = extended_id
+            db_ids.append(db_id)
+        else:
+            fallback_extended_ids.append(extended_id)
+    
+    results = {}
+    
+    try:
+        # Fast path: Batch query by primary key IDs
+        if db_ids:
+            info(f"Using optimized batch ID query for {len(db_ids)} cards")
+            db_response = (
+                supabase_client.table("card_generations")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .in_("id", db_ids)
+                .execute()
+            )
+            
+            if db_response.data:
+                for card_data in db_response.data:
+                    extended_id = card_data.get("extended_id")
+                    if extended_id:
+                        metadata = card_data.get("metadata", {})
+                        db_card_name = metadata.get("card_name")
+                        ai_card_name = metadata.get("ai_info", {}).get("colorName")
+                        final_card_name = db_card_name or ai_card_name or "Color Card"
+
+                        card_response = CardDetailsResponse(
+                            id=card_data.get("id"),
+                            extended_id=extended_id,
+                            hex_color=card_data.get("hex_color"),
+                            status=card_data.get("status"),
+                            card_name=final_card_name,
+                            front_horizontal_image_url=card_data.get("front_horizontal_image_url"),
+                            front_vertical_image_url=card_data.get("front_vertical_image_url"),
+                            note_text=card_data.get("note_text"),
+                            has_note=card_data.get("has_note"),
+                            back_horizontal_image_url=card_data.get("back_horizontal_image_url"),
+                            back_vertical_image_url=card_data.get("back_vertical_image_url"),
+                            ai_name=metadata.get("ai_info", {}).get("colorName"),
+                            ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
+                            ai_article=metadata.get("ai_info", {}).get("article"),
+                            ai_description=metadata.get("ai_info", {}).get("description"),
+                            created_at=card_data.get("created_at"),
+                            updated_at=card_data.get("updated_at")
+                        )
+                        results[extended_id] = card_response
+
+        # Fallback path: Query by extended_id for any that couldn't be parsed
+        if fallback_extended_ids:
+            info(f"Using fallback extended_id query for {len(fallback_extended_ids)} cards")
+            fallback_response = (
+                supabase_client.table("card_generations")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .in_("extended_id", fallback_extended_ids)
+                .execute()
+            )
+            
+            if fallback_response.data:
+                for card_data in fallback_response.data:
+                    extended_id = card_data.get("extended_id")
+                    if extended_id:
+                        metadata = card_data.get("metadata", {})
+                        db_card_name = metadata.get("card_name")
+                        ai_card_name = metadata.get("ai_info", {}).get("colorName")
+                        final_card_name = db_card_name or ai_card_name or "Color Card"
+
+                        card_response = CardDetailsResponse(
+                            id=card_data.get("id"),
+                            extended_id=extended_id,
+                            hex_color=card_data.get("hex_color"),
+                            status=card_data.get("status"),
+                            card_name=final_card_name,
+                            front_horizontal_image_url=card_data.get("front_horizontal_image_url"),
+                            front_vertical_image_url=card_data.get("front_vertical_image_url"),
+                            note_text=card_data.get("note_text"),
+                            has_note=card_data.get("has_note"),
+                            back_horizontal_image_url=card_data.get("back_horizontal_image_url"),
+                            back_vertical_image_url=card_data.get("back_vertical_image_url"),
+                            ai_name=metadata.get("ai_info", {}).get("colorName"),
+                            ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
+                            ai_article=metadata.get("ai_info", {}).get("article"),
+                            ai_description=metadata.get("ai_info", {}).get("description"),
+                            created_at=card_data.get("created_at"),
+                            updated_at=card_data.get("updated_at")
+                        )
+                        results[extended_id] = card_response
+
+        # Ensure all requested IDs are in the response (with None for not found)
+        final_results = {}
+        for extended_id in extended_ids:
+            final_results[extended_id] = results.get(extended_id)
+
+        info(f"Batch retrieval complete. Found {len([r for r in final_results.values() if r is not None])}/{len(extended_ids)} cards")
+        return BatchCardResponse(cards=final_results)
+
+    except Exception as e:
+        error(f"Error in batch card retrieval: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred during batch retrieval: {str(e)}")
+
 @router.get("/generations", response_model=List[CardGenerationRecord])
 async def get_generations(limit: int = 30, offset: int = 0):
     if not supabase_client:
