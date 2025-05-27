@@ -1349,8 +1349,8 @@ export default function HomePage() {
             <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
               {/* Wrapper for text content that should grow */}
               <div className="flex-grow">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mt-6 text-foreground">
-                  Your Everyday Photo, Having Its Moment
+                <h2 className="text-3xl md:text-4xl lg:text-4xl font-bold mb-2 md:mt-6 text-foreground">
+                  Your Everyday Photo,<br/>Having Its Moment
                 </h2>
                 <p className="text-xl font-light md:text-2xl mb-4 text-muted-foreground/90 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
