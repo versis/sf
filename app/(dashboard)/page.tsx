@@ -1358,7 +1358,7 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         <section className="w-full md:pt-1 md:pb-8 py-3">
-          <div className="md:grid md:grid-cols-5 md:gap-2 lg:gap-3"> {/* Reduced gap from md:gap-4 lg:gap-6 to md:gap-2 lg:gap-3 */}
+          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-5 md:items-center"> {/* Added md:items-center to align grid items */}
             {/* Left Column: Text - takes 2/5ths */}
             <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
               {/* Wrapper for text content that should grow */}
@@ -1389,7 +1389,7 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-start w-full md:col-span-3 relative">
+            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative"> {/* Changed md:items-start to md:items-center for horizontal centering too */}
               {/* Wrapper for card image (and formerly mobile dots) */}
               <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}> {/* Added justify-center for mobile */}
                 {/* Card Image Container */}
