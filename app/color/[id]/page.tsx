@@ -287,24 +287,31 @@ export default function ColorCardPage() {
 
           <div className="w-full order-4 mt-4">
             <div className="max-w-4xl mx-auto">
-              <h3 className="text-xl font-semibold mb-3 text-left">So... what&#39;s this? (first time here)</h3>
+              <h3 className="text-xl font-semibold mb-3 text-left">
+                First time here?
+              </h3>
+
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
-                  This is an AI-crafted digital postcard from <i>shadefreude</i> with its unique title:
+                  You’re looking at an AI-crafted postcard from <i>shadefreude</i>&nbsp;
+                  titled:&nbsp;
                   {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono">
-                      {' '}{cardDetails.card_name ? `${cardDetails.card_name} ` : ''}
-                      {cardDetails.hexColor && (
-                        <span>({cardDetails.hexColor})</span>
-                      )}
+                      {cardDetails.card_name ? `${cardDetails.card_name} ` : ''}
+                      {cardDetails.hexColor && `(${cardDetails.hexColor})`}
                     </span>
-                  )}.
-                  <br/>
-                  This is human and AI cooperation. It started with an everyday photo. A special color was chosen, and our AI gave it an evocative title and a poetic mini-story for the front. If there&apos;s a note on the back, that&apos;s a personal touch added by its creator!
+                  )}
+                  .
+                  <br />
+                  It began with an everyday photo. A standout colour was tapped, our
+                  fine-tuned AI read the scene, named the shade, and wrote a one-line fortune
+                  for the front. If there’s a note on the back, that’s the creator’s personal
+                  touch.
                 </p>
+
                 <p>
                   <Link href="/" className="underline hover:text-foreground">
-                    Create your own digital postcard here!
+                    Make your own AI postcard&nbsp;→
                   </Link>
                 </p>
               </div>
