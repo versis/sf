@@ -88,6 +88,9 @@ export default function HomePage() {
   const heroImageContainerRef = useRef<HTMLDivElement>(null);
   const [currentDbId, setCurrentDbId] = useState<number | null>(null);
   
+  // Image dimensions for step 2
+  const [cropImageDimensions, setCropImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  
   const [typedLines, setTypedLines] = useState<string[]>([]);
   const typingLogicRef = useRef<{
     intervalId: NodeJS.Timeout | null;
@@ -482,6 +485,9 @@ export default function HomePage() {
     setPhotoLongitude(null);
     setPhotoLocationCountry(null);
 
+    // Reset crop image dimensions
+    setCropImageDimensions(null);
+
     // Revoke URLs
     if (generatedVerticalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedVerticalImageUrl);
     if (generatedHorizontalImageUrl?.startsWith('blob:')) URL.revokeObjectURL(generatedHorizontalImageUrl);
@@ -521,6 +527,7 @@ export default function HomePage() {
         setPhotoLatitude(null);
         setPhotoLongitude(null);
         setPhotoLocationCountry(null);
+        setCropImageDimensions(null);
         setCurrentWizardStep('upload'); // Ensure it's reset for the new flow
     } else { // User is re-uploading from within the wizard
         // Minimal reset for re-upload:
@@ -534,6 +541,7 @@ export default function HomePage() {
         setIsCropStepCompleted(false);
         setIsColorStepCompleted(false);
         setIsResultsStepCompleted(false);
+        setCropImageDimensions(null);
         setCurrentWizardStep('upload'); 
     }
 
@@ -606,6 +614,12 @@ export default function HomePage() {
       setIsCropStepCompleted(false); // If crop is cleared, mark as not completed
       setCurrentWizardStep('crop'); // Stay on crop step or move back
     }
+  };
+
+
+
+  const handleImageDimensionsChange = (dimensions: { width: number; height: number } | null) => {
+    setCropImageDimensions(dimensions);
   };
 
   const handleHexColorChange = (hex: string) => {
@@ -1552,6 +1566,7 @@ export default function HomePage() {
                         initialPreviewUrl={uploadStepPreviewUrl}
                         currentFileName={selectedFileName}
                         aspectRatio={aspectRatio} // Pass the aspect ratio to the cropper
+                        onImageDimensionsChange={handleImageDimensionsChange}
                         key={`cropper-${uploadStepPreviewUrl}`}
                       />
                   )}

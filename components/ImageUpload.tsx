@@ -4,7 +4,32 @@ import React, { useState, ChangeEvent, useRef, useEffect, forwardRef, useImperat
 import ReactCrop, { type Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
-// Helper function to center the crop
+// Helper function to create the largest possible square crop
+function createMaximizedSquareCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+): Crop {
+  // Use the smaller dimension to create the largest possible square
+  const smallerDimension = Math.min(mediaWidth, mediaHeight);
+  
+  // Calculate the percentage of the smaller dimension relative to each axis
+  const widthPercent = (smallerDimension / mediaWidth) * 100;
+  const heightPercent = (smallerDimension / mediaHeight) * 100;
+  
+  // Center the crop
+  const xPercent = (100 - widthPercent) / 2;
+  const yPercent = (100 - heightPercent) / 2;
+  
+  return {
+    unit: '%' as const,
+    width: widthPercent,
+    height: heightPercent,
+    x: xPercent,
+    y: yPercent,
+  };
+}
+
+// Fallback helper function for standard aspect crop
 function centerAspectCrop(
   mediaWidth: number,
   mediaHeight: number,
@@ -33,6 +58,7 @@ interface ImageUploadProps {
   initialPreviewUrl?: string | null;
   currentFileName?: string | null;
   aspectRatio?: number;
+  onImageDimensionsChange?: (dimensions: { width: number; height: number } | null) => void;
 }
 
 // Exact minimum dimension in pixels
@@ -46,7 +72,8 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
   showCropper,
   initialPreviewUrl,
   currentFileName,
-  aspectRatio = 1/1
+  aspectRatio = 1/1,
+  onImageDimensionsChange
 }, ref) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -63,6 +90,12 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
   // Expose the localInputRef to the parent component via the passed ref
   useImperativeHandle(ref, () => localInputRef.current as HTMLInputElement);
 
+  // Calculate the largest possible square crop using the smaller dimension
+  const getMaximizedSquareAspectRatio = (): number => {
+    // Always return 1:1 for square crop, but the crop initialization will use the smaller dimension
+    return 1;
+  };
+
   // Reset states when initial preview URL changes
   useEffect(() => {
     if (showCropper && initialPreviewUrl && initialPreviewUrl !== previewUrl) {
@@ -72,6 +105,16 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
       setErrorMessage(null);
     }
   }, [initialPreviewUrl, showCropper, previewUrl]);
+
+  // Recalculate crop when image dimensions change
+  useEffect(() => {
+    if (imgRef.current && imageDimensions && showCropper) {
+      const { width, height } = imgRef.current;
+      const newCrop = createMaximizedSquareCrop(width, height);
+      setCrop(newCrop);
+      setPixelCrop(undefined); // Reset pixel crop to trigger recalculation
+    }
+  }, [imageDimensions, showCropper]);
 
   const internalHandleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -97,7 +140,9 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
         
         // Image is valid, proceed
         setErrorMessage(null);
-        setImageDimensions({ width: img.width, height: img.height });
+        const dimensions = { width: img.width, height: img.height };
+        setImageDimensions(dimensions);
+        onImageDimensionsChange?.(dimensions);
         onImageSelect(file);
       };
       
@@ -114,10 +159,12 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
     const { width, height, naturalWidth, naturalHeight } = e.currentTarget;
     
     // Store natural dimensions for validation
-    setImageDimensions({
+    const dimensions = {
       width: naturalWidth,
       height: naturalHeight
-    });
+    };
+    setImageDimensions(dimensions);
+    onImageDimensionsChange?.(dimensions);
     
     // Check if image is too small for processing
     if (naturalWidth < REQUIRED_MIN_DIMENSION || naturalHeight < REQUIRED_MIN_DIMENSION) {
@@ -129,20 +176,9 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
       setErrorMessage(null);
     }
     
-    // Calculate initial crop
-    if (aspectRatio) {
-      const initialCrop = centerAspectCrop(width, height, aspectRatio);
-      setCrop(initialCrop);
-    } else {
-      // For non-aspect ratio crops
-      setCrop({
-        unit: '%' as const,
-        width: 80,
-        height: 80,
-        x: 10,
-        y: 10
-      });
-    }
+    // Calculate initial crop using maximized square approach
+    const initialCrop = createMaximizedSquareCrop(width, height);
+    setCrop(initialCrop);
   };
 
   // Enforce minimum crop size in pixels directly
@@ -176,14 +212,15 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
       }
       
       // If we have an aspect ratio, ensure it's maintained
-      if (aspectRatio) {
+      const effectiveRatio = getMaximizedSquareAspectRatio();
+      if (effectiveRatio) {
         // Determine which dimension is controlling
-        if (adjustedCrop.width / adjustedCrop.height > aspectRatio) {
+        if (adjustedCrop.width / adjustedCrop.height > effectiveRatio) {
           // Width is controlling, adjust height
-          adjustedCrop.height = adjustedCrop.width / aspectRatio;
+          adjustedCrop.height = adjustedCrop.width / effectiveRatio;
         } else {
           // Height is controlling, adjust width
-          adjustedCrop.width = adjustedCrop.height * aspectRatio;
+          adjustedCrop.width = adjustedCrop.height * effectiveRatio;
         }
       }
       
@@ -435,7 +472,7 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
                 crop={crop}
                 onChange={(p, pc) => handleCropChange(p, pc)}
                 onComplete={handleCropComplete}
-                aspect={aspectRatio}
+                aspect={getMaximizedSquareAspectRatio()}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
