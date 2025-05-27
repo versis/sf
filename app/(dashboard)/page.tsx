@@ -1324,7 +1324,7 @@ export default function HomePage() {
         onChange={handleHiddenFileInputChange}
         style={{ display: 'none' }}
       />
-      <div className="w-full max-w-6xl space-y-6" ref={resultRef}>
+      <div className="w-full max-w-6xl space-y-4" ref={resultRef}>
         <header className="py-4 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
             <a href="/" onClick={(e) => { e.preventDefault(); resetWizard(); }} className="flex items-center justify-center cursor-pointer">
@@ -1343,7 +1343,7 @@ export default function HomePage() {
         </header>
 
         {/* Hero Section Text & Example Card */}
-        <section className="w-full md:pt-1 md:pb-2 py-3">
+        <section className="w-full md:pt-1 md:pb-8 py-3">
           <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6"> {/* Removed md:items-end */}
             {/* Left Column: Text - takes 2/5ths */}
             <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
@@ -1508,9 +1508,9 @@ export default function HomePage() {
         {wizardVisible && (
           <div ref={wizardSectionRef}> {/* REF MOVED HERE - to new parent div for whole wizard section */}
             {/* HR Separator and Title for Wizard Section - now part of the ref'd element */}
-            <hr className="w-full border-t-2 border-foreground my-3" />
+            <hr className="w-full border-t-2 border-foreground mt-1 mb-3" />
             <div className="w-full flex flex-col items-start my-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-left mt-2"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-left mt-8 mb-4"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
             </div>
             
             {/* Container for the wizard steps grid - REF REMOVED FROM HERE */}
