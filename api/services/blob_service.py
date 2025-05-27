@@ -57,6 +57,7 @@ class BlobService:
     def upload_multiple_images(
         self,
         images: List[Dict[str, Union[bytes, str, Dict]]],
+        use_parallel: bool = True
     ) -> Dict[str, Dict[str, str]]:
         """
         Upload multiple images to Vercel Blob storage.
@@ -68,42 +69,101 @@ class BlobService:
                    - 'filename': str - The filename to use
                    - 'content_type': str - Optional MIME type (default: image/png)
                    - 'orientation': str - Optional orientation identifier (e.g., 'horizontal', 'vertical')
+            use_parallel: Whether to upload images in parallel (default: True for performance)
         
         Returns:
             Dict mapping orientation keys to image URLs and metadata
         """
         try:
-            log(f"Attempting to upload {len(images)} images to Vercel Blob sequentially")
-            results_by_orientation = {}
+            upload_method = "in parallel" if use_parallel else "sequentially"
+            log(f"Attempting to upload {len(images)} images to Vercel Blob {upload_method}")
             
-            for image_info in images:
-                data = image_info.get('data')
-                filename = image_info.get('filename')
-                content_type = image_info.get('content_type', 'image/png')
-                orientation = image_info.get('orientation', 'default')
+            if use_parallel:
+                return self._upload_images_parallel(images)
+            else:
+                return self._upload_images_sequential(images)
                 
-                if not data or not filename:
-                    error(f"Missing required data or filename for an image in batch upload. Orientation: {orientation}. Skipping.")
-                    continue
-                
-                try:
-                    upload_result = self.upload_image(data, filename, content_type)
-                    results_by_orientation[orientation] = upload_result
-                    log(f"Successfully uploaded image for orientation '{orientation}': {upload_result['url']}")
-                except Exception as upload_err:
-                    error(f"Failed to upload image for orientation '{orientation}' (filename: {filename}): {str(upload_err)}")
-            
-            if not results_by_orientation and images: 
-                raise Exception("Failed to upload any images from the batch.")
-                
-            log(f"Successfully processed batch upload. {len(results_by_orientation)} images uploaded.")
-            return results_by_orientation
-            
         except Exception as e:
             error_detail = f"Failed to upload multiple images: {str(e)}"
             error(error_detail)
             error(traceback.format_exc())
             raise Exception(error_detail)
+    
+    def _upload_images_sequential(self, images: List[Dict[str, Union[bytes, str, Dict]]]) -> Dict[str, Dict[str, str]]:
+        """Upload images one by one (original method)."""
+        results_by_orientation = {}
+        
+        for image_info in images:
+            data = image_info.get('data')
+            filename = image_info.get('filename')
+            content_type = image_info.get('content_type', 'image/png')
+            orientation = image_info.get('orientation', 'default')
+            
+            if not data or not filename:
+                error(f"Missing required data or filename for an image in batch upload. Orientation: {orientation}. Skipping.")
+                continue
+            
+            try:
+                upload_result = self.upload_image(data, filename, content_type)
+                results_by_orientation[orientation] = upload_result
+                log(f"Successfully uploaded image for orientation '{orientation}': {upload_result['url']}")
+            except Exception as upload_err:
+                error(f"Failed to upload image for orientation '{orientation}' (filename: {filename}): {str(upload_err)}")
+        
+        if not results_by_orientation and images: 
+            raise Exception("Failed to upload any images from the batch.")
+            
+        log(f"Successfully processed sequential batch upload. {len(results_by_orientation)} images uploaded.")
+        return results_by_orientation
+    
+    def _upload_images_parallel(self, images: List[Dict[str, Union[bytes, str, Dict]]]) -> Dict[str, Dict[str, str]]:
+        """Upload images in parallel using ThreadPoolExecutor."""
+        import concurrent.futures
+        import threading
+        
+        results_by_orientation = {}
+        results_lock = threading.Lock()
+        
+        def upload_single_image(image_info):
+            """Upload a single image and return the result."""
+            data = image_info.get('data')
+            filename = image_info.get('filename')
+            content_type = image_info.get('content_type', 'image/png')
+            orientation = image_info.get('orientation', 'default')
+            
+            if not data or not filename:
+                error(f"Missing required data or filename for an image in parallel upload. Orientation: {orientation}.")
+                return None, orientation, "Missing data or filename"
+            
+            try:
+                upload_result = self.upload_image(data, filename, content_type)
+                log(f"Successfully uploaded image for orientation '{orientation}': {upload_result['url']}")
+                return upload_result, orientation, None
+            except Exception as upload_err:
+                error_msg = f"Failed to upload image for orientation '{orientation}' (filename: {filename}): {str(upload_err)}"
+                error(error_msg)
+                return None, orientation, error_msg
+        
+        # Use ThreadPoolExecutor for parallel uploads
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all upload tasks
+            future_to_image = {executor.submit(upload_single_image, img): img for img in images}
+            
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_image):
+                upload_result, orientation, error_msg = future.result()
+                
+                if upload_result is not None:
+                    with results_lock:
+                        results_by_orientation[orientation] = upload_result
+                else:
+                    error(f"Parallel upload failed for orientation '{orientation}': {error_msg}")
+        
+        if not results_by_orientation and images:
+            raise Exception("Failed to upload any images from the parallel batch.")
+            
+        log(f"Successfully processed parallel batch upload. {len(results_by_orientation)} images uploaded.")
+        return results_by_orientation
 
     # _upload_single_image_with_orientation was removed previously.
     

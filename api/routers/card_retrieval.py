@@ -93,14 +93,32 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
     original_extended_id = extended_id_slug.replace('-', ' ').upper()
     info(f"Converted slug to original format for query: {original_extended_id}")
     
+    # PERFORMANCE OPTIMIZATION: Try to extract ID and query by primary key first
+    from ..utils.id_utils import extract_id_from_extended_id
+    
+    db_id = extract_id_from_extended_id(original_extended_id)
+    
     try:
-        db_response = (
-            supabase_client.table("card_generations")
-            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
-            .eq("extended_id", original_extended_id) # Query directly on extended_id
-            .single()
-            .execute()
-        )
+        if db_id is not None:
+            # Fast path: Query by primary key ID
+            info(f"Using optimized ID-based query for db_id: {db_id}")
+            db_response = (
+                supabase_client.table("card_generations")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .eq("id", db_id)
+                .single()
+                .execute()
+            )
+        else:
+            # Fallback: Query by extended_id (slower but backward compatible)
+            info(f"Using fallback extended_id query for: {original_extended_id}")
+            db_response = (
+                supabase_client.table("card_generations")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .eq("extended_id", original_extended_id) # Query directly on extended_id
+                .single()
+                .execute()
+            )
 
         if not db_response.data:
             warning(f"No card found for original_extended_id: {original_extended_id} (derived from slug: {extended_id_slug})")

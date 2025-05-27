@@ -43,6 +43,29 @@ interface CardDataFromDB {
   updated_at: string;
 }
 
+// Utility function to extract ID from extended_id
+function extractIdFromExtendedId(extendedId: string): number | null {
+  if (!extendedId || typeof extendedId !== 'string') {
+    return null;
+  }
+  
+  try {
+    const parts = extendedId.trim().split(' ');
+    if (parts.length < 3) {
+      return null;
+    }
+    
+    const paddedId = parts[0];
+    if (!/^\d+$/.test(paddedId)) {
+      return null;
+    }
+    
+    return parseInt(paddedId, 10);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { extended_id: string } }
@@ -59,13 +82,32 @@ export async function GET(
   }
 
   try {
-    // console.log(`Fetching card with extended_id: ${extended_id}`);
-
-    const { data, error } = await supabase
-      .from('card_generations') // Your table name
-      .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
-      .eq('extended_id', extended_id)
-      .single(); // Expecting only one record for a unique extended_id
+    // PERFORMANCE OPTIMIZATION: Try to extract ID and query by primary key first
+    const dbId = extractIdFromExtendedId(extended_id);
+    
+    let data, error;
+    
+    if (dbId !== null) {
+      // Fast path: Query by primary key ID
+      console.log(`[API Route] Using optimized ID-based query for db_id: ${dbId}`);
+      const response = await supabase
+        .from('card_generations')
+        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
+        .eq('id', dbId)
+        .single();
+      data = response.data;
+      error = response.error;
+    } else {
+      // Fallback: Query by extended_id (slower but backward compatible)
+      console.log(`[API Route] Using fallback extended_id query for: ${extended_id}`);
+      const response = await supabase
+        .from('card_generations')
+        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
+        .eq('extended_id', extended_id)
+        .single();
+      data = response.data;
+      error = response.error;
+    }
 
     if (error) {
       console.error('Supabase error:', error);
