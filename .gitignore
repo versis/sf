@@ -41,3 +41,6 @@ next-env.d.ts
 
 # PyCharm IDE
 .idea
+
+# Hero card cache (generated at build time)
+/public/hero-cache/

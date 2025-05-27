@@ -9,6 +9,8 @@
     "next-dev": "next dev",
     "dev": "concurrently \"npm run next-dev\" \"npm run fastapi-dev\"",
     "debug": "concurrently \"npm run next-dev\" \"npm run fastapi-debug\"",
+    "cache-hero-cards": "node scripts/cache-hero-cards.js",
+    "prebuild": "npm run cache-hero-cards",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

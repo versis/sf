@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(extended_ids),
+      body: JSON.stringify({ extended_ids }),
     });
 
     if (!apiResponse.ok) {
@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
         const card = cardData as any;
         transformedCards[extendedId] = {
           id: extendedId,
-          v: card.frontVerticalImageUrl || null,
-          h: card.frontHorizontalImageUrl || null,
-          bv: card.backVerticalImageUrl || null,
-          bh: card.backHorizontalImageUrl || null,
+          v: card.front_vertical_image_url || null,
+          h: card.front_horizontal_image_url || null,
+          bv: card.back_vertical_image_url || null,
+          bh: card.back_horizontal_image_url || null,
         };
       } else {
         transformedCards[extendedId] = null;

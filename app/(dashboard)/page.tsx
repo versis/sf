@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Save, SkipForward, PenSquare, /*ChevronDown, ChevronUp,*/ UploadCloud, Wand2, Eye, RotateCcw,
   Copy, Check, Share2, Download, AlertTriangle, MoreHorizontal, X, ExternalLink,
   Image as ImageIcon, Trash2, Info, SquareArrowOutUpRight, Undo2, BookOpenText, ImagePlus } from 'lucide-react';
-import * as exifr from 'exifr'; // Import exifr for client-side EXIF extraction
+// Dynamic import for EXIFR to avoid SSR issues and reduce bundle warnings
 
 // Define types for wizard steps
 type WizardStepName = 'upload' | 'crop' | 'color' | 'results';
@@ -33,17 +33,10 @@ const DUMMY_MESSAGES = [
 const CHAR_TYPING_SPEED_MS = 30;
 const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
-// User-provided IDs (ensure these are correct and exist in your DB)
-const HERO_EXAMPLE_CARD_EXTENDED_IDS = [
-  "000000228 FE F",
-  "000000229 FE F",
-  "000000216 FE F",
-  "000000225 FE F",
-  "000000206 FE F",
-  "000000221 FE F",
-  "000000222 FE F",
-  "000000236 FE F"
-];
+import { HERO_CARD_IDS } from '@/lib/heroCardConfig';
+
+// Use centralized hero card configuration
+const HERO_EXAMPLE_CARD_EXTENDED_IDS = HERO_CARD_IDS;
 const SWIPE_THRESHOLD = 50;
 
 export default function HomePage() {
@@ -139,7 +132,11 @@ export default function HomePage() {
   }> => {
     try {
       console.log(`[EXIF] Starting EXIF extraction for file: ${file.name}`);
-      const exifData = await exifr.parse(file, {
+      
+      // Dynamic import to avoid SSR issues and reduce bundle warnings
+      const { parse } = await import('exifr');
+      
+      const exifData = await parse(file, {
         gps: true, exif: true, tiff: true, icc: false, iptc: false, jfif: false, ihdr: false
       });
       console.log('[EXIF] Raw EXIF data:', exifData);
@@ -269,33 +266,78 @@ export default function HomePage() {
 
   useEffect(() => {
     let isMounted = true;
-    const fetchFirstHeroCard = async () => {
+    
+    const loadHeroCards = async () => {
       if (HERO_EXAMPLE_CARD_EXTENDED_IDS.length === 0) {
         setHeroCardsLoading(false);
         setFetchedHeroCards([]);
         return;
       }
+      
       setHeroCardsLoading(true);
-      const firstId = HERO_EXAMPLE_CARD_EXTENDED_IDS[0];
+      console.log('[Hero Cards] Loading from cache...');
+      
       try {
-        const encodedExtendedId = encodeURIComponent(firstId);
-        const response = await fetch(`/api/retrieve-card-by-extended-id/${encodedExtendedId}`);
-        if (!response.ok) throw new Error('Failed to fetch first hero card');
-        const data = await response.json();
-        const firstCard = {
-          id: firstId,
-          v: data.frontVerticalImageUrl || null,
-          h: data.frontHorizontalImageUrl || null,
-          bv: data.backVerticalImageUrl || null,
-          bh: data.backHorizontalImageUrl || null,
-        };
+        // Try to load from local cache first
+        const manifestResponse = await fetch('/hero-cache/manifest.json');
+        
+        if (manifestResponse.ok) {
+          const manifest = await manifestResponse.json();
+          console.log('[Hero Cards] Using cached manifest');
+          
+          if (isMounted) {
+            // Transform manifest to expected format, maintaining order
+            const orderedCards = HERO_EXAMPLE_CARD_EXTENDED_IDS
+              .map(extendedId => manifest[extendedId])
+              .filter(card => card !== null && card !== undefined && (card.v || card.h));
+
+            console.log('[Hero Cards] Loaded', orderedCards.length, 'cards from cache');
+            
+            setFetchedHeroCards(orderedCards);
+            setHeroCardsLoading(false);
+          }
+        } else {
+          // Fallback to API if cache not available
+          console.log('[Hero Cards] Cache not available, falling back to API');
+          await fetchHeroCardsFromAPI();
+        }
+      } catch (error) {
+        console.error('[Hero Cards] Cache load failed, falling back to API:', error);
         if (isMounted) {
-          setFetchedHeroCards([firstCard]);
+          await fetchHeroCardsFromAPI();
+        }
+      }
+    };
+
+    const fetchHeroCardsFromAPI = async () => {
+      try {
+        const response = await fetch('/api/batch-retrieve-cards', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ extended_ids: HERO_EXAMPLE_CARD_EXTENDED_IDS }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API fetch failed: ${response.status}`);
+        }
+
+        const batchResult = await response.json();
+        console.log('[Hero Cards] API fetch completed');
+
+        if (isMounted) {
+          const orderedCards = HERO_EXAMPLE_CARD_EXTENDED_IDS
+            .map(extendedId => batchResult.cards[extendedId])
+            .filter(card => card !== null && card !== undefined && (card.v || card.h));
+
+          console.log('[Hero Cards] Processed', orderedCards.length, 'cards from API');
+          
+          setFetchedHeroCards(orderedCards);
           setHeroCardsLoading(false);
         }
-        // Start fetching the rest in the background
-        fetchRemainingHeroCards();
       } catch (error) {
+        console.error('[Hero Cards] API fetch failed:', error);
         if (isMounted) {
           setFetchedHeroCards([]);
           setHeroCardsLoading(false);
@@ -303,42 +345,7 @@ export default function HomePage() {
       }
     };
 
-    const fetchRemainingHeroCards = async () => {
-      const remainingIds = HERO_EXAMPLE_CARD_EXTENDED_IDS.slice(1);
-      const cardDataPromises = remainingIds.map(async (extendedId) => {
-        try {
-          const encodedExtendedId = encodeURIComponent(extendedId);
-          const response = await fetch(`/api/retrieve-card-by-extended-id/${encodedExtendedId}`);
-          if (!response.ok) return null;
-          const data = await response.json();
-          return {
-            id: extendedId,
-            v: data.frontVerticalImageUrl || null,
-            h: data.frontHorizontalImageUrl || null,
-            bv: data.backVerticalImageUrl || null,
-            bh: data.backHorizontalImageUrl || null,
-          };
-        } catch {
-          return null;
-        }
-      });
-      const results = await Promise.all(cardDataPromises);
-      const filteredResults = results.filter(card => card !== null && (card.v || card.h));
-      if (isMounted) {
-        setFetchedHeroCards(prev => {
-          // Avoid duplicates if user reloads quickly
-          const existingIds = new Set(prev.map(card => card.id));
-          // Filter out nulls and only add new cards
-          const newCards = filteredResults.filter(card => card && !existingIds.has(card.id));
-          return [
-            ...prev,
-            ...newCards as Array<{ id: string; v: string | null; h: string | null; bv: string | null; bh: string | null }> // type assertion for safety
-          ];
-        });
-      }
-    };
-
-    fetchFirstHeroCard();
+    loadHeroCards();
     return () => { isMounted = false; };
   }, []);
 
@@ -1459,27 +1466,31 @@ export default function HomePage() {
                 {/* Numbered pagination was here, moved below the wrapper div */}
               </div>
 
-              {/* New Numbered Pagination - Moved here, below the card image container and its wrapper */}
-              {fetchedHeroCards.length > 1 && (
+              {/* New Numbered Pagination - Show immediately based on expected cards */}
+              {HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 1 && (
                 <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
-                  {fetchedHeroCards.map((_, index) => {
+                  {HERO_EXAMPLE_CARD_EXTENDED_IDS.map((_, index) => {
                     // A button looks "pressed/selected" if it's either the current selection OR currently being pressed
                     const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
+                    // Disable button if cards are still loading or if the specific card failed to load
+                    const isDisabled = isAnimating || heroCardsLoading || (fetchedHeroCards.length > 0 && index >= fetchedHeroCards.length);
                     
                     return (
                       <button
                         key={`page-btn-${index}`}
-                        onMouseDown={() => handleButtonMouseDown(index)}
+                        onMouseDown={() => !isDisabled && handleButtonMouseDown(index)}
                         onMouseUp={handleButtonMouseUp}
                         onMouseLeave={handleButtonMouseLeave}
-                        className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                          ${isPressed
+                        className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-150
+                          ${isDisabled
+                            ? 'opacity-50 cursor-not-allowed bg-background text-foreground shadow-[1px_1px_0_0_theme(colors.foreground)]'
+                            : isPressed
                             ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]'
                             : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)]'
                           }
                         `}
                         aria-label={`Go to card ${index + 1}`}
-                        disabled={isAnimating}
+                        disabled={isDisabled}
                       >
                         {index + 1}
                       </button>

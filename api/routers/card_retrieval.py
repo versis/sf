@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client as SupabaseClient
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ..config import SUPABASE_URL, SUPABASE_SERVICE_KEY # Assuming these are in your config
 from ..utils.logger import info, warning, error
@@ -19,7 +19,6 @@ else:
 # Define a Pydantic model for the response for better validation and OpenAPI docs
 # This should match the CardDetails interface in app/color/[id]/page.tsx
 from pydantic import BaseModel, Field
-from typing import Optional
 
 class CardDetailsResponse(BaseModel):
     id: Optional[int] = None
@@ -51,13 +50,18 @@ class BatchCardResponse(BaseModel):
     """Response for batch card retrieval."""
     cards: Dict[str, Optional[CardDetailsResponse]]  # Maps extended_id to card data (or None if not found)
     
+# Removed caching for simplicity
+
+class BatchRetrieveRequest(BaseModel):
+    extended_ids: List[str]
+
 @router.post("/batch-retrieve-cards", response_model=BatchCardResponse)
-async def batch_retrieve_cards(extended_ids: List[str]):
+async def batch_retrieve_cards(request: BatchRetrieveRequest):
     """
     Retrieve multiple cards by their extended IDs in a single optimized query.
     
     Args:
-        extended_ids: List of extended IDs to retrieve
+        request: Request containing list of extended IDs to retrieve
         
     Returns:
         Dict mapping each extended_id to its card data (or None if not found)
@@ -65,6 +69,7 @@ async def batch_retrieve_cards(extended_ids: List[str]):
     if not supabase_client:
         raise HTTPException(status_code=503, detail="Database service unavailable.")
 
+    extended_ids = request.extended_ids
     if not extended_ids:
         return BatchCardResponse(cards={})
 
@@ -175,6 +180,7 @@ async def batch_retrieve_cards(extended_ids: List[str]):
             final_results[extended_id] = results.get(extended_id)
 
         info(f"Batch retrieval complete. Found {len([r for r in final_results.values() if r is not None])}/{len(extended_ids)} cards")
+        
         return BatchCardResponse(cards=final_results)
 
     except Exception as e:
