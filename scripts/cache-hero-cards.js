@@ -39,7 +39,29 @@ function loadHeroCardIds() {
 const HERO_CARD_IDS = loadHeroCardIds();
 
 const CACHE_DIR = path.join(process.cwd(), 'public', 'hero-cache');
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+
+// Smart API URL detection for different environments
+function getApiBaseUrl() {
+  // Production build on Vercel - use the deployed URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Custom production URL (can be set in Vercel environment variables)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Legacy environment variable
+  if (process.env.API_BASE_URL) {
+    return process.env.API_BASE_URL;
+  }
+  
+  // Development fallback
+  return 'http://localhost:8000';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Ensure cache directory exists
 function ensureCacheDir() {
@@ -84,6 +106,7 @@ function downloadImage(url, filename) {
 // Fetch hero card data from API
 async function fetchHeroCards() {
   console.log('🔍 Fetching hero card data...');
+  console.log(`🌐 Using API URL: ${API_BASE_URL}`);
   
   const response = await fetch(`${API_BASE_URL}/api/batch-retrieve-cards`, {
     method: 'POST',
@@ -94,7 +117,7 @@ async function fetchHeroCards() {
   });
   
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
   
   const data = await response.json();
@@ -134,6 +157,7 @@ function getCacheSize() {
 async function cacheHeroCards() {
   try {
     console.log('🚀 Starting hero card caching...');
+    console.log(`🏗️  Build environment: ${process.env.VERCEL ? 'Vercel' : 'Local'}`);
     
     // Step 1: Prepare cache directory
     ensureCacheDir();
@@ -220,7 +244,28 @@ async function cacheHeroCards() {
     console.log(`💾 Total cache size: ${getCacheSize()} MB`);
     
   } catch (error) {
-    console.error('❌ Error caching hero cards:', error);
+    console.error('❌ Error caching hero cards:', error.message);
+    
+    // In build environments, don't fail the build - just warn and continue
+    if (process.env.VERCEL || process.env.CI) {
+      console.warn('⚠️  Caching failed during build, but continuing...');
+      console.warn('🔄 Runtime API fallback will be used for hero cards');
+      console.warn('💡 To enable pre-caching, ensure API is accessible during build');
+      
+      // Create empty cache directory so the build doesn't fail looking for it
+      try {
+        ensureCacheDir();
+        fs.writeFileSync(path.join(CACHE_DIR, 'manifest.json'), '{}');
+        console.log('📝 Created empty manifest for fallback behavior');
+      } catch (fallbackError) {
+        console.warn('⚠️  Could not create fallback manifest:', fallbackError.message);
+      }
+      
+      return; // Don't exit, let build continue
+    }
+    
+    // In development, exit with error for debugging
+    console.error('💥 Exiting due to caching error in development environment');
     process.exit(1);
   }
 }
