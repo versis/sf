@@ -303,9 +303,7 @@ export default function ColorCardPage() {
                   )}
                   .
                   <br />
-                  It began with an everyday photo. A standout colour was tapped, our
-                  fine-tuned AI read the scene, named the shade, and wrote a one-line fortune
-                  for the front. If there’s a note on the back, that’s the creator’s personal
+                  It began with an everyday photo. A standout colour was tapped, our fine-tuned AI studied the scene, named the shade, and served a tiny story on the card. If there’s a note on the back, that’s the creator’s personal
                   touch.
                 </p>
 
