@@ -1,58 +1,44 @@
 {
-  "000000228 FE F": {
-    "id": "000000228 FE F",
-    "v": "/hero-cache/000000228_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000228_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000228_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000228_FE_F_back_horizontal.png"
+  "000000473 FE F": {
+    "id": "000000473 FE F",
+    "v": "/hero-cache/000000473_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000473_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000473_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000473_FE_F_back_horizontal.png"
   },
-  "000000229 FE F": {
-    "id": "000000229 FE F",
-    "v": "/hero-cache/000000229_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000229_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000229_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000229_FE_F_back_horizontal.png"
+  "000000475 FE F": {
+    "id": "000000475 FE F",
+    "v": "/hero-cache/000000475_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000475_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000475_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000475_FE_F_back_horizontal.png"
   },
-  "000000216 FE F": {
-    "id": "000000216 FE F",
-    "v": "/hero-cache/000000216_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000216_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000216_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000216_FE_F_back_horizontal.png"
+  "000000485 FE F": {
+    "id": "000000485 FE F",
+    "v": "/hero-cache/000000485_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000485_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000485_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000485_FE_F_back_horizontal.png"
   },
-  "000000225 FE F": {
-    "id": "000000225 FE F",
-    "v": "/hero-cache/000000225_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000225_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000225_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000225_FE_F_back_horizontal.png"
+  "000000516 FE F": {
+    "id": "000000516 FE F",
+    "v": "/hero-cache/000000516_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000516_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000516_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000516_FE_F_back_horizontal.png"
   },
-  "000000206 FE F": {
-    "id": "000000206 FE F",
-    "v": "/hero-cache/000000206_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000206_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000206_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000206_FE_F_back_horizontal.png"
+  "000000512 FE F": {
+    "id": "000000512 FE F",
+    "v": "/hero-cache/000000512_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000512_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000512_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000512_FE_F_back_horizontal.png"
   },
-  "000000221 FE F": {
-    "id": "000000221 FE F",
-    "v": "/hero-cache/000000221_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000221_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000221_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000221_FE_F_back_horizontal.png"
-  },
-  "000000222 FE F": {
-    "id": "000000222 FE F",
-    "v": "/hero-cache/000000222_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000222_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000222_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000222_FE_F_back_horizontal.png"
-  },
-  "000000236 FE F": {
-    "id": "000000236 FE F",
-    "v": "/hero-cache/000000236_FE_F_front_vertical.png",
-    "h": "/hero-cache/000000236_FE_F_front_horizontal.png",
-    "bv": "/hero-cache/000000236_FE_F_back_vertical.png",
-    "bh": "/hero-cache/000000236_FE_F_back_horizontal.png"
+  "000000518 FE F": {
+    "id": "000000518 FE F",
+    "v": "/hero-cache/000000518_FE_F_front_vertical.png",
+    "h": "/hero-cache/000000518_FE_F_front_horizontal.png",
+    "bv": "/hero-cache/000000518_FE_F_back_vertical.png",
+    "bh": "/hero-cache/000000518_FE_F_back_horizontal.png"
   }
 }
