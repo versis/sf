@@ -158,6 +158,58 @@ This project involves several layers where timeouts can occur. Here's a summary 
 
 It is recommended to keep these timeouts aligned, with client timeouts being slightly less than server/function timeouts to allow for graceful error handling.
 
+## Hero Card Cache Generation
+
+For optimal performance, hero cards are pre-cached locally and committed to the repository. This eliminates API calls during page load and provides instant hero card display.
+
+### Generating Hero Card Cache
+
+When hero cards change or you need to update the cache:
+
+1. **Start the local API server**:
+   ```bash
+   npm run fastapi-dev
+   ```
+
+2. **Generate the cache**:
+   ```bash
+   npm run generate-hero-cache
+   ```
+
+3. **Commit the cache files**:
+   ```bash
+   git add public/hero-cache
+   git commit -m "Update hero card cache"
+   ```
+
+4. **Deploy to production** (cache files are served statically)
+
+### How It Works
+
+- **Local Generation**: The `generate-hero-cache` script fetches hero card data from your local API and downloads all images
+- **Static Serving**: Cache files are committed to git and served directly by Vercel
+- **Zero Build Dependencies**: No API calls needed during Vercel build process
+- **Instant Loading**: Hero cards load immediately from cached files
+
+### Cache Structure
+
+```
+public/hero-cache/
+├── manifest.json                           # Image path mappings
+├── 000000XXX_FE_F_front_vertical.png      # Card images
+├── 000000XXX_FE_F_front_horizontal.png
+├── 000000XXX_FE_F_back_vertical.png
+└── 000000XXX_FE_F_back_horizontal.png
+```
+
+### When to Regenerate Cache
+
+- When hero card IDs change in `lib/heroCardConfig.ts`
+- When card images are updated in the database
+- When adding new hero cards to the rotation
+
+The frontend automatically falls back to API calls if cache is unavailable, ensuring robust operation.
+
 ## Learn More
 
 To learn more about the AI SDK or Next.js by Vercel, take a look at the following resources:

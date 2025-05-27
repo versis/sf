@@ -5,8 +5,12 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
+console.log('🎯 Hero Card Cache Generator');
+console.log('📝 This script generates hero card cache for faster loading');
+console.log('⚠️  Requirements: Local FastAPI server must be running on localhost:8000');
+console.log('');
+
 // Import hero card configuration from centralized source
-// Since this is a Node.js script, we need to read the TypeScript file and extract the array
 function loadHeroCardIds() {
   try {
     const configPath = path.join(process.cwd(), 'lib', 'heroCardConfig.ts');
@@ -37,31 +41,8 @@ function loadHeroCardIds() {
 }
 
 const HERO_CARD_IDS = loadHeroCardIds();
-
 const CACHE_DIR = path.join(process.cwd(), 'public', 'hero-cache');
-
-// Smart API URL detection for different environments
-function getApiBaseUrl() {
-  // Production build on Vercel - use the deployed URL
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  
-  // Custom production URL (can be set in Vercel environment variables)
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  // Legacy environment variable
-  if (process.env.API_BASE_URL) {
-    return process.env.API_BASE_URL;
-  }
-  
-  // Development fallback
-  return 'http://localhost:8000';
-}
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = 'http://localhost:8000';
 
 // Ensure cache directory exists
 function ensureCacheDir() {
@@ -103,10 +84,32 @@ function downloadImage(url, filename) {
   });
 }
 
+// Check if local API server is running
+async function checkApiServer() {
+  console.log('🔍 Checking if local API server is running...');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/docs`);
+    if (response.ok) {
+      console.log('✅ Local FastAPI server is running');
+      return true;
+    } else {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('❌ Local FastAPI server is not running or not accessible');
+    console.error('🚀 Please start the server first:');
+    console.error('   npm run fastapi-dev');
+    console.error('');
+    console.error('📍 Then run this script again:');
+    console.error('   npm run generate-hero-cache');
+    process.exit(1);
+  }
+}
+
 // Fetch hero card data from API
 async function fetchHeroCards() {
-  console.log('🔍 Fetching hero card data...');
-  console.log(`🌐 Using API URL: ${API_BASE_URL}`);
+  console.log('🔍 Fetching hero card data from local API...');
   
   const response = await fetch(`${API_BASE_URL}/api/batch-retrieve-cards`, {
     method: 'POST',
@@ -124,14 +127,6 @@ async function fetchHeroCards() {
   console.log(`📊 Fetched data for ${Object.keys(data.cards).length} cards`);
   
   return data.cards;
-}
-
-// Generate safe filename from URL
-function getFilenameFromUrl(url, prefix = '') {
-  const urlObj = new URL(url);
-  const pathname = urlObj.pathname;
-  const filename = path.basename(pathname);
-  return prefix ? `${prefix}_${filename}` : filename;
 }
 
 // Calculate total cache size in MB
@@ -153,19 +148,21 @@ function getCacheSize() {
   }
 }
 
-// Main caching function
-async function cacheHeroCards() {
+// Main cache generation function
+async function generateHeroCache() {
   try {
-    console.log('🚀 Starting hero card caching...');
-    console.log(`🏗️  Build environment: ${process.env.VERCEL ? 'Vercel' : 'Local'}`);
+    console.log('🚀 Starting hero card cache generation...');
     
-    // Step 1: Prepare cache directory
+    // Step 1: Check if API server is running
+    await checkApiServer();
+    
+    // Step 2: Prepare cache directory
     ensureCacheDir();
     
-    // Step 2: Fetch card data
+    // Step 3: Fetch card data
     const cards = await fetchHeroCards();
     
-    // Step 3: Download images
+    // Step 4: Download images
     const downloadPromises = [];
     const cardManifest = {};
     
@@ -232,47 +229,39 @@ async function cacheHeroCards() {
     // Wait for all downloads to complete
     await Promise.all(downloadPromises);
     
-    // Step 4: Save manifest
+    // Step 5: Save manifest
     const manifestPath = path.join(CACHE_DIR, 'manifest.json');
     fs.writeFileSync(manifestPath, JSON.stringify(cardManifest, null, 2));
     console.log('📋 Saved card manifest:', manifestPath);
     
-    console.log('🎉 Hero card caching completed successfully!');
+    console.log('');
+    console.log('🎉 Hero card cache generation completed successfully!');
     console.log(`📁 Cache location: ${CACHE_DIR}`);
     console.log(`🃏 Cached ${Object.keys(cardManifest).length} cards`);
     console.log(`🖼️  Downloaded ${downloadPromises.length} images`);
     console.log(`💾 Total cache size: ${getCacheSize()} MB`);
+    console.log('');
+    console.log('📝 Next steps:');
+    console.log('   1. Review the generated cache files');
+    console.log('   2. Commit the cache to git:');
+    console.log('      git add public/hero-cache');
+    console.log('      git commit -m "Update hero card cache"');
+    console.log('   3. Deploy to production');
     
   } catch (error) {
-    console.error('❌ Error caching hero cards:', error.message);
-    
-    // In build environments, don't fail the build - just warn and continue
-    if (process.env.VERCEL || process.env.CI) {
-      console.warn('⚠️  Caching failed during build, but continuing...');
-      console.warn('🔄 Runtime API fallback will be used for hero cards');
-      console.warn('💡 To enable pre-caching, ensure API is accessible during build');
-      
-      // Create empty cache directory so the build doesn't fail looking for it
-      try {
-        ensureCacheDir();
-        fs.writeFileSync(path.join(CACHE_DIR, 'manifest.json'), '{}');
-        console.log('📝 Created empty manifest for fallback behavior');
-      } catch (fallbackError) {
-        console.warn('⚠️  Could not create fallback manifest:', fallbackError.message);
-      }
-      
-      return; // Don't exit, let build continue
-    }
-    
-    // In development, exit with error for debugging
-    console.error('💥 Exiting due to caching error in development environment');
+    console.error('❌ Error generating hero card cache:', error.message);
+    console.error('');
+    console.error('🔧 Troubleshooting:');
+    console.error('   1. Ensure FastAPI server is running: npm run fastapi-dev');
+    console.error('   2. Check that hero cards exist in the database');
+    console.error('   3. Verify network connectivity');
     process.exit(1);
   }
 }
 
 // Run if called directly
 if (require.main === module) {
-  cacheHeroCards();
+  generateHeroCache();
 }
 
-module.exports = { cacheHeroCards }; 
+module.exports = { generateHeroCache }; 
