@@ -112,7 +112,16 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
       const { width, height } = imgRef.current;
       const newCrop = createMaximizedSquareCrop(width, height);
       setCrop(newCrop);
-      setPixelCrop(undefined); // Reset pixel crop to trigger recalculation
+      
+      // Also set pixel crop so button remains visible
+      const newPixelCrop: PixelCrop = {
+        x: (newCrop.x / 100) * width,
+        y: (newCrop.y / 100) * height,
+        width: (newCrop.width / 100) * width,
+        height: (newCrop.height / 100) * height,
+        unit: 'px'
+      };
+      setPixelCrop(newPixelCrop);
     }
   }, [imageDimensions, showCropper]);
 
@@ -179,6 +188,16 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
     // Calculate initial crop using maximized square approach
     const initialCrop = createMaximizedSquareCrop(width, height);
     setCrop(initialCrop);
+    
+    // Also set initial pixel crop so button appears immediately
+    const initialPixelCrop: PixelCrop = {
+      x: (initialCrop.x / 100) * width,
+      y: (initialCrop.y / 100) * height,
+      width: (initialCrop.width / 100) * width,
+      height: (initialCrop.height / 100) * height,
+      unit: 'px'
+    };
+    setPixelCrop(initialPixelCrop);
   };
 
   // Enforce minimum crop size in pixels directly
@@ -482,7 +501,7 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
                   onLoad={onImageLoad}
                   style={{ 
                     maxWidth: '100%', 
-                    maxHeight: '650px', 
+                    maxHeight: '500px',
                     objectFit: 'contain'
                   }}
                   className="border border-foreground" 
@@ -491,23 +510,8 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
             </div>
           </div>
           
-          {errorMessage && (
-            <div className="text-sm mt-2 p-2 border border-red-400 rounded bg-red-50 text-red-700">
-              <svg xmlns="http://www.w3.org/2000/svg" className="inline-block mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              {errorMessage}
-            </div>
-          )}
-          
-          {processingMessage && !errorMessage && (
-            <div className="text-sm mt-2 p-2 border border-foreground rounded bg-secondary">
-              {processingMessage}
-            </div>
-          )}
-          
           {pixelCrop && imgRef.current && (
-            <div className="mt-4 flex justify-center">
+            <div className="w-full flex justify-center">
               <button
                 type="button"
                 onClick={getCroppedImg}
@@ -517,6 +521,21 @@ const ImageUpload = forwardRef<HTMLInputElement, ImageUploadProps>(({
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 {isCompressing ? 'Processing...' : 'Continue with this square'}
               </button>
+            </div>
+          )}
+          
+          {errorMessage && (
+            <div className="text-sm p-2 border border-red-400 rounded bg-red-50 text-red-700 w-full max-w-md">
+              <svg xmlns="http://www.w3.org/2000/svg" className="inline-block mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              {errorMessage}
+            </div>
+          )}
+          
+          {processingMessage && !errorMessage && (
+            <div className="text-sm p-2 border border-foreground rounded bg-secondary w-full max-w-md text-center">
+              {processingMessage}
             </div>
           )}
         </div>
