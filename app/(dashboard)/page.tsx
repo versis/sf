@@ -1397,7 +1397,7 @@ export default function HomePage() {
                   ref={heroImageContainerRef}
                   className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-11/12 mx-auto' : 'w-full'}`}
                   style={{
-                    aspectRatio: isMobile ? '1/2' : '80/33', // Use stable aspect ratio for mobile, adjusted for vertical cards
+                    aspectRatio: isMobile ? '1/2' : '2/1', // Changed from '80/33' to '2/1' to better match card proportions
                   }}
                 >
                   <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
