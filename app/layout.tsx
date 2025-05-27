@@ -7,8 +7,24 @@ import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
-  title: "shadefreude: turn your everyday moments into extraordinary AI postcards | part of tinker.institute",
-  description: "Upload a photo from your everyday life, pick a color you love, and watch as AI transforms it into a poetic digital postcard. The shade you choose earns its own evocative title and mini-story, while you add a personal note on the back—turning an ordinary snap into a share-worthy memento.",
+  title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
+  description: "/ Polaroid vibes. / AI brains. / No cringe. — Pick a colour and watch AI flip your snap into a digital postcard with its own name and one-line insight.",
+  alternates: {
+    canonical: "https://sf.tinker.institute/"
+  },
+  openGraph: {
+    title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
+    description: "/ Polaroid vibes. / AI brains. / No cringe. — AI turns any photo into a share-ready postcard with a custom colour name and witty note.",
+    type: "website",
+    url: "https://sf.tinker.institute/",
+    // images: "https://sf.tinker.institute/og-preview.jpg" // Commented out - image doesn't exist
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
+    description: "/ Polaroid vibes. / AI brains. / No cringe. — Snap, pick a colour, get a postcard with its own story.",
+    // images: "https://sf.tinker.institute/og-preview.jpg" // Commented out - image doesn't exist
+  },
   icons: [
     { rel: "icon", url: "/sf-icon.png" },
     { rel: "apple-touch-icon", url: "/sf-icon.png" },
