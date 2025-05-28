@@ -1329,7 +1329,7 @@ export default function HomePage() {
   };
 
   return (
-    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-2 pb-6 md:pt-3 md:px-4 md:pb-12 bg-background text-foreground focus:outline-none"> {/* Reduced padding from px-6 md:px-12 to px-2 md:px-4 */}
+    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-4 pb-6 md:pt-3 md:px-4 md:pb-12 bg-background text-foreground focus:outline-none"> {/* Reduced padding from px-6 md:px-12 to px-2 md:px-4 */}
       {/* Hidden file input that's always present */}
       <input
         ref={hiddenFileInputRef}
