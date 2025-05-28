@@ -17,13 +17,20 @@ export const metadata: Metadata = {
     description: "/ Polaroid vibes. / AI brains. / No cringe. — AI turns any photo into a share-ready postcard with a custom colour name and witty note.",
     type: "website",
     url: "https://sf.tinker.institute/",
-    // images: "https://sf.tinker.institute/og-preview.jpg" // Commented out - image doesn't exist
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "shadefreude Open Graph Image",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
     description: "/ Polaroid vibes. / AI brains. / No cringe. — Snap, pick a colour, get a postcard with its own story.",
-    // images: "https://sf.tinker.institute/og-preview.jpg" // Commented out - image doesn't exist
+    images: ["/og.png"],
   },
   icons: [
     { rel: "icon", url: "/sf-icon.png" },
