@@ -252,7 +252,7 @@ export default function ColorCardPage() {
           <div 
             ref={combinedRefCallback} // Use our combined ref callback
             {...eventHandlersToSpread} // Spread only the event handlers
-            className={`w-full flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing ${!isMobile && currentDisplayOrientation === 'vertical' ? 'md:max-w-xs lg:max-w-sm' : ''}`}
+            className={`${isMobile ? 'w-10/12 mx-auto' : 'w-full'} flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing ${!isMobile && currentDisplayOrientation === 'vertical' ? 'md:max-w-xs lg:max-w-sm' : ''}`}
           >
             <CardDisplay
               isVisible={!loading && !error && !!cardDetails}
@@ -293,7 +293,7 @@ export default function ColorCardPage() {
 
               <div className="text-md text-muted-foreground space-y-3">
                 <p>
-                  You’re looking at an AI-crafted postcard from <i>shadefreude</i>&nbsp;
+                  You're looking at an AI-crafted postcard from <i>shadefreude</i>&nbsp;
                   titled:&nbsp;
                   {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
                     <span className="font-mono">
@@ -303,7 +303,7 @@ export default function ColorCardPage() {
                   )}
                   .
                   <br />
-                  It began with an everyday photo. A standout colour was tapped, our fine-tuned AI studied the scene, named the shade, and served a tiny story on the card. If there’s a note on the back, that’s the creator’s personal
+                  It began with an everyday photo. A standout colour was tapped, our fine-tuned AI studied the scene, named the shade, and served a tiny story on the card. If there's a note on the back, that's the creator's personal
                   touch.
                 </p>
 
