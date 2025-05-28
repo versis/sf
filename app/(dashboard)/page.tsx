@@ -1395,7 +1395,7 @@ export default function HomePage() {
                 {/* Card Image Container */}
                 <div
                   ref={heroImageContainerRef}
-                  className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-11/12 mx-auto' : 'w-full'}`}
+                  className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-10/12 mx-auto' : 'w-full'}`}
                   style={{
                     aspectRatio: isMobile ? '1/2' : '2/1', // Changed from '80/33' to '2/1' to better match card proportions
                   }}
