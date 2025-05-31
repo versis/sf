@@ -21,6 +21,33 @@ export function formatCardDate(isoString: string): string {
 }
 
 /**
+ * Formats an ISO timestamp for description: "March 16, 2025 at 14:33"
+ */
+export function formatDescriptionDate(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(/(\w+ \d+, \d+) at (\d+:\d+)/, '$1 at $2');
+  } catch (error) {
+    console.error('Error formatting description date:', error);
+    return new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(/(\w+ \d+, \d+) at (\d+:\d+)/, '$1 at $2');
+  }
+}
+
+/**
  * Generates a personalized title for the card page
  */
 export function generateCardTitle(location?: string, createdAt?: string, noteText?: string): string {
@@ -50,10 +77,10 @@ export function generateCardDescription(extendedId: string, noteText?: string, c
   let description = '';
   
   if (createdAt) {
-    const formattedDate = formatCardDate(createdAt);
-    description = `Posted: ${formattedDate} | shadefreude`;
+    const formattedDate = formatDescriptionDate(createdAt);
+    description = `Stamped and posted on ${formattedDate}`;
   } else {
-    description = 'shadefreude';
+    description = 'A personalized color postcard';
   }
   
   return description;
