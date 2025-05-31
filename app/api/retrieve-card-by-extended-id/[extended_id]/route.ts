@@ -31,6 +31,10 @@ interface CardDataFromDB {
       article?: string;
       description?: string;
     };
+    exif_data_extracted?: {
+      photo_date?: string;
+      photo_location_country?: string;
+    };
     // Add other metadata fields you might want to return
   };
   front_horizontal_image_url?: string;
@@ -150,6 +154,11 @@ export async function GET(
       ai_description: cardRecord.metadata?.ai_info?.description,
       created_at: cardRecord.created_at,
       updated_at: cardRecord.updated_at,
+      // Add EXIF metadata for personalized sharing
+      photo_date: cardRecord.metadata?.exif_data_extracted?.photo_date,
+      photo_location: cardRecord.metadata?.exif_data_extracted?.photo_location_country,
+      // Include full metadata for utility functions
+      metadata: cardRecord.metadata,
     };
 
     return NextResponse.json(responsePayload);

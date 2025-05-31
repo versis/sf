@@ -1,322 +1,155 @@
-'use client';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import ClientCardPage from './ClientCardPage';
+import { generateCardMetadata } from './utils';
 
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation'; // Added useRouter
-import Link from 'next/link'; // Re-added Link import for the header
-import CardDisplay from '@/components/CardDisplay'; // Import the new component
-import { useSwipeable, type SwipeableHandlers } from 'react-swipeable'; // Added SwipeableHandlers type
-import { copyTextToClipboard } from '@/lib/clipboardUtils';
-import { shareOrCopy } from '@/lib/shareUtils';
-import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
-
-interface CardDetails {
-  // API sends snake_case for these due to direct DB mapping or Pydantic alias behavior with by_alias=True in some contexts
-  // However, the FastAPI response_model_by_alias=False means it uses Pydantic model field names (camelCase)
-  extendedId?: string;        // FastAPI CardDetailsResponse uses extendedId (model field name)
-  hexColor?: string;          // FastAPI CardDetailsResponse uses hexColor
-  card_name?: string;         // This is constructed in the FastAPI route, using this key name
-  status?: string;            // FastAPI CardDetailsResponse uses status
-  frontHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses frontHorizontalImageUrl
-  frontVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses frontVerticalImageUrl
-  noteText?: string;                // FastAPI CardDetailsResponse uses noteText
-  hasNote?: boolean;                // FastAPI CardDetailsResponse uses hasNote
-  backHorizontalImageUrl?: string; // FastAPI CardDetailsResponse uses backHorizontalImageUrl
-  backVerticalImageUrl?: string;   // FastAPI CardDetailsResponse uses backVerticalImageUrl
-  aiName?: string;                  // FastAPI CardDetailsResponse uses aiName
-  aiPhonetic?: string;              // FastAPI CardDetailsResponse uses aiPhonetic
-  aiArticle?: string;               // FastAPI CardDetailsResponse uses aiArticle
-  aiDescription?: string;           // FastAPI CardDetailsResponse uses aiDescription
-  createdAt?: string;               // FastAPI CardDetailsResponse uses createdAt
-  updatedAt?: string;               // FastAPI CardDetailsResponse uses updatedAt
+interface CardDetailsFromAPI {
+  id?: number;
+  extended_id?: string;
+  hex_color?: string;
+  card_name?: string;
+  status?: string;
+  front_horizontal_image_url?: string;
+  front_vertical_image_url?: string;
+  note_text?: string;
+  has_note?: boolean;
+  back_horizontal_image_url?: string;
+  back_vertical_image_url?: string;
+  ai_name?: string;
+  ai_phonetic?: string;
+  ai_article?: string;
+  ai_description?: string;
+  created_at?: string;
+  updated_at?: string;
+  photo_date?: string;
+  photo_location?: string;
+  metadata?: any;
 }
 
-export default function ColorCardPage() {
-  const params = useParams();
-  const router = useRouter(); // Initialize router
-  const idFromUrl = params && typeof params.id === 'string' ? params.id : null;
+// Fetch card data server-side
+async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3000'
+        : 'https://sf.tinker.institute';
+    
+    const response = await fetch(`${baseUrl}/api/retrieve-card-by-extended-id/${id}`, {
+      cache: 'no-store', // Ensure fresh data for metadata generation
+    });
 
-  const [id, setId] = useState<string | null>(null);
-  const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
-  const [loading, setLoading] = useState(true); // Start loading true
-  const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
-  const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
-  const [shareFeedback, setShareFeedback] = useState<string>('');
-  const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>(''); // State for copy URL feedback
-  const cardDisplaySectionRef = useRef<HTMLDivElement>(null); // Ref for scrolling to the card display
-  const [isFlipped, setIsFlipped] = useState(false); // Added for card flip state
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null); // Added for swipe direction
-
-  const handleFlip = () => {
-    if (cardDetails?.hasNote === false || cardDetails?.backHorizontalImageUrl || cardDetails?.backVerticalImageUrl) {
-      setIsFlipped(!isFlipped);
+    if (!response.ok) {
+      console.error(`Failed to fetch card data: ${response.status} ${response.statusText}`);
+      return null;
     }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching card data:', error);
+    return null;
+  }
+}
+
+// Convert API response to client component props
+function transformCardData(apiData: CardDetailsFromAPI): any {
+  return {
+    extendedId: apiData.extended_id,
+    hexColor: apiData.hex_color,
+    card_name: apiData.card_name,
+    status: apiData.status,
+    frontHorizontalImageUrl: apiData.front_horizontal_image_url,
+    frontVerticalImageUrl: apiData.front_vertical_image_url,
+    noteText: apiData.note_text,
+    hasNote: apiData.has_note,
+    backHorizontalImageUrl: apiData.back_horizontal_image_url,
+    backVerticalImageUrl: apiData.back_vertical_image_url,
+    aiName: apiData.ai_name,
+    aiPhonetic: apiData.ai_phonetic,
+    aiArticle: apiData.ai_article,
+    aiDescription: apiData.ai_description,
+    createdAt: apiData.created_at,
+    updatedAt: apiData.updated_at,
+    photoDate: apiData.photo_date,
+    photoLocation: apiData.photo_location,
+    metadata: apiData.metadata,
   };
+}
 
-  const swipeableElementRef = useRef<HTMLDivElement>(null);
+// Generate dynamic metadata for each card
+export async function generateMetadata(
+  { params }: { params: { id: string } }
+): Promise<Metadata> {
+  const cardData = await fetchCardData(params.id);
+  
+  if (!cardData) {
+    return {
+      title: 'Card Not Found - shadefreude',
+      description: 'The requested color card could not be found.',
+    };
+  }
 
-  // Get all handlers from useSwipeable, including its ref callback
-  const allSwipeableHandlers: SwipeableHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      setSwipeDirection('left');
-      handleFlip();
-    },
-    onSwipedRight: () => {
-      setSwipeDirection('right');
-      handleFlip();
-    },
-    preventScrollOnSwipe: true,
-    trackMouse: true,
+  // Generate dynamic metadata using our utility functions
+  const metadata = generateCardMetadata({
+    extended_id: cardData.extended_id || params.id,
+    note_text: cardData.note_text,
+    front_horizontal_image_url: cardData.front_horizontal_image_url,
+    front_vertical_image_url: cardData.front_vertical_image_url,
+    created_at: cardData.created_at || new Date().toISOString(),
+    metadata: cardData.metadata,
   });
 
-  // Separate the ref callback from the other event handlers
-  const { ref: swipeableHookRef, ...eventHandlersToSpread } = allSwipeableHandlers;
+  const cardName = cardData.card_name || 'Color Card';
+  const baseUrl = 'https://sf.tinker.institute';
+  const cardUrl = `${baseUrl}/color/${params.id}`;
 
-  // Custom ref callback to assign the node to both our local ref and react-swipeable's ref
-  const combinedRefCallback = (node: HTMLDivElement | null) => {
-    if (typeof swipeableHookRef === 'function') {
-      swipeableHookRef(node);
-    }
-    (swipeableElementRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  };
-  
-  // Detect if user is on mobile for initial orientation
-  useEffect(() => {
-    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
-
-  // Effect to update 'id' state and reset dependent states when idFromUrl (from router) changes
-  useEffect(() => {
-    if (idFromUrl) {
-      setId(idFromUrl);
-      setCardDetails(null); // Clear previous card details
-      setError(null);       // Clear previous error
-      setLoading(true);     // Set loading for the new ID
-    } else {
-      // Handle case where idFromUrl is not valid (e.g., bad URL directly accessed)
-      setId(null);
-      setError("Invalid card ID in URL.");
-      setLoading(false);
-    }
-  }, [idFromUrl]); // Depend only on idFromUrl from the router
-
-  // Effect to fetch data when 'id' state is set and valid
-  useEffect(() => {
-    if (id && loading) {
-      const fetchCardDetails = async () => {
-        setLoading(true);
-        try {
-          const response = await fetch(`/api/retrieve-card-by-extended-id/${id}`);
-          if (!response.ok) {
-            let errorMsg = `Error fetching card details: ${response.status}`;
-            try {
-                const errorData = await response.json();
-                errorMsg = errorData.detail || errorMsg;
-            } catch (jsonError) { /* Stick with status error */ }
-            throw new Error(errorMsg);
-          }
-          const data: CardDetails = await response.json();
-          setCardDetails(data);
-          
-          let initialOrientation: 'horizontal' | 'vertical';
-          if (isMobile && data.frontVerticalImageUrl) {
-            initialOrientation = 'vertical';
-          } else if (data.frontHorizontalImageUrl) {
-            initialOrientation = 'horizontal';
-          } else if (data.frontVerticalImageUrl) {
-            initialOrientation = 'vertical';
-          } else {
-            initialOrientation = 'horizontal'; // Default
-          }
-          setCurrentDisplayOrientation(initialOrientation);
-          setError(null);
-          // Scroll to card display after data is loaded and orientation set
-          // Ensure this happens after the DOM has a chance to update with the CardDisplay component
-          // setTimeout(() => {
-          //   swipeableElementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // }, 150); // Adjusted delay slightly
-
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'An unknown error occurred');
-          setCardDetails(null);
-        } finally {
-            setLoading(false);
+  return {
+    title: metadata.title,
+    description: metadata.description,
+    openGraph: {
+      title: metadata.title,
+      description: metadata.description,
+      url: cardUrl,
+      siteName: 'shadefreude',
+      images: metadata.imageUrl ? [
+        {
+          url: metadata.imageUrl,
+          width: 1400,
+          height: 700,
+          alt: `${cardName} - shadefreude Color Card`,
         }
-      };
-      fetchCardDetails();
-    }
-  }, [id, isMobile, loading]);
-
-  // handleDownload function to be passed to CardDisplay
-  const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
-    const imageUrl = orientation === 'horizontal' 
-      ? cardDetails?.frontHorizontalImageUrl 
-      : cardDetails?.frontVerticalImageUrl;
-    
-    if (!imageUrl || !cardDetails) return;
-
-    const filename = `shadefreude-${orientation}-${cardDetails.hexColor?.substring(1) || 'color'}-${cardDetails.card_name?.toLowerCase().replace(/\s+/g, '-') || 'card'}.png`;
-    const downloadApiUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
-    window.location.href = downloadApiUrl;
+      ] : [],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: metadata.title,
+      description: metadata.description,
+      images: metadata.imageUrl ? [metadata.imageUrl] : [],
+    },
+    alternates: {
+      canonical: cardUrl,
+    },
   };
+}
 
-  // handleShare function to be passed to CardDisplay
-  const handleShareAction = async () => {
-    if (!idFromUrl) {
-        setShareFeedback('Card ID not available for sharing.');
-        setTimeout(() => setShareFeedback(''), 3000);
-        return;
-    }
-    const shareUrl = `https://sf.tinker.institute/color/${idFromUrl}`;
-    const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
-    const shareData = {
-      title: cardDetails?.card_name ? `shadefreude: ${cardDetails.card_name}` : 'shadefreude Color Card',
-      text: shareMessage,
-      url: shareUrl,
-    };
+// Server component
+export default async function ColorCardPage({ params }: { params: { id: string } }) {
+  const cardData = await fetchCardData(params.id);
 
-    await shareOrCopy(shareData, shareMessage, {
-      onShareSuccess: (message) => setShareFeedback(message),
-      onCopySuccess: (message) => setShareFeedback(message), // Use setShareFeedback for copy fallback as well
-      onShareError: (message) => setShareFeedback(message),
-      onCopyError: (message) => setShareFeedback(message),
-      copySuccessMessage: 'Share message with link copied to clipboard!',
-    });
-    setTimeout(() => setShareFeedback(''), 3000);
-    setCopyUrlFeedback(''); // Clear other feedback
-  };
-
-  // handleCopyPageUrl function to be passed to CardDisplay as handleCopyGeneratedUrl
-  const handleCopyLinkAction = async () => {
-    if (!idFromUrl) {
-      setCopyUrlFeedback('Cannot copy URL: Card ID missing.');
-      setTimeout(() => setCopyUrlFeedback(''), 3000);
-      return;
-    }
-    const urlToCopy = window.location.href;
-    await copyTextToClipboard(urlToCopy, {
-        onSuccess: (message) => setCopyUrlFeedback(message),
-        onError: (message) => setCopyUrlFeedback(message),
-        successMessage: COPY_SUCCESS_MESSAGE,
-    });
-    setTimeout(() => setCopyUrlFeedback(''), 3000);
-    setShareFeedback(''); // Clear other feedback
-  };
-
-  // New handler for the "Create New Card" button from CardDisplay
-  const navigateToHome = () => {
-    router.push('/');
-  };
-
-  if (!idFromUrl && !loading && !error) { // If idFromUrl is null and we are not in an initial loading/error state for it
-    return <div className="flex justify-center items-center min-h-screen text-red-500">Invalid URL or Card ID.</div>;
+  if (!cardData) {
+    notFound();
   }
 
-  if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading card...</div>;
-  }
-
-  if (error) {
-    return <div className="flex justify-center items-center min-h-screen text-red-500">Error: {error}</div>;
-  }
-
-  if (!cardDetails) {
-    return <div className="flex justify-center items-center min-h-screen">Card not found.</div>;
-  }
+  // Transform the API data to match client component expectations
+  const clientCardData = transformCardData(cardData);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground">
-      <div className="w-full max-w-6xl">
-        <header className="py-6 border-b-2 border-foreground">
-          <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
-            <Link href="/" className="flex items-center justify-center cursor-pointer">
-              <span className="mr-1 ml-1">
-                <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
-                shade
-              </span>
-              <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
-                freude
-              </span>
-            </Link>
-          </h1>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
-          </p>
-        </header>
-        
-        {/* Use a flex container with explicit order to ensure consistent layout */}
-        <div className="flex flex-col items-center w-full mt-6">
-          <div 
-            ref={combinedRefCallback} // Use our combined ref callback
-            {...eventHandlersToSpread} // Spread only the event handlers
-            className={`${isMobile ? 'w-10/12 mx-auto' : 'w-full'} flex flex-col items-center justify-center order-1 cursor-grab active:cursor-grabbing ${!isMobile && currentDisplayOrientation === 'vertical' ? 'md:max-w-xs lg:max-w-sm' : ''}`}
-          >
-            <CardDisplay
-              isVisible={!loading && !error && !!cardDetails}
-              frontHorizontalImageUrl={cardDetails?.frontHorizontalImageUrl || null}
-              frontVerticalImageUrl={cardDetails?.frontVerticalImageUrl || null}
-              backHorizontalImageUrl={cardDetails?.backHorizontalImageUrl || null}
-              backVerticalImageUrl={cardDetails?.backVerticalImageUrl || null}
-              noteText={cardDetails?.noteText || null}
-              hasNote={cardDetails?.hasNote || false}
-              isFlippable={true}
-              isFlipped={isFlipped}
-              onFlip={handleFlip}
-              currentDisplayOrientation={currentDisplayOrientation}
-              setCurrentDisplayOrientation={setCurrentDisplayOrientation}
-              handleShare={handleShareAction} 
-              handleCopyGeneratedUrl={handleCopyLinkAction}
-              handleDownloadImage={handleDownloadImage}
-              handleCreateNew={navigateToHome}
-              isGenerating={false}
-              generatedExtendedId={id}
-              shareFeedback={shareFeedback}
-              copyUrlFeedback={copyUrlFeedback}
-              disableScrollOnLoad={true}
-              swipeDirection={swipeDirection}
-              hexColor={cardDetails?.hexColor}
-              createdAt={cardDetails?.createdAt}
-              isMobile={isMobile}
-            />
-          </div>
-          
-          <hr className="w-full border-t-2 border-foreground my-6 order-3" />
-
-          <div className="w-full order-4 mt-4">
-            <div className="max-w-4xl mx-auto">
-              <h3 className="text-xl font-semibold mb-3 text-left">
-                First time here?
-              </h3>
-
-              <div className="text-md text-muted-foreground space-y-3">
-                <p>
-                  You&apos;re looking at an AI-crafted postcard from <i>shadefreude</i>&nbsp;
-                  titled:&nbsp;
-                  {cardDetails && (cardDetails.card_name || cardDetails.hexColor) && (
-                    <span className="font-mono">
-                      {cardDetails.card_name ? `${cardDetails.card_name} ` : ''}
-                      {cardDetails.hexColor && `(${cardDetails.hexColor})`}
-                    </span>
-                  )}
-                  .
-                  <br />
-                  It began with an everyday photo. A standout colour was tapped, our fine-tuned AI studied the scene, named the shade, and served a tiny story on the card. If there&apos;s a note on the back, that&apos;s the creator&apos;s personal
-                  touch.
-                </p>
-
-                <p>
-                  <Link href="/" className="underline hover:text-foreground">
-                    Make your own AI postcard&nbsp;→
-                  </Link>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+    <ClientCardPage
+      cardData={clientCardData}
+      cardId={params.id}
+      loading={false}
+      error={null}
+    />
   );
 } 
