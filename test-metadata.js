@@ -19,6 +19,8 @@ function generateCardTitle(location, createdAt) {
   
   if (location) {
     title += ` from ${location}!`;
+  } else {
+    title += '!';
   }
   
   if (createdAt) {
