@@ -74,6 +74,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [currentOrientation, setCurrentOrientation] = useState<"horizontal" | "vertical">(currentDisplayOrientation);
 
+  // Sync local state with prop changes (for responsive display)
+  useEffect(() => {
+    setCurrentOrientation(currentDisplayOrientation);
+  }, [currentDisplayOrientation]);
+
   const flipperBaseClasses = "card-flipper";
   // const flipperAspectRatio = currentOrientation === 'horizontal' ? 'aspect-[2/1]' : 'aspect-[1/2]'; // REMOVED
   // const verticalMaxHeightClass = currentOrientation === 'vertical' ? 'max-h-[80vh]' : ''; // Intentionally commented out
