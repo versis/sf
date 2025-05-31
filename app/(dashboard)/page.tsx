@@ -1334,7 +1334,7 @@ export default function HomePage() {
   };
 
   return (
-    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-4 pb-6 md:pt-3 md:px-4 md:pb-12 bg-background text-foreground focus:outline-none"> {/* Reduced padding from px-6 md:px-12 to px-2 md:px-4 */}
+    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-4 pb-6 md:pt-3 md:px-4 md:pb-12 bg-background text-foreground focus:outline-none">
       {/* Hidden file input that's always present */}
       <input
         ref={hiddenFileInputRef}
@@ -1363,9 +1363,9 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         <section className="w-full md:pt-1 md:pb-8 py-3">
-          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-5 md:items-center"> {/* Added md:items-center to align grid items */}
+          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-5 md:items-center">
             {/* Left Column: Text - takes 2/5ths */}
-            <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
+            <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col">
               {/* Wrapper for text content that should grow */}
               <div className="flex-grow">
                 <h2 className="text-3xl md:text-4xl lg:text-4xl font-bold mb-2 md:mt-6 text-foreground">
@@ -1379,9 +1379,9 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Container for "Create Your Card" Button - Adjusted for alignment and mobile spacing */}
-              <div className="mt-6"> {/* Simplified this wrapper */}
-                <div className="mb-4 md:mb-0 flex justify-center"> {/* Changed md:justify-start to justify-center for desktop centering */}
+              {/* Container for "Create Your Card" Button */}
+              <div className="mt-6">
+                <div className="mb-4 md:mb-0 flex justify-center">
                   <button
                     onClick={handleCreateYourCardClick}
                     className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center md:w-auto rounded-md"
@@ -1394,15 +1394,15 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative"> {/* Changed md:items-start to md:items-center for horizontal centering too */}
-              {/* Wrapper for card image (and formerly mobile dots) */}
-              <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}> {/* Added justify-center for mobile */}
+            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative">
+              {/* Wrapper for card image */}
+              <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}>
                 {/* Card Image Container */}
                 <div
                   ref={heroImageContainerRef}
                   className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-10/12 mx-auto' : 'w-full'}`}
                   style={{
-                    aspectRatio: isMobile ? '1/2' : '2/1', // Changed from '80/33' to '2/1' to better match card proportions
+                    aspectRatio: isMobile ? '1/2' : '2/1',
                   }}
                 >
                   <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
@@ -1427,7 +1427,6 @@ export default function HomePage() {
                               alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
                               className={`w-full h-full rounded-lg object-contain example-card-image ${primaryImage.animationClass} mx-auto`}
                               style={{
-                                // transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined, // Removed
                                 zIndex: 10, 
                                 position: 'relative',
                                 visibility: isHeroCardFlipped ? 'hidden' : 'visible'
@@ -1485,16 +1484,13 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-                {/* Numbered pagination was here, moved below the wrapper div */}
               </div>
 
-              {/* New Numbered Pagination - Show immediately based on expected cards */}
+              {/* New Numbered Pagination */}
               {HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 1 && (
                 <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
                   {HERO_EXAMPLE_CARD_EXTENDED_IDS.map((_, index) => {
-                    // A button looks "pressed/selected" if it's either the current selection OR currently being pressed
                     const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
-                    // Disable button if cards are still loading or if the specific card failed to load
                     const isDisabled = isAnimating || heroCardsLoading || (fetchedHeroCards.length > 0 && index >= fetchedHeroCards.length);
                     
                     return (
@@ -1525,14 +1521,12 @@ export default function HomePage() {
         </section>
 
         {wizardVisible && (
-          <div ref={wizardSectionRef}> {/* REF MOVED HERE - to new parent div for whole wizard section */}
-            {/* HR Separator and Title for Wizard Section - now part of the ref'd element */}
+          <div ref={wizardSectionRef}>
             <hr className="w-full border-t-2 border-foreground mt-1 mb-3" />
             <div className="w-full flex flex-col items-start my-2">
               <h2 className="text-2xl md:text-3xl font-bold text-left mt-8 mb-4"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
             </div>
             
-            {/* Container for the wizard steps grid - REF REMOVED FROM HERE */}
             <div className={'grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-4'}>
               <section className="w-full bg-card text-card-foreground border-2 border-foreground space-y-0 flex flex-col">
                 <WizardStep 
@@ -1564,13 +1558,13 @@ export default function HomePage() {
                 >
                     {!isGenerating && (
                       <ImageUpload 
-                        onImageSelect={() => {}} // No-op since we're not handling file selection here
+                        onImageSelect={() => {}}
                         onImageCropped={handleCroppedImage} 
                         showUploader={false}
                         showCropper={true}
                         initialPreviewUrl={uploadStepPreviewUrl}
                         currentFileName={selectedFileName}
-                        aspectRatio={aspectRatio} // Pass the aspect ratio to the cropper
+                        aspectRatio={aspectRatio}
                         onImageDimensionsChange={handleImageDimensionsChange}
                         key={`cropper-${uploadStepPreviewUrl}`}
                       />
@@ -1610,7 +1604,7 @@ export default function HomePage() {
                         className={`px-4 py-2 md:px-6 md:py-3 bg-input text-blue-700 font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center gap-2 
                             ${(!croppedImageDataUrl || !selectedHexColor || !userHasInteractedWithColor || isGenerating) ? 
                               'opacity-60 cursor-not-allowed shadow-none text-muted-foreground border-muted-foreground' : 
-                              '' // Active styles (already part of the base string)
+                              ''
                             }`}
                         >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/></svg>
@@ -1705,11 +1699,9 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {/* Conditional Block for Note Input (or Success Message) */}
                     {!isGenerating && !generationError && isResultsStepCompleted && currentWizardStep === 'results' && (
                       <>
                         {isNoteStepActive && currentDbId ? (
-                          // If Note Step is Active: Show Card Front + Note Form
                           <div className="w-full p-1 md:p-2 space-y-4">
                             <div ref={cardDisplayControlsRef} className="w-full mx-auto mb-4">
                               {(currentDisplayOrientation === 'horizontal' && generatedHorizontalImageUrl) ? (
@@ -1722,7 +1714,6 @@ export default function HomePage() {
                                 </div>
                               )}
                             </div>
-                            {/* New wrapper for textarea and char counter */}
                             <div> 
                               <textarea
                                 value={noteText}
@@ -1737,7 +1728,7 @@ export default function HomePage() {
                                 className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
                                 aria-label="Note for the back of the card"
                               />
-                              <div className="flex items-center justify-between mt-1"> {/* Added mt-1 for slight space, removed from parent's space-y effect */}
+                              <div className="flex items-center justify-between mt-1">
                                 <p className="text-xs text-muted-foreground">
                                   {noteText.length}/500 characters
                                 </p>
@@ -1746,13 +1737,13 @@ export default function HomePage() {
                             {noteSubmissionError && (
                               <p className="text-sm text-red-500 mt-2">{noteSubmissionError}</p>
                             )}
-                            <div className="flex flex-col sm:flex-row gap-4 mt-4"> {/* Reverted container style */}
+                            <div className="flex flex-col sm:flex-row gap-4 mt-4">
                               <button
                                 onClick={() => handleNoteSubmission(noteText)}
                                 disabled={isSubmittingNote || noteText.length > 500}
                                 className="flex-1 px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                               >
-                                <PenSquare size={20} className="mr-2" /> {/* Reverted icon and text */}
+                                <PenSquare size={20} className="mr-2" />
                                 Save The Note
                               </button>
                               <button
@@ -1766,7 +1757,6 @@ export default function HomePage() {
                             </div>
                           </div>
                         ) : (
-                          // If Note Step is NOT Active (but results are complete and no error)
                           <div className="p-2 text-center">
                             <p className="text-base">Your unique shadefreude card is ready.</p>
                             <p className="text-base">Now with its own story.</p>
@@ -1775,7 +1765,6 @@ export default function HomePage() {
                       </>
                     )}
 
-                    {/* Message for when color step is done, but results not yet generated */}
                     {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
                       <div className="p-4 text-center">
                         <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
@@ -1784,17 +1773,16 @@ export default function HomePage() {
                   </WizardStep>
                 )}
               </section>
-              {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
               {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
-                            <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
-              <button
-                onClick={handleCreateNewCard}
-                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
-                title="Create New Card"
-              >
-                + Create New Card
-              </button>
-            </div>
+                <div className="mt-1 flex justify-center">
+                  <button
+                    onClick={handleCreateNewCard}
+                    className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
+                    title="Create New Card"
+                  >
+                    + Create New Card
+                  </button>
+                </div>
               )}
             </div>
           </div>
