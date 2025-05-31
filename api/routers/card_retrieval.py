@@ -40,6 +40,10 @@ class CardDetailsResponse(BaseModel):
     aiArticle: Optional[str] = Field(None, alias="ai_article")
     aiDescription: Optional[str] = Field(None, alias="ai_description")
 
+    # New EXIF data fields
+    photoDate: Optional[str] = Field(None, alias="photo_date")
+    photoLocation: Optional[str] = Field(None, alias="photo_location_country")
+
     createdAt: Optional[str] = Field(None, alias="created_at")
     updatedAt: Optional[str] = Field(None, alias="updated_at")
 
@@ -99,7 +103,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
             info(f"Using optimized batch ID query for {len(db_ids)} cards")
             db_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at")
                 .in_("id", db_ids)
                 .execute()
             )
@@ -129,6 +133,8 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
                             ai_article=metadata.get("ai_info", {}).get("article"),
                             ai_description=metadata.get("ai_info", {}).get("description"),
+                            photo_date=card_data.get("photo_date"),
+                            photo_location_country=card_data.get("photo_location_country"),
                             created_at=card_data.get("created_at"),
                             updated_at=card_data.get("updated_at")
                         )
@@ -139,7 +145,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
             info(f"Using fallback extended_id query for {len(fallback_extended_ids)} cards")
             fallback_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at")
                 .in_("extended_id", fallback_extended_ids)
                 .execute()
             )
@@ -169,6 +175,8 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
                             ai_article=metadata.get("ai_info", {}).get("article"),
                             ai_description=metadata.get("ai_info", {}).get("description"),
+                            photo_date=card_data.get("photo_date"),
+                            photo_location_country=card_data.get("photo_location_country"),
                             created_at=card_data.get("created_at"),
                             updated_at=card_data.get("updated_at")
                         )
@@ -197,7 +205,7 @@ async def get_generations(limit: int = 30, offset: int = 0):
     try:
         db_response = (
             supabase_client.table("card_generations")
-            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at")
             .order("created_at", desc=True)
             .limit(limit)
             .offset(offset)
@@ -244,7 +252,7 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
             info(f"Using optimized ID-based query for db_id: {db_id}")
             db_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at")
                 .eq("id", db_id)
                 .single()
                 .execute()
@@ -254,7 +262,7 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
             info(f"Using fallback extended_id query for: {original_extended_id}")
             db_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at")
                 .eq("extended_id", original_extended_id) # Query directly on extended_id
                 .single()
                 .execute()
@@ -287,6 +295,8 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
             ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
             ai_article=metadata.get("ai_info", {}).get("article"),
             ai_description=metadata.get("ai_info", {}).get("description"),
+            photo_date=card_data.get("photo_date"),
+            photo_location_country=card_data.get("photo_location_country"),
             created_at=card_data.get("created_at"),
             updated_at=card_data.get("updated_at")
         )
