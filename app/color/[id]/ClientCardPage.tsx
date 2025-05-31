@@ -128,19 +128,17 @@ export default function ClientCardPage({ cardData, cardId, loading = false, erro
         return;
     }
     const shareUrl = `https://sf.tinker.institute/color/${cardId}`;
-    const shareMessage = `Check this out. This is my own unique color card: ${shareUrl}`;
     const shareData = {
       title: cardData?.card_name ? `shadefreude: ${cardData.card_name}` : 'shadefreude Color Card',
-      text: shareMessage,
       url: shareUrl,
     };
 
-    await shareOrCopy(shareData, shareMessage, {
+    await shareOrCopy(shareData, shareUrl, {
       onShareSuccess: (message) => setShareFeedback(message),
       onCopySuccess: (message) => setShareFeedback(message),
       onShareError: (message) => setShareFeedback(message),
       onCopyError: (message) => setShareFeedback(message),
-      copySuccessMessage: 'Share message with link copied to clipboard!',
+      copySuccessMessage: 'URL copied to clipboard!',
     });
     setTimeout(() => setShareFeedback(''), 3000);
     setCopyUrlFeedback('');

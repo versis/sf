@@ -23,7 +23,7 @@ export function formatCardDate(isoString: string): string {
 /**
  * Generates a personalized title for the card page
  */
-export function generateCardTitle(location?: string, createdAt?: string): string {
+export function generateCardTitle(location?: string, createdAt?: string, noteText?: string): string {
   let title = 'shadefreude:';
   
   if (location) {
@@ -32,28 +32,31 @@ export function generateCardTitle(location?: string, createdAt?: string): string
     title += ` You have a new postcard!`;
   }
   
-  if (createdAt) {
-    const formattedDate = formatCardDate(createdAt);
-    title += ` — Posted: ${formattedDate}`;
+  // Add first 10 characters of note if available
+  if (noteText && noteText.trim()) {
+    const notePreview = noteText.length > 10 
+      ? noteText.substring(0, 10) + '...'
+      : noteText;
+    title += ` — ${notePreview}`;
   }
   
   return title;
 }
 
 /**
- * Generates a description for the card, prioritizing personal notes
+ * Generates a description for the card, prioritizing posted timestamp
  */
-export function generateCardDescription(extendedId: string, noteText?: string): string {
-  if (noteText && noteText.trim()) {
-    // Truncate note to 30 characters max
-    const truncatedNote = noteText.length > 30 
-      ? noteText.substring(0, 27) + "..."
-      : noteText;
-    return truncatedNote;
+export function generateCardDescription(extendedId: string, noteText?: string, createdAt?: string): string {
+  let description = '';
+  
+  if (createdAt) {
+    const formattedDate = formatCardDate(createdAt);
+    description = `Posted: ${formattedDate} | shadefreude`;
+  } else {
+    description = 'shadefreude';
   }
   
-  // Fallback description for users unfamiliar with the app
-  return "A unique AI-generated color postcard that turns everyday photos into shareable moments with custom color names and insights.";
+  return description;
 }
 
 /**
@@ -105,8 +108,8 @@ export function generateCardMetadata(cardData: {
   const photoDate = cardData.photo_date || extractPhotoDate(cardData.metadata);
   
   return {
-    title: generateCardTitle(location, cardData.created_at),
-    description: generateCardDescription(cardData.extended_id, cardData.note_text),
+    title: generateCardTitle(location, cardData.created_at, cardData.note_text),
+    description: generateCardDescription(cardData.extended_id, cardData.note_text, cardData.created_at),
     imageUrl: getOpenGraphImageUrl(cardData.front_horizontal_image_url, cardData.front_vertical_image_url),
     location,
     photoDate,
