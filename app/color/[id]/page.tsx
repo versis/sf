@@ -3,24 +3,26 @@ import { notFound } from 'next/navigation';
 import ClientCardPage from './ClientCardPage';
 import { generateCardMetadata } from './utils';
 
+// This matches the actual FastAPI response format (camelCase from the API response)
 interface CardDetailsFromAPI {
   id?: number;
-  extended_id?: string;
-  hex_color?: string;
+  extendedId?: string;
+  hexColor?: string;
   card_name?: string;
   status?: string;
-  front_horizontal_image_url?: string;
-  front_vertical_image_url?: string;
-  note_text?: string;
-  has_note?: boolean;
-  back_horizontal_image_url?: string;
-  back_vertical_image_url?: string;
-  ai_name?: string;
-  ai_phonetic?: string;
-  ai_article?: string;
-  ai_description?: string;
-  created_at?: string;
-  updated_at?: string;
+  frontHorizontalImageUrl?: string;
+  frontVerticalImageUrl?: string;
+  noteText?: string;
+  hasNote?: boolean;
+  backHorizontalImageUrl?: string;
+  backVerticalImageUrl?: string;
+  aiName?: string;
+  aiPhonetic?: string;
+  aiArticle?: string;
+  aiDescription?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // EXIF fields from FastAPI (might be missing)
   photo_date?: string;
   photo_location?: string;
   metadata?: any;
@@ -29,47 +31,83 @@ interface CardDetailsFromAPI {
 // Fetch card data server-side
 async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3000'
-        : 'https://sf.tinker.institute';
+    // Construct the base URL more reliably
+    let baseUrl: string;
     
-    const response = await fetch(`${baseUrl}/api/retrieve-card-by-extended-id/${id}`, {
+    if (process.env.VERCEL_URL) {
+      // Vercel production/preview
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    } else if (process.env.NODE_ENV === 'development') {
+      // Development mode - use the port where Next.js is running (requests will be proxied to FastAPI)
+      baseUrl = 'http://localhost:3000'; // The server is on 3000 now
+    } else {
+      // Fallback for production
+      baseUrl = 'https://sf.tinker.institute';
+    }
+    
+    const fetchUrl = `${baseUrl}/api/retrieve-card-by-extended-id/${id}`;
+    console.log(`[Server] Fetching card data from: ${fetchUrl}`);
+    
+    const response = await fetch(fetchUrl, {
       cache: 'no-store', // Ensure fresh data for metadata generation
+      headers: {
+        'User-Agent': 'NextJS-Server',
+      },
     });
 
+    console.log(`[Server] Fetch response status: ${response.status}`);
+
     if (!response.ok) {
-      console.error(`Failed to fetch card data: ${response.status} ${response.statusText}`);
+      console.error(`[Server] Failed to fetch card data: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`[Server] Error response body: ${errorText}`);
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`[Server] Raw response from FastAPI:`, data);
+
+    console.log(`[Server] Successfully fetched card data:`, {
+      id: data.id,
+      extendedId: data.extendedId,
+      hasImages: {
+        horizontal: !!data.frontHorizontalImageUrl,
+        vertical: !!data.frontVerticalImageUrl
+      }
+    });
+
+    return data;
   } catch (error) {
-    console.error('Error fetching card data:', error);
+    console.error('[Server] Error fetching card data:', error);
     return null;
   }
 }
 
 // Convert API response to client component props
 function transformCardData(apiData: CardDetailsFromAPI): any {
+  console.log('[Server] Transforming card data for client:', {
+    hasHorizontalImage: !!apiData.frontHorizontalImageUrl,
+    hasVerticalImage: !!apiData.frontVerticalImageUrl,
+    extendedId: apiData.extendedId,
+  });
+
   return {
-    extendedId: apiData.extended_id,
-    hexColor: apiData.hex_color,
+    extendedId: apiData.extendedId,
+    hexColor: apiData.hexColor,
     card_name: apiData.card_name,
     status: apiData.status,
-    frontHorizontalImageUrl: apiData.front_horizontal_image_url,
-    frontVerticalImageUrl: apiData.front_vertical_image_url,
-    noteText: apiData.note_text,
-    hasNote: apiData.has_note,
-    backHorizontalImageUrl: apiData.back_horizontal_image_url,
-    backVerticalImageUrl: apiData.back_vertical_image_url,
-    aiName: apiData.ai_name,
-    aiPhonetic: apiData.ai_phonetic,
-    aiArticle: apiData.ai_article,
-    aiDescription: apiData.ai_description,
-    createdAt: apiData.created_at,
-    updatedAt: apiData.updated_at,
+    frontHorizontalImageUrl: apiData.frontHorizontalImageUrl,
+    frontVerticalImageUrl: apiData.frontVerticalImageUrl,
+    noteText: apiData.noteText,
+    hasNote: apiData.hasNote,
+    backHorizontalImageUrl: apiData.backHorizontalImageUrl,
+    backVerticalImageUrl: apiData.backVerticalImageUrl,
+    aiName: apiData.aiName,
+    aiPhonetic: apiData.aiPhonetic,
+    aiArticle: apiData.aiArticle,
+    aiDescription: apiData.aiDescription,
+    createdAt: apiData.createdAt,
+    updatedAt: apiData.updatedAt,
     photoDate: apiData.photo_date,
     photoLocation: apiData.photo_location,
     metadata: apiData.metadata,
@@ -91,11 +129,11 @@ export async function generateMetadata(
 
   // Generate dynamic metadata using our utility functions
   const metadata = generateCardMetadata({
-    extended_id: cardData.extended_id || params.id,
-    note_text: cardData.note_text,
-    front_horizontal_image_url: cardData.front_horizontal_image_url,
-    front_vertical_image_url: cardData.front_vertical_image_url,
-    created_at: cardData.created_at || new Date().toISOString(),
+    extended_id: cardData.extendedId || params.id,
+    note_text: cardData.noteText,
+    front_horizontal_image_url: cardData.frontHorizontalImageUrl,
+    front_vertical_image_url: cardData.frontVerticalImageUrl,
+    created_at: cardData.createdAt || new Date().toISOString(),
     metadata: cardData.metadata,
   });
 
@@ -135,14 +173,24 @@ export async function generateMetadata(
 
 // Server component
 export default async function ColorCardPage({ params }: { params: { id: string } }) {
+  console.log(`[Server] Processing card page for ID: ${params.id}`);
+  
   const cardData = await fetchCardData(params.id);
 
   if (!cardData) {
+    console.log(`[Server] No card data found for ID: ${params.id}, calling notFound()`);
     notFound();
   }
 
   // Transform the API data to match client component expectations
   const clientCardData = transformCardData(cardData);
+  
+  console.log(`[Server] Final client data:`, {
+    hasData: !!clientCardData,
+    extendedId: clientCardData?.extendedId,
+    frontHorizontalImageUrl: clientCardData?.frontHorizontalImageUrl?.substring(0, 50) + '...',
+    frontVerticalImageUrl: clientCardData?.frontVerticalImageUrl?.substring(0, 50) + '...'
+  });
 
   return (
     <ClientCardPage
