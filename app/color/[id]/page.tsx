@@ -31,18 +31,7 @@ interface CardDetailsFromAPI {
 // Fetch card data server-side
 async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
   try {
-    // Construct the base URL more reliably
-    let baseUrl: string;
-    
-    if (process.env.NODE_ENV === 'development') {
-      // Development mode - use the port where Next.js is running (requests will be proxied to FastAPI)
-      baseUrl = 'http://localhost:3000';
-    } else {
-      // Production - always use custom domain to avoid Vercel authentication on auto-generated URLs
-      baseUrl = 'https://sf.tinker.institute';
-    }
-    
-    const fetchUrl = `${baseUrl}/api/retrieve-card-by-extended-id/${id}`;
+    const fetchUrl = `/api/retrieve-card-by-extended-id/${id}`;
     console.log(`[Server] Fetching card data from: ${fetchUrl}`);
     
     const response = await fetch(fetchUrl, {
