@@ -36,7 +36,7 @@ function generateCardDescription(extendedId, noteText) {
     const truncatedNote = noteText.length > 30 
       ? noteText.substring(0, 27) + "..."
       : noteText;
-    return `Card ID "${extendedId}": ${truncatedNote}`;
+    return `${truncatedNote} | ${extendedId}`;
   }
   
   return "A unique AI-generated color postcard that turns everyday photos into shareable moments with custom color names and insights.";

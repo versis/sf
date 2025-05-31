@@ -49,7 +49,7 @@ export function generateCardDescription(extendedId: string, noteText?: string): 
     const truncatedNote = noteText.length > 30 
       ? noteText.substring(0, 27) + "..."
       : noteText;
-    return `Card ID "${extendedId}": ${truncatedNote}`;
+    return `${truncatedNote} | ${extendedId}`;
   }
   
   // Fallback description for users unfamiliar with the app
@@ -103,18 +103,6 @@ export function generateCardMetadata(cardData: {
   // Prefer direct database fields over metadata extraction
   const location = cardData.photo_location || extractLocation(cardData.metadata);
   const photoDate = cardData.photo_date || extractPhotoDate(cardData.metadata);
-  
-  console.log('[Utils] Generating metadata with:', {
-    extended_id: cardData.extended_id,
-    location,
-    photoDate,
-    note_text: cardData.note_text?.substring(0, 20) + '...',
-    hasMetadata: !!cardData.metadata,
-    usingDirectFields: { 
-      location: !!cardData.photo_location, 
-      date: !!cardData.photo_date 
-    }
-  });
   
   return {
     title: generateCardTitle(location, cardData.created_at),

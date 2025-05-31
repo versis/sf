@@ -40,9 +40,9 @@ class CardDetailsResponse(BaseModel):
     aiArticle: Optional[str] = Field(None, alias="ai_article")
     aiDescription: Optional[str] = Field(None, alias="ai_description")
 
-    # New EXIF data fields
-    photoDate: Optional[str] = Field(None, alias="photo_date")
-    photoLocation: Optional[str] = Field(None, alias="photo_location_country")
+    # New EXIF data fields - use snake_case to match frontend expectations
+    photo_date: Optional[str] = None  # Direct mapping from DB column
+    photo_location: Optional[str] = None  # Will be populated from photo_location_country
 
     createdAt: Optional[str] = Field(None, alias="created_at")
     updatedAt: Optional[str] = Field(None, alias="updated_at")
@@ -134,7 +134,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             ai_article=metadata.get("ai_info", {}).get("article"),
                             ai_description=metadata.get("ai_info", {}).get("description"),
                             photo_date=card_data.get("photo_date"),
-                            photo_location_country=card_data.get("photo_location_country"),
+                            photo_location=card_data.get("photo_location_country"),
                             created_at=card_data.get("created_at"),
                             updated_at=card_data.get("updated_at")
                         )
@@ -176,7 +176,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             ai_article=metadata.get("ai_info", {}).get("article"),
                             ai_description=metadata.get("ai_info", {}).get("description"),
                             photo_date=card_data.get("photo_date"),
-                            photo_location_country=card_data.get("photo_location_country"),
+                            photo_location=card_data.get("photo_location_country"),
                             created_at=card_data.get("created_at"),
                             updated_at=card_data.get("updated_at")
                         )
@@ -296,7 +296,7 @@ async def retrieve_card_by_extended_id(extended_id_slug: str):
             ai_article=metadata.get("ai_info", {}).get("article"),
             ai_description=metadata.get("ai_info", {}).get("description"),
             photo_date=card_data.get("photo_date"),
-            photo_location_country=card_data.get("photo_location_country"),
+            photo_location=card_data.get("photo_location_country"),
             created_at=card_data.get("created_at"),
             updated_at=card_data.get("updated_at")
         )
