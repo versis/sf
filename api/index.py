@@ -77,8 +77,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS, # Use from config
     allow_credentials=True,
-    allow_methods=["POST"], # Keep this tight for now, will add PUT/GET later if other endpoints need it
-    allow_headers=["Content-Type"], # Will add X-Internal-API-Key later
+    allow_methods=["GET", "POST"], # Added GET for card retrieval endpoints
+    allow_headers=["Content-Type", "X-Internal-API-Key"], # Added X-Internal-API-Key as noted in comment
 )
 
 @app.on_event("startup")
