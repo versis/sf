@@ -34,14 +34,11 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
     // Construct the base URL more reliably
     let baseUrl: string;
     
-    if (process.env.VERCEL_URL) {
-      // Vercel production/preview
-      baseUrl = `https://${process.env.VERCEL_URL}`;
-    } else if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development') {
       // Development mode - use the port where Next.js is running (requests will be proxied to FastAPI)
-      baseUrl = 'http://localhost:3000'; // The server is on 3000 now
+      baseUrl = 'http://localhost:3000';
     } else {
-      // Fallback for production
+      // Production - always use custom domain to avoid Vercel authentication on auto-generated URLs
       baseUrl = 'https://sf.tinker.institute';
     }
     
