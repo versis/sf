@@ -72,6 +72,8 @@ async def finalize_card_generation(
     card_name: str = Form(...),
     photo_date: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
     photo_location: Optional[str] = Form(None),  # New optional field from client-side EXIF extraction
+    photo_latitude: Optional[str] = Form(None),  # GPS coordinates
+    photo_longitude: Optional[str] = Form(None),  # GPS coordinates
     user_prompt: Optional[str] = Body(None), # Stored in metadata, not currently used for AI call generation
 ):
     """
@@ -118,8 +120,8 @@ async def finalize_card_generation(
         user_image_data_url = f"data:{user_image_content_type};base64,{base64.b64encode(user_image_bytes).decode('utf-8')}"
 
         # Log the received EXIF data
-        if photo_date or photo_location:
-            log(f"Client-side EXIF data for DB ID {db_id}: Date='{photo_date}', Location='{photo_location}'", request_id=str(db_id))
+        if photo_date or photo_location or photo_latitude or photo_longitude:
+            log(f"Client-side EXIF data for DB ID {db_id}: Date='{photo_date}', Location='{photo_location}', GPS='{photo_latitude},{photo_longitude}'", request_id=str(db_id))
         else:
             log(f"No EXIF data received from client for DB ID {db_id}", request_id=str(db_id))
 
@@ -219,6 +221,19 @@ async def finalize_card_generation(
             log(f"[DEBUG] Adding photo_location_country to DB: '{photo_location}'", request_id=str(db_id))
         else:
             log(f"[DEBUG] No photo_location received from frontend for DB ID: {db_id}", request_id=str(db_id))
+
+        # Store GPS coordinates if available
+        if photo_latitude and photo_longitude:
+            try:
+                lat = float(photo_latitude)
+                lng = float(photo_longitude)
+                coordinates = {"lat": lat, "lng": lng}
+                update_payload["photo_location_coordinates"] = coordinates
+                log(f"[DEBUG] Adding photo_location_coordinates to DB: {coordinates}", request_id=str(db_id))
+            except (ValueError, TypeError) as coord_error:
+                log(f"[WARNING] Failed to parse coordinates lat='{photo_latitude}', lng='{photo_longitude}': {coord_error}", level="WARNING", request_id=str(db_id))
+        else:
+            log(f"[DEBUG] No GPS coordinates received from frontend for DB ID: {db_id}", request_id=str(db_id))
         
         if photo_date:
             log(f"[DEBUG] Processing photo_date: '{photo_date}' for DB ID: {db_id}", request_id=str(db_id))

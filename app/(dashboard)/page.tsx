@@ -751,6 +751,11 @@ export default function HomePage() {
         formData.append('photo_location', photoLocationCountry);
         console.log(`[EXIF] Adding photo_location to form: ${photoLocationCountry}`);
       }
+      if (photoLatitude !== null && photoLongitude !== null) {
+        formData.append('photo_latitude', photoLatitude.toString());
+        formData.append('photo_longitude', photoLongitude.toString());
+        console.log(`[EXIF] Adding coordinates to form: ${photoLatitude}, ${photoLongitude}`);
+      }
       // Note: We're only sending the country, not raw coordinates for privacy
 
       const finalizeResponse = await fetch(`/api/finalize-card-generation/${dbId}`, {
