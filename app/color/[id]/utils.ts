@@ -24,14 +24,16 @@ export function formatCardDate(isoString: string): string {
  * Generates a personalized title for the card page
  */
 export function generateCardTitle(location?: string, createdAt?: string): string {
-  const formattedDate = createdAt ? formatCardDate(createdAt) : '';
-  const fromLocation = location || 'an unknown location';
+  let title = 'shadefreude:';
   
-  let title = 'shadefreude: You have a new postcard';
   if (location) {
-    title += ` from ${fromLocation}!`;
+    title += ` You have a new postcard from ${location}!`;
+  } else {
+    title += ` You have a new postcard!`;
   }
+  
   if (createdAt) {
+    const formattedDate = formatCardDate(createdAt);
     title += ` Posted: ${formattedDate}`;
   }
   
@@ -47,7 +49,7 @@ export function generateCardDescription(extendedId: string, noteText?: string): 
     const truncatedNote = noteText.length > 30 
       ? noteText.substring(0, 27) + "..."
       : noteText;
-    return `Card ID ${extendedId}: ${truncatedNote}`;
+    return `Card ID "${extendedId}": ${truncatedNote}`;
   }
   
   // Fallback description for users unfamiliar with the app
@@ -94,9 +96,25 @@ export function generateCardMetadata(cardData: {
   front_vertical_image_url?: string;
   created_at: string;
   metadata?: any;
+  // New direct database fields for EXIF data
+  photo_location?: string;
+  photo_date?: string;
 }): CardMetadata {
-  const location = extractLocation(cardData.metadata);
-  const photoDate = extractPhotoDate(cardData.metadata);
+  // Prefer direct database fields over metadata extraction
+  const location = cardData.photo_location || extractLocation(cardData.metadata);
+  const photoDate = cardData.photo_date || extractPhotoDate(cardData.metadata);
+  
+  console.log('[Utils] Generating metadata with:', {
+    extended_id: cardData.extended_id,
+    location,
+    photoDate,
+    note_text: cardData.note_text?.substring(0, 20) + '...',
+    hasMetadata: !!cardData.metadata,
+    usingDirectFields: { 
+      location: !!cardData.photo_location, 
+      date: !!cardData.photo_date 
+    }
+  });
   
   return {
     title: generateCardTitle(location, cardData.created_at),

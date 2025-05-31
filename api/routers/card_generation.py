@@ -213,6 +213,40 @@ async def finalize_card_generation(
             },
         }
 
+        # Add EXIF data to dedicated database columns (for better performance and querying)
+        if photo_location:
+            update_payload["photo_location_country"] = photo_location
+            log(f"[DEBUG] Adding photo_location_country to DB: '{photo_location}'", request_id=str(db_id))
+        else:
+            log(f"[DEBUG] No photo_location received from frontend for DB ID: {db_id}", request_id=str(db_id))
+        
+        if photo_date:
+            log(f"[DEBUG] Processing photo_date: '{photo_date}' for DB ID: {db_id}", request_id=str(db_id))
+            # Convert photo_date string to proper timestamp format if needed
+            # Note: photo_date from frontend is in format like "2024/05/28" 
+            # We need to convert it to a proper ISO timestamp for the database
+            try:
+                from datetime import datetime
+                if photo_date:
+                    # Parse the date string and convert to ISO format
+                    # Frontend sends dates like "2024/05/28" 
+                    parsed_date = datetime.strptime(photo_date, "%Y/%m/%d")
+                    iso_date = parsed_date.isoformat() + "+00:00"  # Add UTC timezone
+                    update_payload["photo_date"] = iso_date
+                    log(f"[DEBUG] Converted photo_date '{photo_date}' to ISO: '{iso_date}' for DB ID: {db_id}", request_id=str(db_id))
+            except Exception as date_parse_error:
+                log(f"Failed to parse photo_date '{photo_date}': {date_parse_error}. Storing as-is.", level="WARNING", request_id=str(db_id))
+                # Store the original string if parsing fails
+                update_payload["photo_date"] = photo_date
+        else:
+            log(f"[DEBUG] No photo_date received from frontend for DB ID: {db_id}", request_id=str(db_id))
+
+        log(f"[DEBUG] Final update_payload keys for DB ID {db_id}: {list(update_payload.keys())}", request_id=str(db_id))
+        if "photo_location_country" in update_payload:
+            log(f"[DEBUG] photo_location_country value: '{update_payload['photo_location_country']}'", request_id=str(db_id))
+        if "photo_date" in update_payload:
+            log(f"[DEBUG] photo_date value: '{update_payload['photo_date']}'", request_id=str(db_id))
+
         # Add direct columns for horizontal and vertical URLs if they exist in the table
         if uploaded_image_info.get("horizontal", {}).get("url"):
             update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]

@@ -135,6 +135,9 @@ export async function generateMetadata(
     front_vertical_image_url: cardData.frontVerticalImageUrl,
     created_at: cardData.createdAt || new Date().toISOString(),
     metadata: cardData.metadata,
+    // Include EXIF data from direct database fields
+    photo_location: cardData.photo_location,
+    photo_date: cardData.photo_date,
   });
 
   const cardName = cardData.card_name || 'Color Card';

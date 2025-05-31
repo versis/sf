@@ -43,6 +43,9 @@ interface CardDataFromDB {
   has_note?: boolean;
   back_horizontal_image_url?: string;
   back_vertical_image_url?: string;
+  // New EXIF data columns
+  photo_location_country?: string;
+  photo_date?: string;
   created_at: string;
   updated_at: string;
 }
@@ -96,7 +99,7 @@ export async function GET(
       console.log(`[API Route] Using optimized ID-based query for db_id: ${dbId}`);
       const response = await supabase
         .from('card_generations')
-        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
+        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at')
         .eq('id', dbId)
         .single();
       data = response.data;
@@ -106,7 +109,7 @@ export async function GET(
       console.log(`[API Route] Using fallback extended_id query for: ${extended_id}`);
       const response = await supabase
         .from('card_generations')
-        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, created_at, updated_at')
+        .select('id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_date, created_at, updated_at')
         .eq('extended_id', extended_id)
         .single();
       data = response.data;
@@ -154,9 +157,9 @@ export async function GET(
       ai_description: cardRecord.metadata?.ai_info?.description,
       created_at: cardRecord.created_at,
       updated_at: cardRecord.updated_at,
-      // Add EXIF metadata for personalized sharing
-      photo_date: cardRecord.metadata?.exif_data_extracted?.photo_date,
-      photo_location: cardRecord.metadata?.exif_data_extracted?.photo_location_country,
+      // Use EXIF data from direct database columns (preferred) or fallback to metadata
+      photo_date: cardRecord.photo_date || cardRecord.metadata?.exif_data_extracted?.photo_date,
+      photo_location: cardRecord.photo_location_country || cardRecord.metadata?.exif_data_extracted?.photo_location_country,
       // Include full metadata for utility functions
       metadata: cardRecord.metadata,
     };
