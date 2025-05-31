@@ -34,7 +34,7 @@ export function generateCardTitle(location?: string, createdAt?: string): string
   
   if (createdAt) {
     const formattedDate = formatCardDate(createdAt);
-    title += ` Posted: ${formattedDate}`;
+    title += ` — Posted: ${formattedDate}`;
   }
   
   return title;
@@ -49,7 +49,7 @@ export function generateCardDescription(extendedId: string, noteText?: string): 
     const truncatedNote = noteText.length > 30 
       ? noteText.substring(0, 27) + "..."
       : noteText;
-    return `${truncatedNote} | ${extendedId}`;
+    return truncatedNote;
   }
   
   // Fallback description for users unfamiliar with the app
