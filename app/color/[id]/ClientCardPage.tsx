@@ -217,7 +217,7 @@ export default function ClientCardPage({
                   </span>
                 </Link>
               </h1>
-              <p className="text-sm text-muted-foreground mt-3">The Digital Postcard Service</p>
+              <p className="text-sm text-muted-foreground mt-3 text-center">The Digital Postcard Service</p>
             </div>
             
             {/* Create button on the right - centered with logo block */}
