@@ -8,6 +8,7 @@ import { useSwipeable, type SwipeableHandlers } from 'react-swipeable';
 import { copyTextToClipboard } from '@/lib/clipboardUtils';
 import { shareOrCopy } from '@/lib/shareUtils';
 import { COPY_SUCCESS_MESSAGE } from '@/lib/constants';
+import { ImagePlus } from 'lucide-react';
 
 interface CardDetails {
   extendedId?: string;
@@ -221,10 +222,7 @@ export default function ClientCardPage({
               onClick={navigateToHome}
               className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-                <circle cx="12" cy="13" r="3"/>
-              </svg>
+              <ImagePlus size={12} className="mr-1" />
               <span className="hidden md:inline">Create Your Card</span>
               <span className="md:hidden">Create</span>
             </button>
