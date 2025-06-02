@@ -1378,8 +1378,8 @@ export default function HomePage() {
             {/* Left Column: Features & Description - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
               {/* Features */}
-              <div className="mb-4">
-                <p className="text-lg font-light md:text-xl mb-3 text-muted-foreground/80 tracking-wide">
+              <div className="mb-4 mt-4 md:mt-8">
+                <p className="text-xl md:text-2xl font-light mb-3 text-muted-foreground/80 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
               </div>
