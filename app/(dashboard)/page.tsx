@@ -1373,143 +1373,140 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Two-column layout: Big button left, Example card right */}
-          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 md:items-center mb-8 md:mb-12">
-            {/* Left Column: Big Create Button - takes 2/5ths */}
-            <div className="flex items-center justify-center mb-6 md:mb-0 md:col-span-2 h-full">
-              <button
-                onClick={handleCreateYourCardClick}
-                className="px-8 py-4 md:px-12 md:py-6 font-semibold text-lg md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
-              >
-                <ImagePlus size={24} className="mr-3" />
-                Create Your Card
-              </button>
-            </div>
+          {/* Create Your Card Button - Centered */}
+          <div className="flex justify-center mb-6 md:mb-8">
+            <button
+              onClick={handleCreateYourCardClick}
+              className="px-8 py-4 md:px-12 md:py-6 font-semibold text-lg md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
+            >
+              <ImagePlus size={24} className="mr-3" />
+              Create Your Card
+            </button>
+          </div>
 
-            {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative">
-              {/* Wrapper for card image */}
-              <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}>
-                {/* Card Image Container */}
-                <div
-                  ref={heroImageContainerRef}
-                  className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-10/12 mx-auto' : 'w-full'}`}
-                  style={{
-                    aspectRatio: isMobile ? '1/2' : '2/1',
-                  }}
-                >
-                  <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
-                    <div 
-                      className={`card-flipper w-full h-full ${isHeroCardFlipped ? (heroCardSwipeDirection === 'left' ? 'is-flipped swipe-left' : 'is-flipped swipe-right') : ''}`}
-                      onTouchStart={handleTouchStart}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                      onTouchCancel={handleHeroCardTouchCancel}
-                    >
-                      {/* CARD_FRONT and CARD_BACK content */}
-                      <div className="card-face card-front">
-                        {heroCardsLoading ? (
-                          <div className="w-full h-full rounded-lg bg-muted flex items-center justify-center">
-                            <p className="text-muted-foreground">Loading examples...</p>
-                          </div>
-                        ) : primaryImage.src ? (
-                          <>
+          {/* Example Card with Navigation - Centered */}
+          <div className="flex flex-col items-center justify-center w-full mb-8 md:mb-12">
+            {/* Wrapper for card image */}
+            <div className={`${isMobile ? 'w-10/12' : 'w-full max-w-2xl'} mx-auto`}>
+              {/* Card Image Container */}
+              <div
+                ref={heroImageContainerRef}
+                className="relative cursor-grab active:cursor-grabbing example-card-image-container my-2"
+                style={{
+                  aspectRatio: isMobile ? '1/2' : '2/1',
+                }}
+              >
+                <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
+                  <div 
+                    className={`card-flipper w-full h-full ${isHeroCardFlipped ? (heroCardSwipeDirection === 'left' ? 'is-flipped swipe-left' : 'is-flipped swipe-right') : ''}`}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleHeroCardTouchCancel}
+                  >
+                    {/* CARD_FRONT and CARD_BACK content */}
+                    <div className="card-face card-front">
+                      {heroCardsLoading ? (
+                        <div className="w-full h-full rounded-lg bg-muted flex items-center justify-center">
+                          <p className="text-muted-foreground">Loading examples...</p>
+                        </div>
+                      ) : primaryImage.src ? (
+                        <>
+                          <img
+                            key={`primary-${primaryImage.src}-${currentExampleCardIndex}`}
+                            src={primaryImage.src}
+                            alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
+                            className={`w-full h-full rounded-lg object-contain example-card-image ${primaryImage.animationClass} mx-auto`}
+                            style={{
+                              zIndex: 10, 
+                              position: 'relative',
+                              visibility: isHeroCardFlipped ? 'hidden' : 'visible'
+                            }}
+                            draggable="false"
+                            onAnimationEnd={primaryImage.animationClass ? handleAnimationEnd : undefined}
+                            onError={(e) => { 
+                                console.error("[Hero Image Error] Failed to load primaryImage.src:", primaryImage.src, e);
+                            }}
+                          />
+                          {secondaryImage.src && !isHeroCardFlipped && ( 
                             <img
-                              key={`primary-${primaryImage.src}-${currentExampleCardIndex}`}
-                              src={primaryImage.src}
-                              alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
-                              className={`w-full h-full rounded-lg object-contain example-card-image ${primaryImage.animationClass} mx-auto`}
+                              key={`secondary-${secondaryImage.src}`}
+                              src={secondaryImage.src}
+                              alt="Next example card image"
+                              className={`w-full h-full rounded-lg object-contain example-card-image absolute top-0 left-0 ${secondaryImage.animationClass} mx-auto`}
                               style={{
-                                zIndex: 10, 
-                                position: 'relative',
-                                visibility: isHeroCardFlipped ? 'hidden' : 'visible'
+                                transform: secondaryImage.initialTranslate,
+                                zIndex: 5,
+                                visibility: isHeroCardFlipped ? 'hidden' : 'visible' 
                               }}
                               draggable="false"
-                              onAnimationEnd={primaryImage.animationClass ? handleAnimationEnd : undefined}
-                              onError={(e) => { 
-                                  console.error("[Hero Image Error] Failed to load primaryImage.src:", primaryImage.src, e);
-                              }}
+                              onAnimationEnd={secondaryImage.animationClass ? handleAnimationEnd : undefined} 
                             />
-                            {secondaryImage.src && !isHeroCardFlipped && ( 
-                              <img
-                                key={`secondary-${secondaryImage.src}`}
-                                src={secondaryImage.src}
-                                alt="Next example card image"
-                                className={`w-full h-full rounded-lg object-contain example-card-image absolute top-0 left-0 ${secondaryImage.animationClass} mx-auto`}
-                                style={{
-                                  transform: secondaryImage.initialTranslate,
-                                  zIndex: 5,
-                                  visibility: isHeroCardFlipped ? 'hidden' : 'visible' 
-                                }}
-                                draggable="false"
-                                onAnimationEnd={secondaryImage.animationClass ? handleAnimationEnd : undefined} 
-                              />
-                            )}
-                          </>
-                        ) : (
-                          <div className="w-full h-full rounded-lg bg-muted flex items-center justify-center">
-                            <p className="text-muted-foreground">No example images available.</p>
-                          </div>
-                        )}
-                      </div>
-                      {/* CARD_BACK */} 
-                      <div className="card-face card-back rounded-lg overflow-hidden">
-                        {(() => {
-                          const currentCardData = fetchedHeroCards[currentExampleCardIndex];
-                          if (currentCardData) {
-                            const backImageUrl = isMobile
-                              ? currentCardData.bv || currentCardData.bh
-                              : currentCardData.bh || currentCardData.bv;
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full rounded-lg bg-muted flex items-center justify-center">
+                          <p className="text-muted-foreground">No example images available.</p>
+                        </div>
+                      )}
+                    </div>
+                    {/* CARD_BACK */} 
+                    <div className="card-face card-back rounded-lg overflow-hidden">
+                      {(() => {
+                        const currentCardData = fetchedHeroCards[currentExampleCardIndex];
+                        if (currentCardData) {
+                          const backImageUrl = isMobile
+                            ? currentCardData.bv || currentCardData.bh
+                            : currentCardData.bh || currentCardData.bv;
 
-                            if (backImageUrl) {
-                              return <img src={backImageUrl} alt="Hero card back" className="w-full h-full object-contain" />;
-                            }
+                          if (backImageUrl) {
+                            return <img src={backImageUrl} alt="Hero card back" className="w-full h-full object-contain" />;
                           }
-                          // Fallback if no specific back image for hero card
-                          return (
-                            <div className="w-full h-full bg-gray-700 text-white flex flex-col items-center justify-center p-4">
-                              <p className="text-xl font-semibold">Card Back</p>
-                              <p className="text-sm mt-1">(Hero Example - No Specific Back Image)</p>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                        }
+                        // Fallback if no specific back image for hero card
+                        return (
+                          <div className="w-full h-full bg-gray-700 text-white flex flex-col items-center justify-center p-4">
+                            <p className="text-xl font-semibold">Card Back</p>
+                            <p className="text-sm mt-1">(Hero Example - No Specific Back Image)</p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Numbered Pagination */}
-              {HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 1 && (
-                <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
-                  {HERO_EXAMPLE_CARD_EXTENDED_IDS.map((_, index) => {
-                    const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
-                    const isDisabled = isAnimating || heroCardsLoading || (fetchedHeroCards.length > 0 && index >= fetchedHeroCards.length);
-                    
-                    return (
-                      <button
-                        key={`page-btn-${index}`}
-                        onMouseDown={() => !isDisabled && handleButtonMouseDown(index)}
-                        onMouseUp={handleButtonMouseUp}
-                        onMouseLeave={handleButtonMouseLeave}
-                        className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-150
-                          ${isDisabled
-                            ? 'opacity-50 cursor-not-allowed bg-background text-foreground shadow-[1px_1px_0_0_theme(colors.foreground)]'
-                            : isPressed
-                            ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]'
-                            : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)]'
-                          }
-                        `}
-                        aria-label={`Go to card ${index + 1}`}
-                        disabled={isDisabled}
-                      >
-                        {index + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
+
+            {/* Numbered Pagination */}
+            {HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 1 && (
+              <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
+                {HERO_EXAMPLE_CARD_EXTENDED_IDS.map((_, index) => {
+                  const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
+                  const isDisabled = isAnimating || heroCardsLoading || (fetchedHeroCards.length > 0 && index >= fetchedHeroCards.length);
+                  
+                  return (
+                    <button
+                      key={`page-btn-${index}`}
+                      onMouseDown={() => !isDisabled && handleButtonMouseDown(index)}
+                      onMouseUp={handleButtonMouseUp}
+                      onMouseLeave={handleButtonMouseLeave}
+                      className={`px-3 py-1.5 border-2 border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-150
+                        ${isDisabled
+                          ? 'opacity-50 cursor-not-allowed bg-background text-foreground shadow-[1px_1px_0_0_theme(colors.foreground)]'
+                          : isPressed
+                          ? 'bg-foreground text-background shadow-none translate-x-[1px] translate-y-[1px]'
+                          : 'bg-background text-foreground shadow-[2px_2px_0_0_theme(colors.foreground)] hover:shadow-[3px_3px_0_0_theme(colors.foreground)]'
+                        }
+                      `}
+                      aria-label={`Go to card ${index + 1}`}
+                      disabled={isDisabled}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Features and Description - Full Width Below Everything */}
