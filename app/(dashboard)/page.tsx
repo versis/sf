@@ -1378,7 +1378,7 @@ export default function HomePage() {
             {/* Left Column: Features & Description - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
               {/* Features */}
-              <div className="mb-4 mt-4 md:mt-8">
+              <div className="mb-4 mt-4 md:mt-6">
                 <p className="text-xl md:text-2xl font-light mb-3 text-muted-foreground/80 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
@@ -1392,10 +1392,10 @@ export default function HomePage() {
               </div>
 
               {/* Create Your Card Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center mt-6">
                 <button
                   onClick={handleCreateYourCardClick}
-                  className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
+                  className="px-6 py-3 md:px-8 md:py-4 font-semibold md:text-lg bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
                 >
                   <ImagePlus size={22} className="mr-2" />
                   Create Your Card
