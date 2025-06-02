@@ -1373,34 +1373,17 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Two-column layout: Features left, Example card right */}
-          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 md:items-start">
-            {/* Left Column: Features & Description - takes 2/5ths */}
-            <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
-              {/* Features */}
-              <div className="mb-3 md:mb-4 mt-0 md:mt-6">
-                <p className="text-xl md:text-2xl font-light mb-2 md:mb-3 text-muted-foreground/80 tracking-wide">
-                  / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
-                </p>
-              </div>
-
-              {/* Description */}
-              <div className="mb-4 md:mb-6">
-                <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
-                  Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
-                </p>
-              </div>
-
-              {/* Create Your Card Button */}
-              <div className="flex justify-center mt-4 md:mt-6">
-                <button
-                  onClick={handleCreateYourCardClick}
-                  className="px-6 py-3 md:px-8 md:py-4 font-semibold md:text-lg bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
-                >
-                  <ImagePlus size={22} className="mr-2" />
-                  Create Your Card
-                </button>
-              </div>
+          {/* Two-column layout: Big button left, Example card right */}
+          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 md:items-center mb-8 md:mb-12">
+            {/* Left Column: Big Create Button - takes 2/5ths */}
+            <div className="flex items-center justify-center mb-6 md:mb-0 md:col-span-2 h-full">
+              <button
+                onClick={handleCreateYourCardClick}
+                className="px-8 py-4 md:px-12 md:py-6 font-semibold text-lg md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
+              >
+                <ImagePlus size={24} className="mr-3" />
+                Create Your Card
+              </button>
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
@@ -1526,6 +1509,23 @@ export default function HomePage() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Features and Description - Full Width Below Everything */}
+          <div className="w-full max-w-4xl mx-auto">
+            {/* Features */}
+            <div className="mb-4 text-center md:text-left">
+              <p className="text-xl md:text-2xl font-light mb-3 text-muted-foreground/80 tracking-wide">
+                / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
+              </p>
+            </div>
+
+            {/* Description */}
+            <div className="text-center md:text-left">
+              <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
+                Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
+              </p>
             </div>
           </div>
         </section>
