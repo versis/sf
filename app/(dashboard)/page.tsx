@@ -1364,11 +1364,11 @@ export default function HomePage() {
         {/* Hero Section Text & Example Card */}
         <section className="w-full md:pt-1 md:pb-8 py-3">
           {/* Title and Subtitle - Full Width */}
-          <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 text-foreground">
+          <div className="text-left md:text-center mb-4 md:mb-12">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 text-foreground">
               The Digital Postcard Service
             </h2>
-            <p className="text-2xl md:text-3xl lg:text-4xl font-light mb-4 text-muted-foreground/90 tracking-wide">
+            <p className="text-2xl md:text-3xl lg:text-4xl font-light mb-2 md:mb-4 text-muted-foreground/90 tracking-wide">
               Your everyday photo, having its moment.
             </p>
           </div>
@@ -1378,21 +1378,21 @@ export default function HomePage() {
             {/* Left Column: Features & Description - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
               {/* Features */}
-              <div className="mb-4 mt-4 md:mt-6">
-                <p className="text-xl md:text-2xl font-light mb-3 text-muted-foreground/80 tracking-wide">
+              <div className="mb-3 md:mb-4 mt-0 md:mt-6">
+                <p className="text-xl md:text-2xl font-light mb-2 md:mb-3 text-muted-foreground/80 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
               </div>
 
               {/* Description */}
-              <div className="mb-6">
+              <div className="mb-4 md:mb-6">
                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
                   Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
                 </p>
               </div>
 
               {/* Create Your Card Button */}
-              <div className="flex justify-center mt-6">
+              <div className="flex justify-center mt-4 md:mt-6">
                 <button
                   onClick={handleCreateYourCardClick}
                   className="px-6 py-3 md:px-8 md:py-4 font-semibold md:text-lg bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
