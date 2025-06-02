@@ -8,13 +8,13 @@ import Footer from '@/components/Footer';
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
   title: "shadefreude: The Digital Postcard Service | tinker.institute",
-  description: "Your everyday photo, having its moment. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story. Polaroid vibes, AI brains, no cringe.",
+  description: "Your everyday photo, having its moment. / Polaroid vibes. / AI brains. / No cringe. Hopefully. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story.",
   alternates: {
     canonical: "https://sf.tinker.institute/"
   },
   openGraph: {
     title: "shadefreude: The Digital Postcard Service",
-    description: "Your everyday photo, having its moment. AI transforms any photo into a shareable digital postcard with custom color names and unique stories. Pick a color, get a postcard.",
+    description: "Your everyday photo, having its moment. / Polaroid vibes. / AI brains. / No cringe. Hopefully. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story.",
     type: "website",
     url: "https://sf.tinker.institute/",
     images: [
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "shadefreude: The Digital Postcard Service",
-    description: "Your everyday photo, having its moment. AI creates digital postcards from your photos with custom color names and stories.",
+    description: "Your everyday photo, having its moment. / Polaroid vibes. / AI brains. / No cringe. Hopefully. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story.",
     images: ["/og.png"],
   },
   icons: [
