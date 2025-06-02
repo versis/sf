@@ -217,13 +217,13 @@ export default function ClientCardPage({
                   </span>
                 </Link>
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">The Digital Postcard Service</p>
+              <p className="text-sm text-muted-foreground mt-3">The Digital Postcard Service</p>
             </div>
             
-            {/* Create button on the right - shorter text on mobile */}
+            {/* Create button on the right - centered with logo block */}
             <button
               onClick={navigateToHome}
-              className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center ml-4 self-center"
+              className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center ml-4"
             >
               <ImagePlus size={12} className="mr-1" />
               <span className="hidden md:inline">Create Your Card</span>
