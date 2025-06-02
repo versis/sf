@@ -205,22 +205,25 @@ export default function ClientCardPage({
         <header className="py-6 border-b-2 border-foreground">
           <div className="flex items-center justify-between">
             {/* Logo on the left */}
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center">
-              <Link href="/" className="flex items-center cursor-pointer">
-                <span className="mr-1 ml-1">
-                  <img src="/sf-icon.png" alt="SF Icon" className="inline h-5 w-5 md:h-6 md:w-6 mr-1" />
-                  shade
-                </span>
-                <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
-                  freude
-                </span>
-              </Link>
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center">
+                <Link href="/" className="flex items-center cursor-pointer">
+                  <span className="mr-1 ml-1">
+                    <img src="/sf-icon.png" alt="SF Icon" className="inline h-5 w-5 md:h-6 md:w-6 mr-1" />
+                    shade
+                  </span>
+                  <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
+                    freude
+                  </span>
+                </Link>
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">The Digital Postcard Service</p>
+            </div>
             
             {/* Create button on the right - shorter text on mobile */}
             <button
               onClick={navigateToHome}
-              className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center"
+              className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center ml-4 self-center"
             >
               <ImagePlus size={12} className="mr-1" />
               <span className="hidden md:inline">Create Your Card</span>
@@ -231,14 +234,6 @@ export default function ClientCardPage({
         
         {/* Use a flex container with explicit order to ensure consistent layout */}
         <div className="flex flex-col items-center w-full mt-6">
-          {/* Add "The Digital Postcard Service" as a title above the card */}
-          <div className="text-center mb-4 md:mb-8">
-            <h2 className="text-base md:text-3xl text-foreground tracking-wide">
-              <span className="text-xs md:text-xl text-muted-foreground font-normal">Delivered by </span>
-              <span className="font-bold">The Digital Postcard Service</span>
-            </h2>
-          </div>
-          
           <div 
             ref={combinedRefCallback}
             {...eventHandlersToSpread}
