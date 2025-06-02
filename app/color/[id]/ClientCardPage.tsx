@@ -227,13 +227,17 @@ export default function ClientCardPage({
               <span className="md:hidden">Create</span>
             </button>
           </div>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            The Digital Postcard Service
-          </p>
         </header>
         
         {/* Use a flex container with explicit order to ensure consistent layout */}
         <div className="flex flex-col items-center w-full mt-6">
+          {/* Add "The Digital Postcard Service" as a title above the card */}
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-light text-muted-foreground/90 tracking-wide">
+              The Digital Postcard Service
+            </h2>
+          </div>
+          
           <div 
             ref={combinedRefCallback}
             {...eventHandlersToSpread}

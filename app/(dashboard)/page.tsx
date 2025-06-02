@@ -1353,7 +1353,7 @@ export default function HomePage() {
   };
 
   return (
-    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-4 pb-6 md:pt-3 md:px-4 md:pb-12 bg-background text-foreground focus:outline-none"> {/* Reduced padding from px-6 md:px-12 to px-2 md:px-4 */}
+    <main ref={mainContainerRef} tabIndex={-1} className="flex min-h-screen flex-col items-center justify-start pt-1 px-6 pb-6 md:pt-3 md:px-12 md:pb-12 bg-background text-foreground focus:outline-none"> {/* Updated padding to match ClientCardPage */}
       {/* Hidden file input that's always present */}
       <input
         ref={hiddenFileInputRef}
@@ -1363,7 +1363,7 @@ export default function HomePage() {
         style={{ display: 'none' }}
       />
       <div className="w-full max-w-6xl space-y-4" ref={resultRef}>
-        <header className="py-4 border-b-2 border-foreground">
+        <header className="py-4 border-b-2 border-foreground"> {/* Removed sticky functionality */}
           <div className="flex items-center justify-between">
             {/* Logo on the left */}
             <h1 className="text-2xl md:text-3xl font-bold flex items-center">
