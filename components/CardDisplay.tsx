@@ -224,24 +224,67 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           >
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
-              {(currentOrientation === 'horizontal' && frontHorizontalImageUrl) ? (
-                <img src={frontHorizontalImageUrl} alt="Generated horizontal card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
-              ) : (currentOrientation === 'vertical' && frontVerticalImageUrl) ? (
-                <img src={frontVerticalImageUrl} alt="Generated vertical card (front)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
-              ) : (
+              {/* Render both orientations but use CSS to control visibility */}
+              {frontHorizontalImageUrl && (
+                <img 
+                  src={frontHorizontalImageUrl} 
+                  alt="Generated horizontal card (front)" 
+                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
+                    currentOrientation === 'horizontal' ? '' : 'opacity-0 pointer-events-none absolute'
+                  } ${isMobile ? 'mobile-hide-horizontal' : 'desktop-show-horizontal'}`}
+                  onClick={handleFlipCard} 
+                />
+              )}
+              {frontVerticalImageUrl && (
+                <img 
+                  src={frontVerticalImageUrl} 
+                  alt="Generated vertical card (front)" 
+                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
+                    currentOrientation === 'vertical' ? '' : 'opacity-0 pointer-events-none absolute'
+                  } ${isMobile ? 'mobile-show-vertical' : 'mobile-hide-vertical'}`}
+                  onClick={handleFlipCard} 
+                />
+              )}
+              {/* Fallback when no images are available */}
+              {!frontHorizontalImageUrl && !frontVerticalImageUrl && (
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Image not available or selected orientation has no image.</p>
+                </div>
+              )}
+              {/* Show message when selected orientation has no image but other orientation does */}
+              {((currentOrientation === 'horizontal' && !frontHorizontalImageUrl && frontVerticalImageUrl) ||
+                (currentOrientation === 'vertical' && !frontVerticalImageUrl && frontHorizontalImageUrl)) && (
+                <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
+                  <p className="text-muted-foreground text-center p-4">Selected orientation has no image available.</p>
                 </div>
               )}
             </div>
 
             {/* BACK OF CARD */}
             <div className="card-face card-back">
-              {(currentOrientation === 'horizontal' && backHorizontalImageUrl) ? (
-                <img src={backHorizontalImageUrl} alt="Generated horizontal card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
-              ) : (currentOrientation === 'vertical' && backVerticalImageUrl) ? (
-                <img src={backVerticalImageUrl} alt="Generated vertical card (back)" className="w-full h-full object-contain rounded-md cursor-pointer" onClick={handleFlipCard} />
-              ) : noteText ? (
+              {/* Render both back orientations with CSS control */}
+              {backHorizontalImageUrl && (
+                <img 
+                  src={backHorizontalImageUrl} 
+                  alt="Generated horizontal card (back)" 
+                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
+                    currentOrientation === 'horizontal' ? '' : 'opacity-0 pointer-events-none absolute'
+                  } ${isMobile ? 'mobile-hide-horizontal' : 'desktop-show-horizontal'}`}
+                  onClick={handleFlipCard} 
+                />
+              )}
+              {backVerticalImageUrl && (
+                <img 
+                  src={backVerticalImageUrl} 
+                  alt="Generated vertical card (back)" 
+                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
+                    currentOrientation === 'vertical' ? '' : 'opacity-0 pointer-events-none absolute'
+                  } ${isMobile ? 'mobile-show-vertical' : 'mobile-hide-vertical'}`}
+                  onClick={handleFlipCard} 
+                />
+              )}
+              {/* Fallback content when no back images are available */}
+              {!backHorizontalImageUrl && !backVerticalImageUrl && (noteText ? (
                 <div 
                   className="w-full h-full flex flex-col justify-center items-center p-6 rounded-md overflow-auto"
                   style={{
@@ -268,7 +311,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
                   <p className="text-muted-foreground text-center p-4">Card back not available.</p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>

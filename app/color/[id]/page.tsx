@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import ClientCardPage from './ClientCardPage';
 import { generateCardMetadata } from './utils';
 
@@ -111,6 +112,19 @@ function transformCardData(apiData: CardDetailsFromAPI): any {
   };
 }
 
+// Add mobile detection utility function
+function isMobileUserAgent(userAgent: string): boolean {
+  const mobileKeywords = [
+    'Mobile', 'Android', 'iPhone', 'iPad', 'iPod',
+    'BlackBerry', 'Windows Phone', 'Opera Mini',
+    'IEMobile', 'Mobile Safari'
+  ];
+  
+  return mobileKeywords.some(keyword => 
+    userAgent.includes(keyword)
+  );
+}
+
 // Generate dynamic metadata for each card
 export async function generateMetadata(
   { params }: { params: { id: string } }
@@ -175,6 +189,14 @@ export async function generateMetadata(
 export default async function ColorCardPage({ params }: { params: { id: string } }) {
   console.log(`[Server] Processing card page for ID: ${params.id}`);
   
+  // Get server-side mobile detection
+  const headersList = headers();
+  const userAgent = headersList.get('user-agent') || '';
+  const serverDetectedMobile = isMobileUserAgent(userAgent);
+  
+  console.log(`[Server] User-Agent: ${userAgent.substring(0, 100)}...`);
+  console.log(`[Server] Detected mobile: ${serverDetectedMobile}`);
+  
   const cardData = await fetchCardData(params.id);
 
   if (!cardData) {
@@ -185,11 +207,25 @@ export default async function ColorCardPage({ params }: { params: { id: string }
   // Transform the API data to match client component expectations
   const clientCardData = transformCardData(cardData);
   
+  // Determine initial orientation based on server-side mobile detection
+  let initialOrientation: 'horizontal' | 'vertical' = 'horizontal';
+  if (serverDetectedMobile && clientCardData?.frontVerticalImageUrl) {
+    initialOrientation = 'vertical';
+  } else if (clientCardData?.frontHorizontalImageUrl) {
+    initialOrientation = 'horizontal';
+  } else if (clientCardData?.frontVerticalImageUrl) {
+    initialOrientation = 'vertical';
+  }
+  
+  console.log(`[Server] Initial orientation for ${serverDetectedMobile ? 'mobile' : 'desktop'}: ${initialOrientation}`);
+  
   console.log(`[Server] Final client data:`, {
     hasData: !!clientCardData,
     extendedId: clientCardData?.extendedId,
     frontHorizontalImageUrl: clientCardData?.frontHorizontalImageUrl?.substring(0, 50) + '...',
-    frontVerticalImageUrl: clientCardData?.frontVerticalImageUrl?.substring(0, 50) + '...'
+    frontVerticalImageUrl: clientCardData?.frontVerticalImageUrl?.substring(0, 50) + '...',
+    initialOrientation,
+    serverDetectedMobile
   });
 
   return (
@@ -198,6 +234,8 @@ export default async function ColorCardPage({ params }: { params: { id: string }
       cardId={params.id}
       loading={false}
       error={null}
+      initialMobile={serverDetectedMobile}
+      initialOrientation={initialOrientation}
     />
   );
 } 

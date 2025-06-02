@@ -37,12 +37,21 @@ interface ClientCardPageProps {
   cardId: string;
   loading?: boolean;
   error?: string | null;
+  initialMobile?: boolean;
+  initialOrientation?: 'horizontal' | 'vertical';
 }
 
-export default function ClientCardPage({ cardData, cardId, loading = false, error = null }: ClientCardPageProps) {
+export default function ClientCardPage({ 
+  cardData, 
+  cardId, 
+  loading = false, 
+  error = null,
+  initialMobile = false,
+  initialOrientation = 'horizontal'
+}: ClientCardPageProps) {
   const router = useRouter();
-  const [isMobile, setIsMobile] = useState<boolean>(false);
-  const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [isMobile, setIsMobile] = useState<boolean>(initialMobile);
+  const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>(initialOrientation);
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
   const cardDisplaySectionRef = useRef<HTMLDivElement>(null);
@@ -84,28 +93,39 @@ export default function ClientCardPage({ cardData, cardId, loading = false, erro
   
   // Detect if user is on mobile for initial orientation
   useEffect(() => {
-    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkIfMobile = () => {
+      const newIsMobile = window.innerWidth < 768;
+      // Only update if different from server detection to avoid unnecessary re-renders
+      if (newIsMobile !== isMobile) {
+        setIsMobile(newIsMobile);
+      }
+    };
+    
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
+  }, [isMobile]);
 
-  // Set initial orientation when card data loads
+  // Set initial orientation when card data loads or mobile state changes
   useEffect(() => {
     if (cardData) {
-      let initialOrientation: 'horizontal' | 'vertical';
+      let newOrientation: 'horizontal' | 'vertical';
       if (isMobile && cardData.frontVerticalImageUrl) {
-        initialOrientation = 'vertical';
+        newOrientation = 'vertical';
       } else if (cardData.frontHorizontalImageUrl) {
-        initialOrientation = 'horizontal';
+        newOrientation = 'horizontal';
       } else if (cardData.frontVerticalImageUrl) {
-        initialOrientation = 'vertical';
+        newOrientation = 'vertical';
       } else {
-        initialOrientation = 'horizontal'; // Default
+        newOrientation = 'horizontal'; // Default
       }
-      setCurrentDisplayOrientation(initialOrientation);
+      
+      // Only update if orientation actually needs to change
+      if (newOrientation !== currentDisplayOrientation) {
+        setCurrentDisplayOrientation(newOrientation);
+      }
     }
-  }, [cardData, isMobile]);
+  }, [cardData, isMobile, currentDisplayOrientation]);
 
   // handleDownload function to be passed to CardDisplay
   const handleDownloadImage = (orientation: 'vertical' | 'horizontal') => {
