@@ -1378,21 +1378,21 @@ export default function HomePage() {
             {/* Left Column: Features & Description - takes 2/5ths */}
             <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
               {/* Features */}
-              <div className="mb-6">
-                <p className="text-lg font-light md:text-xl mb-4 text-muted-foreground/80 tracking-wide">
+              <div className="mb-4">
+                <p className="text-lg font-light md:text-xl mb-3 text-muted-foreground/80 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
               </div>
 
               {/* Description */}
-              <div className="flex-grow mb-6">
+              <div className="mb-6">
                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
                   Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
                 </p>
               </div>
 
               {/* Create Your Card Button */}
-              <div className="flex justify-center md:justify-start">
+              <div className="flex justify-center">
                 <button
                   onClick={handleCreateYourCardClick}
                   className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
