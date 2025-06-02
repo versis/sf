@@ -214,6 +214,9 @@ export default function ClientCardPage({
             </Link>
           </h1>
           <p className="text-center text-sm text-muted-foreground mt-2">
+            The Digital Postcard Service
+          </p>
+          <p className="text-center text-xs text-muted-foreground mt-1">
             part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
           </p>
         </header>
@@ -252,39 +255,6 @@ export default function ClientCardPage({
               createdAt={cardData?.createdAt}
               isMobile={isMobile}
             />
-          </div>
-          
-          <hr className="w-full border-t-2 border-foreground my-6 order-3" />
-
-          <div className="w-full order-4 mt-4">
-            <div className="max-w-4xl mx-auto">
-              <h3 className="text-xl font-semibold mb-3 text-left">
-                First time here?
-              </h3>
-
-              <div className="text-md text-muted-foreground space-y-3">
-                <p>
-                  You&apos;re looking at an AI-crafted postcard from <i>shadefreude</i>&nbsp;
-                  titled:&nbsp;
-                  {cardData && (cardData.card_name || cardData.hexColor) && (
-                    <span className="font-mono">
-                      {cardData.card_name ? `${cardData.card_name} ` : ''}
-                      {cardData.hexColor && `(${cardData.hexColor})`}
-                    </span>
-                  )}
-                  .
-                  <br />
-                  It began with an everyday photo. A standout colour was tapped, our fine-tuned AI studied the scene, named the shade, and served a tiny story on the card. If there&apos;s a note on the back, that&apos;s the creator&apos;s personal
-                  touch.
-                </p>
-
-                <p>
-                  <Link href="/" className="underline hover:text-foreground">
-                    Make your own AI postcard&nbsp;→
-                  </Link>
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
