@@ -7,14 +7,14 @@ import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sf.tinker.institute'),
-  title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
-  description: "/ Polaroid vibes. / AI brains. / No cringe. — Pick a colour and watch AI flip your snap into a digital postcard with its own name and one-line insight.",
+  title: "shadefreude: The Digital Postcard Service | tinker.institute",
+  description: "Your everyday photo, having its moment. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story. Polaroid vibes, AI brains, no cringe.",
   alternates: {
     canonical: "https://sf.tinker.institute/"
   },
   openGraph: {
-    title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
-    description: "/ Polaroid vibes. / AI brains. / No cringe. — AI turns any photo into a share-ready postcard with a custom colour name and witty note.",
+    title: "shadefreude: The Digital Postcard Service",
+    description: "Your everyday photo, having its moment. AI transforms any photo into a shareable digital postcard with custom color names and unique stories. Pick a color, get a postcard.",
     type: "website",
     url: "https://sf.tinker.institute/",
     images: [
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "shadefreude Open Graph Image",
+        alt: "shadefreude - The Digital Postcard Service",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "shadefreude: Your Everyday Photo, Having Its Moment | tinker.institute",
-    description: "/ Polaroid vibes. / AI brains. / No cringe. — Snap, pick a colour, get a postcard with its own story.",
+    title: "shadefreude: The Digital Postcard Service",
+    description: "Your everyday photo, having its moment. AI creates digital postcards from your photos with custom color names and stories.",
     images: ["/og.png"],
   },
   icons: [

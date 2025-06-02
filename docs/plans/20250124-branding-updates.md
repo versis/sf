@@ -22,10 +22,18 @@ Update branding messaging and mobile experience improvements across the shadefre
 
 ### ✅ 3. Footer Mobile Optimization
 - **Smaller font size** on mobile (text-xs vs text-sm)
-- **2-column layout** on mobile with "|" separators
+- **Simple stacked layout** on mobile (reverted from 2-column after feedback)
 - **Responsive icons** - smaller on mobile (h-2 w-2 vs h-3 w-3)
-- **Better spacing** and visual hierarchy
+- **Desktop maintains horizontal layout** with "|" separators
 - **Location**: `components/Footer.tsx`
+
+### ✅ 4. SEO and Open Graph Updates
+- **Updated main title**: "shadefreude: The Digital Postcard Service | tinker.institute"
+- **Enhanced description**: "Your everyday photo, having its moment. Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story."
+- **Improved Open Graph titles**: Focus on "The Digital Postcard Service" branding
+- **Clearer social descriptions**: More service-focused and conversion-oriented
+- **Updated image alt text**: "shadefreude - The Digital Postcard Service"
+- **Location**: `app/layout.tsx` lines 8-42
 
 ## Rationale
 1. **Service clarity**: "The Digital Postcard Service" immediately communicates what the product does

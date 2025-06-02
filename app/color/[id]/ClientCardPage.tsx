@@ -232,9 +232,9 @@ export default function ClientCardPage({
         {/* Use a flex container with explicit order to ensure consistent layout */}
         <div className="flex flex-col items-center w-full mt-6">
           {/* Add "The Digital Postcard Service" as a title above the card */}
-          <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-xl md:text-3xl lg:text-4xl text-foreground tracking-wide">
-              <span className="text-lg md:text-xl text-muted-foreground font-normal">this is </span>
+          <div className="text-center mb-4 md:mb-8">
+            <h2 className="text-base md:text-3xl text-foreground tracking-wide">
+              <span className="text-xs md:text-xl text-muted-foreground font-normal">Delivered by </span>
               <span className="font-bold">The Digital Postcard Service</span>
             </h2>
           </div>
