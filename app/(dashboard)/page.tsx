@@ -1345,8 +1345,8 @@ export default function HomePage() {
       />
       <div className="w-full max-w-6xl space-y-4" ref={resultRef}>
         <header className="py-4 border-b-2 border-foreground">
-          <div className="flex items-center justify-center md:justify-between">
-            {/* Logo on the left (desktop) / center (mobile) */}
+          <div className="flex items-center justify-between">
+            {/* Logo on the left */}
             <h1 className="text-2xl md:text-3xl font-bold flex items-center">
               <a href="/" onClick={(e) => { e.preventDefault(); resetWizard(); }} className="flex items-center cursor-pointer">
                 <span className="mr-1 ml-1">
@@ -1359,13 +1359,14 @@ export default function HomePage() {
               </a>
             </h1>
             
-            {/* Create button on the right - hidden on mobile, taller */}
+            {/* Create button on the right - shorter text on mobile */}
             <button
               onClick={handleCreateYourCardClick}
-              className="hidden md:flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center"
+              className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center"
             >
               <ImagePlus size={12} className="mr-1" />
-              Create Your Card
+              <span className="hidden md:inline">Create Your Card</span>
+              <span className="md:hidden">Create</span>
             </button>
           </div>
         </header>

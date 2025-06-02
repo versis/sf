@@ -67,7 +67,7 @@ Three possible approaches considered:
 
 ### Logo Size Changes (Updated)
 - Current: `text-4xl md:text-5xl` (36px/48px → 48px/60px)
-- New: `text-2xl md:text-3xl` (24px/30px → 30px/36px)
+. - New: `text-2xl md:text-3xl` (24px/30px → 30px/36px)
 - Icon: `h-8 w-8 md:h-12 md:w-12` → `h-5 w-5 md:h-6 md:w-6`
 - Reduction: ~40-50% (exceeds requested 30%)
 
