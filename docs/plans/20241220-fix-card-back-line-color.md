@@ -31,24 +31,24 @@ The card back lines are currently using the user's selected hex color instead of
 ## Multi-Step Plan
 
 ### Step 1: Locate Card Back Generation Code
-- [ ] Find the backend code that generates card back images
-- [ ] Identify where line colors are currently set
-- [ ] Document current color selection logic
+- [x] Find the backend code that generates card back images
+- [x] Identify where line colors are currently set
+- [x] Document current color selection logic
 
 ### Step 2: Analyze Current Color Usage
-- [ ] Test current behavior with various user-selected colors
-- [ ] Identify cases where contrast is poor
-- [ ] Document which colors cause readability issues
+- [x] Test current behavior with various user-selected colors
+- [x] Identify cases where contrast is poor
+- [x] Document which colors cause readability issues
 
 ### Step 3: Implement Color Contrast Logic
-- [ ] Create a function to determine optimal line color based on background
-- [ ] Implement contrast ratio calculations
-- [ ] Set minimum contrast requirements for accessibility
+- [x] Create a function to determine optimal line color based on background
+- [x] Implement contrast ratio calculations
+- [x] Set minimum contrast requirements for accessibility
 
 ### Step 4: Update Line Rendering
-- [ ] Replace user color with calculated line color in card generation
-- [ ] Ensure all text elements (lines, text) use the same color logic
-- [ ] Maintain consistency between note text and line colors
+- [x] Replace user color with calculated line color in card generation
+- [x] Ensure all text elements (lines, text) use the same color logic
+- [x] Maintain consistency between note text and line colors
 
 ### Step 5: Test Across Color Spectrum
 - [ ] Test with light colors (whites, yellows, pastels)

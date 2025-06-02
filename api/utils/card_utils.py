@@ -9,7 +9,7 @@ import os
 import math
 import random
 
-from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
+from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, adjust_hls
 
 # --- Font Loading ---
 ASSETS_BASE_PATH = "assets"
@@ -563,10 +563,11 @@ async def generate_back_card_image_bytes(
         
         text_block_x_start = note_text_area_start_x # Text starts at the beginning of its allowed area
 
-        rule_line_color = desaturate_hex_color(hex_color_input, 0.3, 0.6) # Lighter, less saturated version of card color
-        if rule_line_color is None: # Fallback if color conversion failed
-             rule_line_color = (200,200,200) if sum(solid_lightened_bg_rgb) > 384 else (100,100,100)
-
+        # FIXED: Use text_color for rule lines instead of user's chosen color for better contrast
+        rule_line_color = text_color  # Use the same color as text for consistency and readability
+        # Old problematic code: rule_line_color = desaturate_hex_color(hex_color_input, 0.3, 0.6) # Lighter, less saturated version of card color
+        # if rule_line_color is None: # Fallback if color conversion failed
+        #      rule_line_color = (200,200,200) if sum(solid_lightened_bg_rgb) > 384 else (100,100,100)
 
         rule_x_start = text_block_x_start
         rule_x_end = note_text_area_end_x # Rules span the full available note width
