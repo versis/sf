@@ -1368,11 +1368,14 @@ export default function HomePage() {
             <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
               {/* Wrapper for text content that should grow */}
               <div className="flex-grow">
-                <h2 className="text-3xl md:text-4xl lg:text-4xl font-bold mb-2 md:mt-6 text-foreground">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mt-6 text-foreground">
                   The Digital Postcard Service
                 </h2>
-                <p className="text-xl font-light md:text-2xl mb-4 text-muted-foreground/90 tracking-wide">
-                  / Your everyday photo, having its moment.<br/>/ Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
+                <p className="text-xl md:text-2xl lg:text-3xl font-light mb-4 text-muted-foreground/90 tracking-wide">
+                  Your everyday photo, having its moment.
+                </p>
+                <p className="text-lg font-light md:text-xl mb-4 text-muted-foreground/80 tracking-wide">
+                  / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
                   Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
