@@ -381,16 +381,6 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         {copyUrlFeedback && (
           <p className="text-sm text-green-700 mt-2 text-center h-5">{copyUrlFeedback}</p>
         )}
-
-        {handleCreateNew && (
-          <button
-            onClick={handleCreateNew}
-            className={createNewButtonStyles}
-            title="Create New Card"
-          >
-            + Create New Card
-          </button>
-        )}
       </div>
     </section>
   );

@@ -1345,20 +1345,29 @@ export default function HomePage() {
       />
       <div className="w-full max-w-6xl space-y-4" ref={resultRef}>
         <header className="py-4 border-b-2 border-foreground">
-          <h1 className="text-4xl md:text-5xl font-bold text-center flex items-center justify-center">
-            <a href="/" onClick={(e) => { e.preventDefault(); resetWizard(); }} className="flex items-center justify-center cursor-pointer">
-              <span className="mr-1 ml-1">
-                <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-12 md:w-12 mr-1" />
-                shade
-              </span>
-              <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
-                freude
-              </span>
-            </a>
-          </h1>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            part of <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">tinker.institute</a>
-          </p>
+          <div className="flex items-center justify-center md:justify-between">
+            {/* Logo on the left (desktop) / center (mobile) */}
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center">
+              <a href="/" onClick={(e) => { e.preventDefault(); resetWizard(); }} className="flex items-center cursor-pointer">
+                <span className="mr-1 ml-1">
+                  <img src="/sf-icon.png" alt="SF Icon" className="inline h-5 w-5 md:h-6 md:w-6 mr-1" />
+                  shade
+                </span>
+                <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
+                  freude
+                </span>
+              </a>
+            </h1>
+            
+            {/* Create button on the right - hidden on mobile, taller */}
+            <button
+              onClick={handleCreateYourCardClick}
+              className="hidden md:flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center"
+            >
+              <ImagePlus size={12} className="mr-1" />
+              Create Your Card
+            </button>
+          </div>
         </header>
 
         {/* Hero Section Text & Example Card */}
@@ -1785,18 +1794,6 @@ export default function HomePage() {
                   </WizardStep>
                 )}
               </section>
-              {/* "+ Create New Card" button - MOVED BACK HERE, after wizard <section> */}
-              {isNoteStepActive && isResultsStepCompleted && !isGenerating && (
-                            <div className="mt-1 flex justify-center"> {/* mt-3 changed to mt-1 */}
-              <button
-                onClick={handleCreateNewCard}
-                className="text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2 py-2"
-                title="Create New Card"
-              >
-                + Create New Card
-              </button>
-            </div>
-              )}
             </div>
           </div>
         )}
