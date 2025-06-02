@@ -267,6 +267,25 @@ export default function HomePage() {
     };
   }, []);
 
+  // Auto-trigger file picker if ?create=true parameter is present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('create') === 'true') {
+      // Clean up the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Trigger file picker after a small delay to ensure component is fully loaded
+      setTimeout(() => {
+        if (hiddenFileInputRef.current) {
+          console.log('Auto-triggering file picker from URL parameter');
+          hiddenFileInputRef.current.value = '';
+          hiddenFileInputRef.current.click();
+        }
+      }, 100);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     
@@ -1375,7 +1394,7 @@ export default function HomePage() {
         <section className="w-full md:pt-1 md:pb-8 py-3">
           {/* Title and Subtitle - Full Width */}
           <div className="text-left md:text-center mb-4 md:mb-12">
-            <h2 className="text-5xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 text-foreground">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 text-foreground">
               The Digital Postcard Service
             </h2>
             <p className="text-3xl md:text-3xl lg:text-4xl font-light mb-2 md:mb-4 text-muted-foreground/90 tracking-wide">
@@ -1525,7 +1544,7 @@ export default function HomePage() {
           {/* Features and Description - Full Width Below Everything */}
           <div className="w-full max-w-4xl mx-auto">
             {/* Features */}
-            <div className="mb-4 text-center md:text-left">
+            <div className="mb-4 text-left">
               <p className="text-xl md:text-2xl font-light mb-3 text-muted-foreground/80 tracking-wide">
                 / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
               </p>

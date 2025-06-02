@@ -184,7 +184,7 @@ export default function ClientCardPage({
 
   // New handler for the "Create New Card" button from CardDisplay
   const navigateToHome = () => {
-    router.push('/');
+    router.push('/?create=true');
   };
 
   if (loading) {
