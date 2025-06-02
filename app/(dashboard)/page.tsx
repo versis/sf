@@ -1363,7 +1363,7 @@ export default function HomePage() {
         style={{ display: 'none' }}
       />
       <div className="w-full max-w-6xl space-y-4" ref={resultRef}>
-        <header className="py-4 border-b-2 border-foreground"> {/* Removed sticky functionality */}
+        <header className="py-6 border-b-2 border-foreground"> {/* Changed from py-4 to py-6 to match ClientCardPage */}
           <div className="flex items-center justify-between">
             {/* Logo on the left */}
             <h1 className="text-2xl md:text-3xl font-bold flex items-center">
