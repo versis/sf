@@ -1363,49 +1363,56 @@ export default function HomePage() {
 
         {/* Hero Section Text & Example Card */}
         <section className="w-full md:pt-1 md:pb-8 py-3">
-          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-5 md:items-center"> {/* Added md:items-center to align grid items */}
-            {/* Left Column: Text - takes 2/5ths */}
-            <div className="text-left mb-4 md:mb-0 md:col-span-2 pt-0 md:pt-2 flex flex-col"> {/* Ensured flex flex-col for vertical distribution */}
-              {/* Wrapper for text content that should grow */}
-              <div className="flex-grow">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mt-6 text-foreground">
-                  The Digital Postcard Service
-                </h2>
-                <p className="text-2xl md:text-3xl lg:text-4xl font-light mb-4 text-muted-foreground/90 tracking-wide">
-                  Your everyday photo, having its moment.
-                </p>
+          {/* Title and Subtitle - Full Width */}
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 text-foreground">
+              The Digital Postcard Service
+            </h2>
+            <p className="text-2xl md:text-3xl lg:text-4xl font-light mb-4 text-muted-foreground/90 tracking-wide">
+              Your everyday photo, having its moment.
+            </p>
+          </div>
+
+          {/* Two-column layout: Features left, Example card right */}
+          <div className="md:grid md:grid-cols-5 md:gap-4 lg:gap-6 md:items-start">
+            {/* Left Column: Features & Description - takes 2/5ths */}
+            <div className="text-left mb-6 md:mb-0 md:col-span-2 flex flex-col">
+              {/* Features */}
+              <div className="mb-6">
                 <p className="text-lg font-light md:text-xl mb-4 text-muted-foreground/80 tracking-wide">
                   / Polaroid vibes.<br/>/ AI brains.<br/>/ No cringe. Hopefully.
                 </p>
+              </div>
+
+              {/* Description */}
+              <div className="flex-grow mb-6">
                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
                   Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
                 </p>
               </div>
 
-              {/* Container for "Create Your Card" Button - Adjusted for alignment and mobile spacing */}
-              <div className="mt-6"> {/* Simplified this wrapper */}
-                <div className="mb-4 md:mb-0 flex justify-center"> {/* Changed md:justify-start to justify-center for desktop centering */}
-                  <button
-                    onClick={handleCreateYourCardClick}
-                    className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center md:w-auto rounded-md"
-                  >
-                    <ImagePlus size={22} className="mr-2" />
-                    Create Your Card
-                  </button>
-                </div>
+              {/* Create Your Card Button */}
+              <div className="flex justify-center md:justify-start">
+                <button
+                  onClick={handleCreateYourCardClick}
+                  className="px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
+                >
+                  <ImagePlus size={22} className="mr-2" />
+                  Create Your Card
+                </button>
               </div>
             </div>
 
             {/* Right Column: Example Card with Navigation - takes 3/5ths */}
-            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative"> {/* Changed md:items-start to md:items-center for horizontal centering too */}
-              {/* Wrapper for card image (and formerly mobile dots) */}
-              <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}> {/* Added justify-center for mobile */}
+            <div className="flex flex-col md:items-center md:justify-center w-full md:col-span-3 relative">
+              {/* Wrapper for card image */}
+              <div className={`w-full ${isMobile ? 'flex flex-row items-center justify-center' : ''}`}>
                 {/* Card Image Container */}
                 <div
                   ref={heroImageContainerRef}
                   className={`relative cursor-grab active:cursor-grabbing example-card-image-container md:my-2 mt-2 mb-2 ${isMobile ? 'w-10/12 mx-auto' : 'w-full'}`}
                   style={{
-                    aspectRatio: isMobile ? '1/2' : '2/1', // Changed from '80/33' to '2/1' to better match card proportions
+                    aspectRatio: isMobile ? '1/2' : '2/1',
                   }}
                 >
                   <div className="w-full h-full perspective-container" onClick={() => { if (!isAnimating && swipeDeltaX === 0) handleHeroCardFlip(); }}>
@@ -1430,7 +1437,6 @@ export default function HomePage() {
                               alt={`Example shadefreude Card ${currentExampleCardIndex + 1}`}
                               className={`w-full h-full rounded-lg object-contain example-card-image ${primaryImage.animationClass} mx-auto`}
                               style={{
-                                // transform: (swipeDeltaY !== 0 && !isAnimating && !primaryImage.animationClass && !isHeroCardFlipped) ? `translateY(${swipeDeltaY}px)` : undefined, // Removed
                                 zIndex: 10, 
                                 position: 'relative',
                                 visibility: isHeroCardFlipped ? 'hidden' : 'visible'
@@ -1488,16 +1494,13 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-                {/* Numbered pagination was here, moved below the wrapper div */}
               </div>
 
-              {/* New Numbered Pagination - Show immediately based on expected cards */}
+              {/* Numbered Pagination */}
               {HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 1 && (
                 <div className="flex justify-center items-center space-x-2 mt-3 mb-1 w-full">
                   {HERO_EXAMPLE_CARD_EXTENDED_IDS.map((_, index) => {
-                    // A button looks "pressed/selected" if it's either the current selection OR currently being pressed
                     const isPressed = ((pendingExampleCardIndex !== null ? pendingExampleCardIndex : currentExampleCardIndex) === index) || (pressedButtonIndex === index && mouseIsDown);
-                    // Disable button if cards are still loading or if the specific card failed to load
                     const isDisabled = isAnimating || heroCardsLoading || (fetchedHeroCards.length > 0 && index >= fetchedHeroCards.length);
                     
                     return (

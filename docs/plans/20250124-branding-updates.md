@@ -7,8 +7,12 @@ Update branding messaging and mobile experience improvements across the shadefre
 
 ### ✅ 1. Main Page Hero Section Update
 - **Changed title** from "Your Everyday Photo, Having Its Moment" to "The Digital Postcard Service"
-- **Preserved old title** by integrating it into the subtitle/tagline area
-- **Location**: `app/(dashboard)/page.tsx` lines ~504-509
+- **Increased title size** to be more prominent (text-4xl md:text-5xl lg:text-6xl)
+- **Enhanced subtitle hierarchy**: "Your everyday photo, having its moment" as prominent subtitle (text-2xl md:text-3xl lg:text-4xl)
+- **Restructured layout**: Title/subtitle now span full width at top, followed by two-column layout
+- **Two-column design**: Features & description on left (2/5), example cards on right (3/5)
+- **Separated feature elements**: "/" items now smaller and distinct (text-lg md:text-xl)
+- **Location**: `app/(dashboard)/page.tsx` lines ~1355-1499
 
 ### ✅ 2. Color Page Simplification  
 - **Removed** "First time here?" explanation section entirely
