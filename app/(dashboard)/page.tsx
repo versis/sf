@@ -1374,12 +1374,12 @@ export default function HomePage() {
           </div>
 
           {/* Create Your Card Button - Centered */}
-          <div className="flex justify-center mb-6 md:mb-8">
+          <div className="flex justify-center mb-6 md:mb-16">
             <button
               onClick={handleCreateYourCardClick}
-              className="px-8 py-4 md:px-12 md:py-6 font-semibold text-lg md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
+              className="px-6 py-3 md:px-12 md:py-6 font-semibold text-base md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
             >
-              <ImagePlus size={24} className="mr-3" />
+              <ImagePlus size={20} className="mr-2 md:mr-3" />
               Create Your Card
             </button>
           </div>
@@ -1508,6 +1508,9 @@ export default function HomePage() {
               </div>
             )}
           </div>
+
+          {/* Separator */}
+          <hr className="w-full border-t-2 border-foreground mb-8 md:mb-12" />
 
           {/* Features and Description - Full Width Below Everything */}
           <div className="w-full max-w-4xl mx-auto">
