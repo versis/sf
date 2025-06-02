@@ -363,13 +363,17 @@ async def generate_back_card_image_bytes(
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
         fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
-    # 1. Determine card dimensions and base font sizes (reverted to original)
+    # 1. Determine card dimensions and proportional font sizes
     if orientation == "horizontal":
         card_w, card_h = 1400, 700
-        note_font_size_val = 32  # Reverted to original
+        # Use smaller dimension for consistent scaling across orientations
+        base_scale = min(card_w, card_h) / 700  # Use 700 as baseline (minimum dimension)
+        note_font_size_val = int(32 * base_scale)
     else: # vertical
         card_w, card_h = 700, 1400
-        note_font_size_val = 32  # Reverted to original
+        # Use smaller dimension for consistent scaling across orientations
+        base_scale = min(card_w, card_h) / 700  # Use 700 as baseline (minimum dimension)
+        note_font_size_val = int(32 * base_scale)
 
     # 2. Calculate effective background color
     solid_lightened_bg_rgb = fixed_back_card_rgb # Use the fixed color directly
@@ -563,10 +567,8 @@ async def generate_back_card_image_bytes(
         
         text_block_x_start = note_text_area_start_x # Text starts at the beginning of its allowed area
 
-        rule_line_color = desaturate_hex_color(hex_color_input, 0.3, 0.6) # Lighter, less saturated version of card color
-        if rule_line_color is None: # Fallback if color conversion failed
-             rule_line_color = (200,200,200) if sum(solid_lightened_bg_rgb) > 384 else (100,100,100)
-
+        # Use text_color for rule lines instead of user's chosen color for better contrast
+        rule_line_color = text_color  # Use the same color as text for consistency and readability
 
         rule_x_start = text_block_x_start
         rule_x_end = note_text_area_end_x # Rules span the full available note width
