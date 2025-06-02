@@ -79,6 +79,8 @@ The card generation backend cannot properly render emojis and special characters
 - [ ] Consider adding a "why this restriction?" explanation for users
 - [ ] Update any relevant error handling documentation
 
+**Status:** ❌ **PENDING** - Implementation reverted, needs rework.
+
 ## Technical Implementation Notes
 
 ### Frontend Implementation

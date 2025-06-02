@@ -224,24 +224,20 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
           >
             {/* FRONT OF CARD */}
             <div className="card-face card-front">
-              {/* Render both orientations but use CSS to control visibility */}
-              {frontHorizontalImageUrl && (
+              {/* Only render the current orientation */}
+              {currentOrientation === 'horizontal' && frontHorizontalImageUrl && (
                 <img 
                   src={frontHorizontalImageUrl} 
                   alt="Generated horizontal card (front)" 
-                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
-                    currentOrientation === 'horizontal' ? '' : 'opacity-0 pointer-events-none absolute'
-                  } ${isMobile ? 'mobile-hide-horizontal' : 'desktop-show-horizontal'}`}
+                  className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
               )}
-              {frontVerticalImageUrl && (
+              {currentOrientation === 'vertical' && frontVerticalImageUrl && (
                 <img 
                   src={frontVerticalImageUrl} 
                   alt="Generated vertical card (front)" 
-                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
-                    currentOrientation === 'vertical' ? '' : 'opacity-0 pointer-events-none absolute'
-                  } ${isMobile ? 'mobile-show-vertical' : 'mobile-hide-vertical'}`}
+                  className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
               )}
@@ -262,24 +258,20 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
             {/* BACK OF CARD */}
             <div className="card-face card-back">
-              {/* Render both back orientations with CSS control */}
-              {backHorizontalImageUrl && (
+              {/* Only render the current orientation */}
+              {currentOrientation === 'horizontal' && backHorizontalImageUrl && (
                 <img 
                   src={backHorizontalImageUrl} 
                   alt="Generated horizontal card (back)" 
-                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
-                    currentOrientation === 'horizontal' ? '' : 'opacity-0 pointer-events-none absolute'
-                  } ${isMobile ? 'mobile-hide-horizontal' : 'desktop-show-horizontal'}`}
+                  className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
               )}
-              {backVerticalImageUrl && (
+              {currentOrientation === 'vertical' && backVerticalImageUrl && (
                 <img 
                   src={backVerticalImageUrl} 
                   alt="Generated vertical card (back)" 
-                  className={`w-full h-full object-contain rounded-md cursor-pointer card-orientation-transition ${
-                    currentOrientation === 'vertical' ? '' : 'opacity-0 pointer-events-none absolute'
-                  } ${isMobile ? 'mobile-show-vertical' : 'mobile-hide-vertical'}`}
+                  className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
               )}

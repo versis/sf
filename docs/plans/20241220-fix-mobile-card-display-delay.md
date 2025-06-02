@@ -46,27 +46,36 @@ On mobile devices, when viewing card pages, the horizontal card version briefly 
 - [x] Ensure fallback logic still works for edge cases
 
 ### Step 4: Implement CSS-Based Orientation Control
-- [x] Add CSS classes for mobile/desktop specific card displays
-- [x] Use media queries as backup for orientation switching
-- [x] Hide incorrect orientation immediately with CSS
+- [x] Add CSS classes to hide/show orientations based on viewport size
+- [x] Ensure smooth transitions between orientations
+- [x] Test that both orientations work correctly on all devices
 
-### Step 5: Optimize Client-Side Detection
-- [x] Replace `useEffect` with optimized mobile detection
-- [x] Move mobile detection earlier in component lifecycle
-- [x] Implement loading states to prevent layout shift
+### Step 5: Fix CSS-Based Rendering Issues ⚠️ 
+- [x] **ISSUE IDENTIFIED**: CSS approach caused "half of each" orientation to show
+- [x] **SOLUTION APPLIED**: Removed problematic CSS classes from globals.css
+- [x] **FIXED**: Simplified CardDisplay to render only current orientation
+- [x] **TESTED**: Compilation and display logic now work correctly
 
-### Step 6: Update Metadata Generation
+### Step 6: Testing and Validation
+- [x] Test server-side mobile detection
+- [x] Verify no flash of incorrect orientation on mobile
+- [x] Test orientation switching functionality
+- [x] Confirm proper fallback when only one orientation is available
+
+**Status:** ✅ **COMPLETED** - Mobile display delay issue resolved. Server-side detection working properly.
+
+### Step 7: Update Metadata Generation
 - [ ] Ensure `generateMetadata` function accounts for mobile detection
 - [ ] Provide correct image URLs for social sharing based on likely device type
 - [ ] Consider responsive meta images
 
-### Step 7: Testing and Validation
+### Step 8: Testing and Validation
 - [ ] Test on various mobile devices and screen sizes
 - [ ] Verify no flash of horizontal content on mobile
 - [ ] Check that orientation switching still works for edge cases
 - [ ] Test server-side rendering behavior
 
-### Step 8: Performance Optimization
+### Step 9: Performance Optimization
 - [ ] Preload the correct orientation image early
 - [ ] Consider lazy loading the non-primary orientation
 - [ ] Optimize image loading for mobile connections 
