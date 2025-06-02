@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-# When working on:
+When working on:
 - working on new feaature
 - improved implemnetation
 - changes to the implementation
@@ -23,16 +23,14 @@ alwaysApply: true
 10. Start the implementation, step by step.
 
 
-# When making multi-steps plans:
+When making multi-steps plans:
 1. Add them to `docs/plans` in markdown file.
 2. Use date as prefix, e.g. `20230322-<description>md`
 3. Use checkmarks to mark tasks as one.
 
 
-# What to (not) run:
+
+What to (not) run:
 1. Use linters to check the code.
 2. Do not run data migration scripts.
 3. If you run app to check if it works - remember to close it after you are done.
-
-# When you finish:
-1. Provide a commit message.
