@@ -1551,7 +1551,7 @@ export default function HomePage() {
             </div>
 
             {/* Description */}
-            <div className="text-center md:text-left">
+            <div className="text-left">
               <p className="text-md md:text-lg text-muted-foreground leading-relaxed">
                 Pick a color from your photo. Watch it become a <span className="highlight-marker">digital postcard</span> with a custom color name and an observation you didn&apos;t see coming. Each color tells its own story. Add a note on the back if you want. The kind of thing you share, print, or both.
               </p>
