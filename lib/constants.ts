@@ -1,1 +1,1 @@
-export const COPY_SUCCESS_MESSAGE = "Link to your card copied! Go on, spread the freude.";
+export const COPY_SUCCESS_MESSAGE = "Link to your card copied! Go on, share it.";

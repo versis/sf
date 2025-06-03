@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   MoreHorizontal, Share2, Link2, Download, RectangleHorizontal, RectangleVertical,
-  Undo2, BookOpenText
+  Undo2, BookOpenText, Mail
 } from 'lucide-react';
 import { getContrastTextColor } from '@/lib/colorUtils';
 
@@ -140,6 +140,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   const createNewButtonStyles = "text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2";
 
   const revealButtonStyle = "px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
+
+  const sendButtonStyle = "px-6 py-3 bg-input text-foreground font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] hover:border-blue-700 active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:border-blue-700 transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground w-full sm:w-auto";
 
   const downloadButtonText = () => {
     let text = "Download";
@@ -310,21 +312,31 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
 
         <div className="flex flex-col justify-center items-center gap-4 mt-6 w-full">
           {isFlippable && (backCardImageUrl || (hasNote === false)) && (
-            <div className="flex flex-col items-center mb-2">
-              <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center mb-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
                 <button
                   onClick={handleFlipCard}
-                  className={`${revealButtonStyle} min-w-[200px]`}
+                  className={`${revealButtonStyle} min-w-[200px] w-full sm:w-auto`}
                   title={isFlipped ? "Show Front" : "Reveal the Note"}
                 >
                   {isFlipped ? <Undo2 size={20} className="mr-1.5" /> : <BookOpenText size={20} className="mr-1.5" />}
                   <span className="text-sm">{isFlipped ? "Show Front" : "Reveal the Note"}</span>
                 </button>
 
-                <div className="relative" ref={actionsMenuRef}>
+                <button
+                  onClick={handleShare}
+                  className={`${commonButtonStyles} min-w-[200px] w-full sm:w-auto`}
+                  title="Send The Card"
+                  disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
+                >
+                  <Mail size={20} className="mr-1.5" />
+                  <span className="text-sm">Send The Card</span>
+                </button>
+
+                <div className="relative w-full sm:w-auto" ref={actionsMenuRef}>
                   <button
                     onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                    className={`${commonButtonStyles}`}
+                    className={`${commonButtonStyles} w-full sm:w-auto`}
                     title="More actions"
                   >
                     <MoreHorizontal size={20} />
@@ -346,13 +358,6 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                         <RectangleVertical size={16} /> View Vertical
                       </button>
                       <div className="h-px bg-border my-1 mx-2"></div>
-                      <button
-                        onClick={() => { handleShare(); setIsActionsMenuOpen(false); }}
-                        disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
-                        className={dropdownItemStyles}
-                      >
-                        <Share2 size={16} /> Share
-                      </button>
                       <button
                         onClick={() => { handleCopyGeneratedUrl(); setIsActionsMenuOpen(false); }}
                         disabled={isGenerating || !generatedExtendedId}

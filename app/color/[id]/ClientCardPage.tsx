@@ -151,6 +151,7 @@ export default function ClientCardPage({
     const shareUrl = `https://sf.tinker.institute/color/${cardId}`;
     const shareData = {
       title: cardData?.card_name ? `shadefreude: ${cardData.card_name}` : 'shadefreude Color Card',
+      text: cardData?.card_name ? `Check out this shadefreude postcard: ${cardData.card_name}` : 'Check out this shadefreude postcard',
       url: shareUrl,
     };
 
@@ -159,7 +160,10 @@ export default function ClientCardPage({
       onCopySuccess: (message) => setShareFeedback(message),
       onShareError: (message) => setShareFeedback(message),
       onCopyError: (message) => setShareFeedback(message),
-      copySuccessMessage: 'URL copied to clipboard!',
+      shareSuccessMessage: "Your postcard sent successfully!",
+      copySuccessMessage: "Postcard link copied! Go on, share it.",
+      shareErrorMessage: "Sending postcard failed. Attempting to copy link.",
+      copyErrorMessage: "Failed to copy postcard link."
     });
     setTimeout(() => setShareFeedback(''), 3000);
     setCopyUrlFeedback('');
@@ -177,6 +181,7 @@ export default function ClientCardPage({
         onSuccess: (message) => setCopyUrlFeedback(message),
         onError: (message) => setCopyUrlFeedback(message),
         successMessage: COPY_SUCCESS_MESSAGE,
+        errorMessage: "Failed to copy postcard link."
     });
     setTimeout(() => setCopyUrlFeedback(''), 3000);
     setShareFeedback('');
