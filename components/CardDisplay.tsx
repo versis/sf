@@ -134,14 +134,12 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     return null;
   }
 
-  const commonButtonStyles = "px-6 py-3 bg-input text-foreground font-semibold border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center";
+  const commonButtonStyles = "px-6 py-3 bg-input text-foreground font-medium border-2 border-foreground shadow-[4px_4px_0_0_theme(colors.foreground)] hover:shadow-[2px_2px_0_0_theme(colors.foreground)] active:shadow-[1px_1px_0_0_theme(colors.foreground)] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground flex items-center justify-center";
   const dropdownItemStyles = "w-full px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center justify-start gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
-  const activeDropdownItemStyles = "w-full px-4 py-2 text-sm text-blue-700 bg-blue-50 font-semibold flex items-center justify-start gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+  const activeDropdownItemStyles = "w-full px-4 py-2 text-sm text-blue-700 bg-blue-50 font-medium flex items-center justify-start gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
   const createNewButtonStyles = "text-sm text-foreground hover:text-muted-foreground underline flex items-center justify-center gap-2";
 
-  const revealButtonStyle = "px-6 py-3 font-semibold bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
-
-  const sendButtonStyle = "px-6 py-3 bg-input text-foreground font-semibold border-2 border-blue-700 shadow-[4px_4px_0_0_theme(colors.blue.700)] hover:shadow-[2px_2px_0_0_theme(colors.blue.700)] hover:border-blue-700 active:shadow-[1px_1px_0_0_theme(colors.blue.700)] active:border-blue-700 transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:text-muted-foreground disabled:border-muted-foreground w-full sm:w-auto";
+  const revealButtonStyle = "px-6 py-3 font-medium bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
 
   const downloadButtonText = () => {
     let text = "Download";
@@ -319,7 +317,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                   className={`${revealButtonStyle} min-w-[200px] w-full sm:w-auto`}
                   title={isFlipped ? "Show Front" : "Reveal the Note"}
                 >
-                  {isFlipped ? <Undo2 size={20} className="mr-1.5" /> : <BookOpenText size={20} className="mr-1.5" />}
+                  {isFlipped ? <Undo2 size={20} className="mr-1.5" strokeWidth={1.5} /> : <BookOpenText size={20} className="mr-1.5" strokeWidth={1.5} />}
                   <span className="text-sm">{isFlipped ? "Show Front" : "Reveal the Note"}</span>
                 </button>
 
@@ -329,8 +327,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                   title="Send The Card"
                   disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
                 >
-                  <Mail size={20} className="mr-1.5" />
-                  <span className="text-sm">Send The Card</span>
+                  <Mail size={20} className="mr-1.5" strokeWidth={1.5} />
+                  <span className="text-sm">Send The Postcard</span>
                 </button>
 
                 <div className="relative w-full sm:w-auto" ref={actionsMenuRef}>
@@ -339,7 +337,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                     className={`${commonButtonStyles} w-full sm:w-auto`}
                     title="More actions"
                   >
-                    <MoreHorizontal size={20} />
+                    <MoreHorizontal size={20} strokeWidth={1.5} />
                   </button>
                   {isActionsMenuOpen && (
                     <div className="absolute bottom-full mb-2 right-0 bg-card border-2 border-foreground shadow-lg rounded-md py-1 z-10 flex flex-col min-w-[240px]">
@@ -348,14 +346,14 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                         disabled={!frontHorizontalImageUrl}
                         className={currentOrientation === 'horizontal' ? activeDropdownItemStyles : dropdownItemStyles}
                       >
-                        <RectangleHorizontal size={16} /> View Horizontal
+                        <RectangleHorizontal size={16} strokeWidth={1.5} /> View Horizontal
                       </button>
                       <button
                         onClick={() => handleSetOrientation('vertical')}
                         disabled={!frontVerticalImageUrl}
                         className={currentOrientation === 'vertical' ? activeDropdownItemStyles : dropdownItemStyles}
                       >
-                        <RectangleVertical size={16} /> View Vertical
+                        <RectangleVertical size={16} strokeWidth={1.5} /> View Vertical
                       </button>
                       <div className="h-px bg-border my-1 mx-2"></div>
                       <button
@@ -363,14 +361,14 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                         disabled={isGenerating || !generatedExtendedId}
                         className={dropdownItemStyles}
                       >
-                        <Link2 size={16} /> Copy URL
+                        <Link2 size={16} strokeWidth={1.5} /> Copy URL
                       </button>
                       <button
                         onClick={() => { handleDownloadImage(currentOrientation); setIsActionsMenuOpen(false); }}
                         disabled={isGenerating || (currentOrientation === 'horizontal' ? !frontHorizontalImageUrl : !frontVerticalImageUrl)}
                         className={dropdownItemStyles}
                       >
-                        <Download size={16} /> {downloadButtonText()}
+                        <Download size={16} strokeWidth={1.5} /> {downloadButtonText()}
                       </button>
                     </div>
                   )}
