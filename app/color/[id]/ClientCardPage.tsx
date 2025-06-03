@@ -53,8 +53,8 @@ export default function ClientCardPage({
   const router = useRouter();
   const [isMobile, setIsMobile] = useState<boolean>(initialMobile);
   const [currentDisplayOrientation, setCurrentDisplayOrientation] = useState<'horizontal' | 'vertical'>(initialOrientation);
-  const [shareFeedback, setShareFeedback] = useState<string>('');
-  const [copyUrlFeedback, setCopyUrlFeedback] = useState<string>('');
+  const [shareFeedback, setShareFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [copyUrlFeedback, setCopyUrlFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const cardDisplaySectionRef = useRef<HTMLDivElement>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -144,8 +144,8 @@ export default function ClientCardPage({
   // handleShare function to be passed to CardDisplay
   const handleShareAction = async () => {
     if (!cardId) {
-        setShareFeedback('Card ID not available for sharing.');
-        setTimeout(() => setShareFeedback(''), 3000);
+        setShareFeedback({ message: 'Card ID not available for sharing.', type: 'error' });
+        setTimeout(() => setShareFeedback(null), 3000);
         return;
     }
     const shareUrl = `https://sf.tinker.institute/color/${cardId}`;
@@ -156,35 +156,35 @@ export default function ClientCardPage({
     };
 
     await shareOrCopy(shareData, shareUrl, {
-      onShareSuccess: (message) => setShareFeedback(message),
-      onCopySuccess: (message) => setShareFeedback(message),
-      onShareError: (message) => setShareFeedback(message),
-      onCopyError: (message) => setShareFeedback(message),
+      onShareSuccess: (message) => setShareFeedback({ message, type: 'success' }),
+      onCopySuccess: (message) => setShareFeedback({ message, type: 'success' }),
+      onShareError: (message) => setShareFeedback({ message, type: 'error' }),
+      onCopyError: (message) => setShareFeedback({ message, type: 'error' }),
       shareSuccessMessage: "Your postcard sent successfully!",
       copySuccessMessage: "Postcard link copied! Go on, share it.",
       shareErrorMessage: "Sending postcard failed. Attempting to copy link.",
       copyErrorMessage: "Failed to copy postcard link."
     });
-    setTimeout(() => setShareFeedback(''), 3000);
-    setCopyUrlFeedback('');
+    setTimeout(() => setShareFeedback(null), 3000);
+    setCopyUrlFeedback(null);
   };
 
   // handleCopyPageUrl function to be passed to CardDisplay as handleCopyGeneratedUrl
   const handleCopyLinkAction = async () => {
     if (!cardId) {
-      setCopyUrlFeedback('Cannot copy URL: Card ID missing.');
-      setTimeout(() => setCopyUrlFeedback(''), 3000);
+      setCopyUrlFeedback({ message: 'Cannot copy URL: Card ID missing.', type: 'error' });
+      setTimeout(() => setCopyUrlFeedback(null), 3000);
       return;
     }
     const urlToCopy = window.location.href;
     await copyTextToClipboard(urlToCopy, {
-        onSuccess: (message) => setCopyUrlFeedback(message),
-        onError: (message) => setCopyUrlFeedback(message),
+        onSuccess: (message) => setCopyUrlFeedback({ message, type: 'success' }),
+        onError: (message) => setCopyUrlFeedback({ message, type: 'error' }),
         successMessage: COPY_SUCCESS_MESSAGE,
         errorMessage: "Failed to copy postcard link."
     });
-    setTimeout(() => setCopyUrlFeedback(''), 3000);
-    setShareFeedback('');
+    setTimeout(() => setCopyUrlFeedback(null), 3000);
+    setShareFeedback(null);
   };
 
   // New handler for the "Create New Card" button from CardDisplay

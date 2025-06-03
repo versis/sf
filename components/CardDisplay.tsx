@@ -26,8 +26,8 @@ interface CardDisplayProps {
   isGenerating: boolean;
   generatedExtendedId: string | null;
   cardDisplayControlsRef?: React.RefObject<HTMLDivElement>;
-  shareFeedback?: string;
-  copyUrlFeedback?: string;
+  shareFeedback?: { message: string; type: 'success' | 'error' } | null;
+  copyUrlFeedback?: { message: string; type: 'success' | 'error' } | null;
   isVisible: boolean;
   disableScrollOnLoad?: boolean;
   swipeDirection?: 'left' | 'right' | null;
@@ -379,10 +379,14 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
         </div>
         
         {(shareFeedback && !copyUrlFeedback) && (
-          <p className="text-sm text-blue-700 mt-2 text-center h-5">{shareFeedback}</p>
+          <p className={`text-sm mt-2 text-center h-5 ${shareFeedback.type === 'success' ? 'text-blue-700' : 'text-red-500'}`}>
+            {shareFeedback.message}
+          </p>
         )}
         {copyUrlFeedback && (
-          <p className="text-sm text-green-700 mt-2 text-center h-5">{copyUrlFeedback}</p>
+          <p className={`text-sm mt-2 text-center h-5 ${copyUrlFeedback.type === 'success' ? 'text-blue-700' : 'text-red-500'}`}>
+            {copyUrlFeedback.message}
+          </p>
         )}
       </div>
     </section>
