@@ -229,13 +229,18 @@ export default async function ColorCardPage({ params }: { params: { id: string }
   });
 
   return (
-    <ClientCardPage
-      cardData={clientCardData}
-      cardId={params.id}
-      loading={false}
-      error={null}
-      initialMobile={serverDetectedMobile}
-      initialOrientation={initialOrientation}
-    />
+    <>
+      <ClientCardPage
+        cardData={clientCardData}
+        cardId={params.id}
+        loading={false}
+        error={null}
+        initialMobile={serverDetectedMobile}
+        initialOrientation={initialOrientation}
+      />
+      <footer className="w-full text-center py-4 text-sm text-muted-foreground">
+        <p>Delivered by shadefreude,<br/><strong className="text-base">The Digital Postcard Service</strong></p>
+      </footer>
+    </>
   );
 } 
