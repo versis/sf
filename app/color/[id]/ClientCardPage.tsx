@@ -268,10 +268,10 @@ export default function ClientCardPage({
           </div>
 
           {/* Text added below the CardDisplay component block, now with order-2 */}
-          <div className="w-full text-center py-4 mt-4 order-2">
-            <p className="text-xs text-muted-foreground">
-              Delivered by shadefreude,<br />
-              <strong className="text-sm">The Digital Postcard Service</strong>
+          <div className="w-full text-center py-4 mt-4 md:mt-8 order-2">
+            <p className="text-sm md:text-lg text-muted-foreground">
+              Delivered by <i>shadefreude</i>,<br />
+              <strong className="text-lg md:text-2xl">The Digital Postcard Service</strong>
             </p>
           </div>
 
