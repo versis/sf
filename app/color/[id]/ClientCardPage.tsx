@@ -217,7 +217,6 @@ export default function ClientCardPage({
                   </span>
                 </Link>
               </h1>
-              <p className="text-sm text-muted-foreground mt-3 text-center">The Digital Postcard Service</p>
             </div>
             
             {/* Create button on the right - centered with logo block */}
@@ -267,6 +266,15 @@ export default function ClientCardPage({
               isMobile={isMobile}
             />
           </div>
+
+          {/* Text added below the CardDisplay component block, now with order-2 */}
+          <div className="w-full text-center py-4 mt-4 order-2">
+            <p className="text-xs text-muted-foreground">
+              Delivered by shadefreude,<br />
+              <strong className="text-sm">The Digital Postcard Service</strong>
+            </p>
+          </div>
+
         </div>
       </div>
     </main>

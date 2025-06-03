@@ -238,9 +238,6 @@ export default async function ColorCardPage({ params }: { params: { id: string }
         initialMobile={serverDetectedMobile}
         initialOrientation={initialOrientation}
       />
-      <footer className="w-full text-center py-4 text-sm text-muted-foreground">
-        <p>Delivered by shadefreude,<br/><strong className="text-base">The Digital Postcard Service</strong></p>
-      </footer>
     </>
   );
 } 
