@@ -315,16 +315,16 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 <button
                   onClick={handleFlipCard}
                   className={`${revealButtonStyle} min-w-[200px] w-full sm:w-auto`}
-                  title={isFlipped ? "Show Front" : "Reveal the Note"}
+                  title={isFlipped ? "Show Front" : "Reveal The Note"}
                 >
                   {isFlipped ? <Undo2 size={20} className="mr-1.5" strokeWidth={1.5} /> : <BookOpenText size={20} className="mr-1.5" strokeWidth={1.5} />}
-                  <span className="text-sm">{isFlipped ? "Show Front" : "Reveal the Note"}</span>
+                  <span className="text-sm">{isFlipped ? "Show Front" : "Reveal The Note"}</span>
                 </button>
 
                 <button
                   onClick={handleShare}
                   className={`${commonButtonStyles} min-w-[200px] w-full sm:w-auto`}
-                  title="Send the Postcard"
+                  title="Send The Postcard"
                   disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
                 >
                   <Mail size={20} className="mr-1.5" strokeWidth={1.5} />
