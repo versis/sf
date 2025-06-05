@@ -228,7 +228,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               {currentOrientation === 'horizontal' && frontHorizontalImageUrl && (
                 <img 
                   src={frontHorizontalImageUrl} 
-                  alt="Generated horizontal card (front)" 
+                  alt="Generated horizontal postcard (front)" 
                   className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
@@ -236,7 +236,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               {currentOrientation === 'vertical' && frontVerticalImageUrl && (
                 <img 
                   src={frontVerticalImageUrl} 
-                  alt="Generated vertical card (front)" 
+                  alt="Generated vertical postcard (front)" 
                   className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
@@ -262,7 +262,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               {currentOrientation === 'horizontal' && backHorizontalImageUrl && (
                 <img 
                   src={backHorizontalImageUrl} 
-                  alt="Generated horizontal card (back)" 
+                  alt="Generated horizontal postcard (back)" 
                   className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
@@ -270,7 +270,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
               {currentOrientation === 'vertical' && backVerticalImageUrl && (
                 <img 
                   src={backVerticalImageUrl} 
-                  alt="Generated vertical card (back)" 
+                  alt="Generated vertical postcard (back)" 
                   className="w-full h-full object-contain rounded-md cursor-pointer"
                   onClick={handleFlipCard} 
                 />
@@ -301,7 +301,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 </div>
               ) : (
                 <div className="w-full h-full flex justify-center items-center bg-muted rounded-md">
-                  <p className="text-muted-foreground text-center p-4">Card back not available.</p>
+                  <p className="text-muted-foreground text-center p-4">Postcard back not available.</p>
                 </div>
               ))}
             </div>
@@ -324,7 +324,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 <button
                   onClick={handleShare}
                   className={`${commonButtonStyles} min-w-[200px] w-full sm:w-auto`}
-                  title="Send The Card"
+                  title="Send the Postcard"
                   disabled={isGenerating || !(frontHorizontalImageUrl || frontVerticalImageUrl) || !generatedExtendedId}
                 >
                   <Mail size={20} className="mr-1.5" strokeWidth={1.5} />

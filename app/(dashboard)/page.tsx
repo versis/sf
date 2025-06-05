@@ -35,7 +35,7 @@ const NEW_LINE_DELAY_TICKS = Math.floor(2300 / CHAR_TYPING_SPEED_MS);
 
 import { HERO_CARD_IDS } from '@/lib/heroCardConfig';
 
-// Use centralized hero card configuration
+// Use centralized hero postcard configuration
 const HERO_EXAMPLE_CARD_EXTENDED_IDS = HERO_CARD_IDS;
 const SWIPE_THRESHOLD = 50;
 
@@ -297,7 +297,7 @@ export default function HomePage() {
       }
       
       setHeroCardsLoading(true);
-      console.log('[Hero Cards] Loading from cache...');
+      console.log('[Hero Postcards] Loading from cache...');
       
       try {
         // Try to load from local cache first
@@ -305,7 +305,7 @@ export default function HomePage() {
         
         if (manifestResponse.ok) {
           const manifest = await manifestResponse.json();
-          console.log('[Hero Cards] Using cached manifest');
+          console.log('[Hero Postcards] Using cached manifest');
           
           if (isMounted) {
             // Transform manifest to expected format, maintaining order
@@ -313,18 +313,18 @@ export default function HomePage() {
               .map(extendedId => manifest[extendedId])
               .filter(card => card !== null && card !== undefined && (card.v || card.h));
 
-            console.log('[Hero Cards] Loaded', orderedCards.length, 'cards from cache');
+            console.log('[Hero Postcards] Loaded', orderedCards.length, 'postcards from cache');
             
             setFetchedHeroCards(orderedCards);
             setHeroCardsLoading(false);
           }
         } else {
           // Fallback to API if cache not available
-          console.log('[Hero Cards] Cache not available, falling back to API');
+          console.log('[Hero Postcards] Cache not available, falling back to API');
           await fetchHeroCardsFromAPI();
         }
       } catch (error) {
-        console.error('[Hero Cards] Cache load failed, falling back to API:', error);
+        console.error('[Hero Postcards] Cache load failed, falling back to API:', error);
         if (isMounted) {
           await fetchHeroCardsFromAPI();
         }
@@ -346,20 +346,20 @@ export default function HomePage() {
         }
 
         const batchResult = await response.json();
-        console.log('[Hero Cards] API fetch completed');
+        console.log('[Hero Postcards] API fetch completed');
 
         if (isMounted) {
           const orderedCards = HERO_EXAMPLE_CARD_EXTENDED_IDS
             .map(extendedId => batchResult.cards[extendedId])
             .filter(card => card !== null && card !== undefined && (card.v || card.h));
 
-          console.log('[Hero Cards] Processed', orderedCards.length, 'cards from API');
+          console.log('[Hero Postcards] Processed', orderedCards.length, 'postcards from API');
           
           setFetchedHeroCards(orderedCards);
           setHeroCardsLoading(false);
         }
       } catch (error) {
-        console.error('[Hero Cards] API fetch failed:', error);
+        console.error('[Hero Postcards] API fetch failed:', error);
         if (isMounted) {
           setFetchedHeroCards([]);
           setHeroCardsLoading(false);
@@ -381,15 +381,15 @@ export default function HomePage() {
           setPrimaryImage({ src: initialImageSrc, animationClass: '' });
           console.log("[Hero Init] Initial primaryImage.src set to:", initialImageSrc);
         } else {
-          console.warn(`[Hero Init] Card at index ${currentExampleCardIndex} has no image URLs.`);
+          console.warn(`[Hero Init] Postcard at index ${currentExampleCardIndex} has no image URLs.`);
           setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
         }
       } else {
-        console.warn(`[Hero Init] No card data found at currentExampleCardIndex: ${currentExampleCardIndex} after loading.`);
+        console.warn(`[Hero Init] No postcard data found at currentExampleCardIndex: ${currentExampleCardIndex} after loading.`);
         setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
       }
     } else if (!heroCardsLoading && fetchedHeroCards.length === 0 && HERO_EXAMPLE_CARD_EXTENDED_IDS.length > 0) {
-        console.warn("[Hero Init] Hero cards were fetched, but the resulting array is empty or all items filtered out.");
+        console.warn("[Hero Init] Hero postcards were fetched, but the resulting array is empty or all items filtered out.");
         setPrimaryImage({ src: '/placeholder-hero.png', animationClass: '' }); // Fallback placeholder
     }
   }, [currentExampleCardIndex, isMobile, fetchedHeroCards, heroCardsLoading]);
@@ -1384,7 +1384,7 @@ export default function HomePage() {
               className="flex px-3 py-2 md:px-4 md:py-3 font-medium text-xs md:text-sm bg-black text-white border border-[#374151] shadow-[2px_2px_0_0_#374151] hover:shadow-[1px_1px_0_0_#374151] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all duration-100 ease-in-out items-center justify-center ml-4"
             >
               <ImagePlus size={12} className="mr-1" />
-              <span className="hidden md:inline">Create Your Card</span>
+              <span className="hidden md:inline">Create Your Postcard</span>
               <span className="md:hidden">Create</span>
             </button>
           </div>
@@ -1409,7 +1409,7 @@ export default function HomePage() {
               className="px-6 py-3 md:px-12 md:py-6 font-semibold text-base md:text-xl bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center rounded-md"
             >
               <ImagePlus size={20} className="mr-2 md:mr-3" />
-              Create Your Card
+              Create Your Postcard
             </button>
           </div>
 
@@ -1564,7 +1564,7 @@ export default function HomePage() {
             {/* HR Separator and Title for Wizard Section - now part of the ref'd element */}
             <hr className="w-full border-t-2 border-foreground mt-1 mb-3" />
             <div className="w-full flex flex-col items-start my-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-left mt-8 mb-4"><span className="text-lg md:text-xl font-normal text-muted-foreground">create</span> Your card</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-left mt-8 mb-4"><span className="text-lg md:text-xl font-normal text-muted-foreground"></span>Create Your Postcard</h2>
             </div>
             
             {/* Container for the wizard steps grid - REF REMOVED FROM HERE */}
@@ -1657,7 +1657,7 @@ export default function HomePage() {
 
                 {(isCropStepCompleted && ((currentWizardStep === 'results' || isGenerating) || isResultsStepCompleted)) && (
                   <WizardStep
-                    title="4: Your card takes form..."
+                    title="4: Your postcard takes form..."
                     stepNumber={4}
                     isActive={currentWizardStep === 'results'}
                     isCompleted={isResultsStepCompleted}

@@ -12,7 +12,7 @@ interface ImageCardDisplayProps {
   cardSet: CardImage[]; // Array of card image objects
   isMobile: boolean;
   initialIndex?: number;
-  enableImageSwitching?: boolean; // To control if prev/next is shown when multiple cards
+  enableImageSwitching?: boolean; // To control if prev/next is shown when multiple postcards
   className?: string; // Optional additional class names for the wrapper
   defaultOrientation?: 'horizontal' | 'vertical';
 }
@@ -85,7 +85,7 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
     return (
         <div className={`flex flex-col items-center w-full ${className}`}>
             <div className={`relative w-full mb-2 ${aspectRatioContainer} flex items-center justify-center text-muted-foreground bg-muted rounded-md`}>
-                Orientation not available for this card.
+                Orientation not available for this postcard.
             </div>
         </div>
     );
@@ -110,7 +110,7 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
       >
         <img 
           src={imageUrl}
-          alt={currentCard.altText || `Card image ${currentIndex + 1} - ${currentOrientation}`}
+          alt={currentCard.altText || `Postcard image ${currentIndex + 1} - ${currentOrientation}`}
           className="w-full h-full rounded-lg object-contain"
           draggable="false"
         />
@@ -122,7 +122,7 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
               <button 
                 onClick={handlePrevCard} 
                 className="absolute top-1/2 -left-4 md:-left-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                aria-label="Previous card"
+                aria-label="Previous postcard"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
               </button>
@@ -131,7 +131,7 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
               <button 
                 onClick={handleNextCard} 
                 className="absolute top-1/2 -right-4 md:-right-8 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10 transition-colors"
-                aria-label="Next card"
+                aria-label="Next postcard"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
@@ -148,7 +148,7 @@ const ImageCardDisplay: React.FC<ImageCardDisplayProps> = ({
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`w-2.5 h-2.5 rounded-full transition-colors ${currentIndex === index ? 'bg-foreground' : 'bg-muted hover:bg-muted-foreground/50'}`}
-                aria-label={`Go to card ${index + 1}`}
+                aria-label={`Go to postcard ${index + 1}`}
                 />
             ))}
         </div>

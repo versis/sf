@@ -130,7 +130,7 @@ export default function ReviewPage() {
                   {gen.extended_id && (
                     <div className="mt-3 space-y-2">
                       <div>
-                        <span className="text-sm font-medium text-gray-700">Card ID: </span>
+                        <span className="text-sm font-medium text-gray-700">Postcard ID: </span>
                         <span className="text-sm text-gray-600 font-mono mr-2">{gen.extended_id}</span>
                         <button 
                           onClick={async () => {
@@ -151,7 +151,7 @@ export default function ReviewPage() {
                       <div>
                         <Link href={`/color/${gen.extended_id.replace(/\s+/g, '-').toLowerCase()}`} legacyBehavior>
                           <a className="text-sm text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
-                            View Full Card Details
+                            View Full Postcard Details
                           </a>
                         </Link>
                       </div>
@@ -180,7 +180,7 @@ export default function ReviewPage() {
                     generatedExtendedId={gen.extended_id}
                     isVisible={true}
                     disableScrollOnLoad={true} // Prevent CardDisplay's own scroll effect
-                    // hexColor and createdAt could be passed if CardDisplay uses them on the back for non-note cards
+                    // hexColor and createdAt could be passed if CardDisplay uses them on the back for non-note postcards
                     hexColor={gen.hex_color}
                     createdAt={gen.created_at}
                   />

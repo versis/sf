@@ -51,10 +51,10 @@ const ColorTools: React.FC<ColorToolsProps> = ({
         prevCtx.imageSmoothingEnabled = true;
         prevCtx.imageSmoothingQuality = 'high';
         
-        // Set dimensions to match card proportions (horizontal orientation)
+        // Set dimensions to match postcard proportions (horizontal orientation)
         // Use higher resolution for better image quality 
         previewCanvas.width = 1000; 
-        previewCanvas.height = 500; // 2:1 aspect ratio to match card
+        previewCanvas.height = 500; // 2:1 aspect ratio to match postcard
         
         // Split the canvas 50/50 for color and image
         const swatchWidth = previewCanvas.width * 0.5; // 50% for color swatch
@@ -236,7 +236,7 @@ const ColorTools: React.FC<ColorToolsProps> = ({
             onClick={handleCanvasClick} 
             className="cursor-crosshair w-full max-w-[38.4rem] h-auto rounded-lg block mx-auto shadow-sm"
             style={{ 
-              aspectRatio: '2 / 1', // 2:1 ratio to match horizontal card layout
+              aspectRatio: '2 / 1', // 2:1 ratio to match horizontal postcard layout
               imageRendering: 'auto', // CSS hint for high-quality rendering
               backgroundColor: '#000' // Dark background to avoid transparency issues
             }}

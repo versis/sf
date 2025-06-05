@@ -29,7 +29,7 @@ interface CardDetailsFromAPI {
   metadata?: any;
 }
 
-// Fetch card data server-side
+// Fetch postcard data server-side
 async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
   try {
     // Construct the base URL more reliably
@@ -44,7 +44,7 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
     }
     
     const fetchUrl = `${baseUrl}/api/retrieve-card-by-extended-id/${id}`;
-    console.log(`[Server] Fetching card data from: ${fetchUrl}`);
+    console.log(`[Server] Fetching postcard data from: ${fetchUrl}`);
     
     const response = await fetch(fetchUrl, {
       cache: 'no-store', // Ensure fresh data for metadata generation
@@ -56,7 +56,7 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
     console.log(`[Server] Fetch response status: ${response.status}`);
 
     if (!response.ok) {
-      console.error(`[Server] Failed to fetch card data: ${response.status} ${response.statusText}`);
+      console.error(`[Server] Failed to fetch postcard data: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
       console.error(`[Server] Error response body: ${errorText}`);
       return null;
@@ -65,7 +65,7 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
     const data = await response.json();
     console.log(`[Server] Raw response from FastAPI:`, data);
 
-    console.log(`[Server] Successfully fetched card data:`, {
+    console.log(`[Server] Successfully fetched postcard data:`, {
       id: data.id,
       extendedId: data.extendedId,
       hasImages: {
@@ -76,14 +76,14 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
 
     return data;
   } catch (error) {
-    console.error('[Server] Error fetching card data:', error);
+    console.error('[Server] Error fetching postcard data:', error);
     return null;
   }
 }
 
 // Convert API response to client component props
 function transformCardData(apiData: CardDetailsFromAPI): any {
-  console.log('[Server] Transforming card data for client:', {
+  console.log('[Server] Transforming postcard data for client:', {
     hasHorizontalImage: !!apiData.frontHorizontalImageUrl,
     hasVerticalImage: !!apiData.frontVerticalImageUrl,
     extendedId: apiData.extendedId,
@@ -125,7 +125,7 @@ function isMobileUserAgent(userAgent: string): boolean {
   );
 }
 
-// Generate dynamic metadata for each card
+// Generate dynamic metadata for each postcard
 export async function generateMetadata(
   { params }: { params: { id: string } }
 ): Promise<Metadata> {
@@ -133,8 +133,8 @@ export async function generateMetadata(
   
   if (!cardData) {
     return {
-      title: 'Card Not Found - shadefreude',
-      description: 'The requested color card could not be found.',
+      title: 'Postcard Not Found - shadefreude',
+      description: 'The requested color postcard could not be found.',
     };
   }
 
@@ -151,7 +151,7 @@ export async function generateMetadata(
     photo_date: cardData.photo_date,
   });
 
-  const cardName = cardData.card_name || 'Color Card';
+  const cardName = cardData.card_name || 'Color Postcard';
   const baseUrl = 'https://sf.tinker.institute';
   const cardUrl = `${baseUrl}/color/${params.id}`;
 
@@ -168,7 +168,7 @@ export async function generateMetadata(
           url: metadata.imageUrl,
           width: 1400,
           height: 700,
-          alt: `${cardName} - shadefreude Color Card`,
+          alt: `${cardName} - shadefreude Postcard`,
         }
       ] : [],
       type: 'website',
@@ -187,7 +187,7 @@ export async function generateMetadata(
 
 // Server component
 export default async function ColorCardPage({ params }: { params: { id: string } }) {
-  console.log(`[Server] Processing card page for ID: ${params.id}`);
+  console.log(`[Server] Processing postcard page for ID: ${params.id}`);
   
   // Get server-side mobile detection
   const headersList = headers();
@@ -200,7 +200,7 @@ export default async function ColorCardPage({ params }: { params: { id: string }
   const cardData = await fetchCardData(params.id);
 
   if (!cardData) {
-    console.log(`[Server] No card data found for ID: ${params.id}, calling notFound()`);
+    console.log(`[Server] No postcard data found for ID: ${params.id}, calling notFound()`);
     notFound();
   }
 
