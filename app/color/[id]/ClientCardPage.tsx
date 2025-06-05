@@ -150,8 +150,6 @@ export default function ClientCardPage({
     }
     const shareUrl = `https://sf.tinker.institute/color/${cardId}`;
     const shareData = {
-      title: cardData?.card_name ? `shadefreude: ${cardData.card_name}` : 'shadefreude postcard',
-      text: cardData?.card_name ? `Check out this shadefreude postcard: ${cardData.card_name}` : 'Check out this shadefreude postcard',
       url: shareUrl,
     };
 
