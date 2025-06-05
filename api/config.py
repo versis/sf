@@ -50,6 +50,8 @@ AZURE_OPENAI_CLIENT_TIMEOUT = float(os.environ.get("AZURE_OPENAI_CLIENT_TIMEOUT"
 
 # CORS Origins
 ALLOWED_ORIGINS = [
+    "https://www.shadefreude.com/",
+    "https://shadefreude.com/",
     "http://localhost:3000",
     "https://sf.tinker.institute",
     "https://sf-livid.vercel.app",

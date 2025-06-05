@@ -40,7 +40,7 @@ async function fetchCardData(id: string): Promise<CardDetailsFromAPI | null> {
       baseUrl = 'http://localhost:3000';
     } else {
       // Production - always use custom domain to avoid Vercel authentication on auto-generated URLs
-      baseUrl = 'https://sf.tinker.institute';
+      baseUrl = process.env.NEXT_PUBLIC_API_URL!;
     }
     
     const fetchUrl = `${baseUrl}/api/retrieve-card-by-extended-id/${id}`;
@@ -152,7 +152,7 @@ export async function generateMetadata(
   });
 
   const cardName = cardData.card_name || 'Color Postcard';
-  const baseUrl = 'https://sf.tinker.institute';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL!;
   const cardUrl = `${baseUrl}/color/${params.id}`;
 
   return {

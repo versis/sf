@@ -978,7 +978,7 @@ export default function HomePage() {
     let shareUrl = currentImageUrl; // Default to direct image URL
     if (generatedExtendedId) {
       const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
-      shareUrl = `https://sf.tinker.institute/color/${slug}`;
+      shareUrl = `${process.env.NEXT_PUBLIC_API_URL}/color/${slug}`;
     }
     
     const shareMessage = `My latest shadefreude discovery – a color with a tale to tell: ${shareUrl}`;
@@ -1010,7 +1010,7 @@ export default function HomePage() {
       return;
     }
     const slug = generatedExtendedId.replace(/\s+/g, '-').toLowerCase();
-    const urlToCopy = `https://sf.tinker.institute/color/${slug}`;
+    const urlToCopy = `${process.env.NEXT_PUBLIC_API_URL}/color/${slug}`;
     
     await copyTextToClipboard(urlToCopy, {
         onSuccess: (message: string) => setCopyUrlFeedback(message),

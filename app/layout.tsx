@@ -5,18 +5,20 @@ import { cn } from "@/lib/utils";
 import { Metadata } from 'next';
 import Footer from '@/components/Footer';
 
+const siteUrl = process.env.NEXT_PUBLIC_API_URL; // Removed fallback
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sf.tinker.institute'),
+  metadataBase: new URL(siteUrl!), // Keep non-null assertion for URL constructor
   title: "shadefreude: The Digital Postcard Service | tinker.institute",
   description: "Your everyday photo, having its moment — / Polaroid vibes. / AI brains. / No cringe. Hopefully. — Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story.",
   alternates: {
-    canonical: "https://sf.tinker.institute/"
+    canonical: `${siteUrl}/`
   },
   openGraph: {
     title: "shadefreude: The Digital Postcard Service",
     description: "Your everyday photo, having its moment — / Polaroid vibes. / AI brains. / No cringe. Hopefully. — Pick a color from your photo and watch AI transform it into a digital postcard with a custom color name and unique story.",
     type: "website",
-    url: "https://sf.tinker.institute/",
+    url: `${siteUrl}/`,
     images: [
       {
         url: "/og.png",

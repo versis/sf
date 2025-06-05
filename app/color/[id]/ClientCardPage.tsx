@@ -148,7 +148,7 @@ export default function ClientCardPage({
         setTimeout(() => setShareFeedback(null), 3000);
         return;
     }
-    const shareUrl = `https://sf.tinker.institute/color/${cardId}`;
+    const shareUrl = `${process.env.NEXT_PUBLIC_API_URL}/color/${cardId}`;
     const shareData = {
       url: shareUrl,
     };
