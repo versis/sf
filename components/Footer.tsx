@@ -28,7 +28,10 @@ const Footer = () => {
       </div>
       <div className="w-full max-w-6xl mx-auto mt-4 flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-2">
         <span>
-          &copy; {new Date().getFullYear()} <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="hover:underline">tinker.institute</a>
+          &copy; {new Date().getFullYear()} <a href="https://tinker.institute" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 inline-flex items-center">
+            tinker.institute
+            <ExternalLink className="ml-1 h-2 w-2 md:h-3 md:w-3 text-gray-500" />
+          </a>
         </span>
         <span className="hidden md:inline">|</span>
         <span>Made in Poland</span>
