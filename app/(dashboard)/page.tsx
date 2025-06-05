@@ -1762,7 +1762,7 @@ export default function HomePage() {
                               <textarea
                                 value={noteText}
                                 onChange={(e) => setNoteText(e.target.value)}
-                                placeholder="Add your note here (optional, max 500 characters). Press Enter for new lines."
+                                placeholder="Add your note here (optional)."
                                 maxLength={500}
                                 className="w-full h-24 p-3 bg-input border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground/70 text-foreground text-base resize"
                                 aria-label="Note for the back of the card"
