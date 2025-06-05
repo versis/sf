@@ -525,7 +525,7 @@ export default function HomePage() {
     // If called from the new button flow, wizardVisible is false.
     // If called from within an already visible wizard (e.g. user clicks step 1 again), wizardVisible is true.
 
-    if (!wizardVisible) { // Coming from the new "Create Your Card" button flow
+    if (!wizardVisible) { // Coming from the new "Create Your Postcard" button flow
         setUploadStepPreviewUrl(null);
         setCroppedImageDataUrl(null);
         setGeneratedVerticalImageUrl(null);
@@ -1402,7 +1402,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Create Your Card Button - Centered */}
+          {/* Create Your Postcard Button - Centered */}
           <div className="flex justify-center mb-6 md:mb-16">
             <button
               onClick={handleCreateYourCardClick}
@@ -1798,7 +1798,7 @@ export default function HomePage() {
                         ) : (
                           // If Note Step is NOT Active (but results are complete and no error)
                           <div className="p-2 text-center">
-                            <p className="text-base">Your unique shadefreude card is ready.</p>
+                            <p className="text-base">Your unique shadefreude postcard is ready.</p>
                             <p className="text-base">Now with its own story.</p>
                           </div>
                         )}
@@ -1808,7 +1808,7 @@ export default function HomePage() {
                     {/* Message for when color step is done, but results not yet generated */}
                     {!isGenerating && !isResultsStepCompleted && isColorStepCompleted && !generationError && currentWizardStep !== 'results' && (
                       <div className="p-4 text-center">
-                        <p className="text-base text-muted-foreground">Ready to generate your card in Step 3.</p>
+                        <p className="text-base text-muted-foreground">Ready to generate your postcard in Step 3.</p>
                       </div>
                     )}
                   </WizardStep>
