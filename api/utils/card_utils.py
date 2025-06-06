@@ -198,7 +198,7 @@ async def generate_card_image_bytes(
     article_x = x_pos + int(swatch_w * 0.02)
     draw.text((article_x, current_y), article_display, font=f_article, fill=text_color)
     _, h_phonetic = get_text_dimensions(phonetic_display, f_phonetic)
-    current_y += h_phonetic + int(swatch_h * 0.03)
+    current_y += h_phonetic + int(swatch_h * 0.05)
 
     # Description
     desc_display = card_details.get("description", "Missing description.")
