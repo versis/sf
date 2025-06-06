@@ -1798,7 +1798,7 @@ export default function HomePage() {
                         ) : (
                           // If Note Step is NOT Active (but results are complete and no error)
                           <div className="p-2 text-center">
-                            <p className="text-base">Your unique shadefreude postcard is ready.</p>
+                            <p className="text-base">Your unique postcard is ready.</p>
                             <p className="text-base">Now with its own story.</p>
                           </div>
                         )}
