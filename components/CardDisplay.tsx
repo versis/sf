@@ -315,10 +315,10 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 <button
                   onClick={handleFlipCard}
                   className={`${revealButtonStyle} min-w-[200px] w-full sm:w-auto`}
-                  title={isFlipped ? "Show Front" : "Reveal The Note"}
+                  title={isFlipped ? "Show Front" : "Reveal The Postcard Note"}
                 >
                   {isFlipped ? <Undo2 size={20} className="mr-1.5" strokeWidth={1.5} /> : <BookOpenText size={20} className="mr-1.5" strokeWidth={1.5} />}
-                  <span className="text-sm">{isFlipped ? "Show Front" : "Reveal The Note"}</span>
+                  <span className="text-sm">{isFlipped ? "Show Front" : "Reveal The Postcard Note"}</span>
                 </button>
 
                 <button
