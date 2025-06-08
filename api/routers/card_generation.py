@@ -176,7 +176,7 @@ async def finalize_card_generation(
         
         # Get the current output format from the card generation function
         # TODO: Make this configurable later, for now detect from function signature
-        output_format = "TIFF"  # Currently hardcoded in card_utils.py for testing
+        output_format = "PNG"  # Default format, will be configurable later
         file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
         content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
         
@@ -341,7 +341,7 @@ async def add_note_to_card(
         orientations = ["horizontal", "vertical"]
         
         # Use same output format as front cards for consistency
-        output_format = "TIFF"  # Currently hardcoded in card_utils.py for testing
+        output_format = "PNG"  # Default format, will be configurable later
         file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
         content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
         
