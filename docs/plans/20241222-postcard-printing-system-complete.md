@@ -64,11 +64,11 @@ BACK SIDE (Short-edge flip alignment):
 - [x] **Step 1.3:** Generate TIFF version alongside existing PNG
 - [x] **Step 1.4:** Test single card generation and scaling
 
-### Phase 2: Database Schema Updates
+### Phase 2: Database Schema Updates ✅ COMPLETED
 - [x] **Step 2.1:** Add TIFF URL columns to database
 - [x] **Step 2.2:** Update API models for new fields
 - [x] **Step 2.3:** Implement parallel PNG/TIFF upload
-- [ ] **Step 2.4:** Test database integration
+- [x] **Step 2.4:** Test database integration
 
 ### Phase 3: A4 Layout Engine
 - [ ] **Step 3.1:** Create basic A4 canvas and card positioning
