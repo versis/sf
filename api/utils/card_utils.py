@@ -146,7 +146,7 @@ async def generate_card_image_bytes(
     request_id: Optional[str] = None,
     photo_date: Optional[str] = None,
     photo_location: Optional[str] = None,
-    output_format: str = "PNG"
+    output_format: str = "TIFF"  # TEMPORARILY SET TO TIFF FOR TESTING
 ) -> bytes:
     log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}", request_id=request_id)
     
@@ -403,7 +403,7 @@ async def generate_back_card_image_bytes(
     orientation: str,
     created_at_iso_str: Optional[str] = None, 
     request_id: Optional[str] = None,
-    output_format: str = "PNG"
+    output_format: str = "TIFF"  # TEMPORARILY SET TO TIFF FOR TESTING
 ) -> bytes:
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 

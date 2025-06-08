@@ -174,6 +174,12 @@ async def finalize_card_generation(
         generated_images_for_blob = []
         orientations = ["horizontal", "vertical"]
         
+        # Get the current output format from the card generation function
+        # TODO: Make this configurable later, for now detect from function signature
+        output_format = "TIFF"  # Currently hardcoded in card_utils.py for testing
+        file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
+        content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
+        
         for orientation in orientations:
             img_bytes = await generate_card_image_bytes(
                 cropped_image_data_url=user_image_data_url, 
@@ -188,8 +194,8 @@ async def finalize_card_generation(
             
             generated_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{random_suffix}.png",
-                "content_type": "image/png",
+                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{random_suffix}.{file_extension}",
+                "content_type": content_type,
                 "orientation": orientation
             })
 
@@ -334,6 +340,11 @@ async def add_note_to_card(
         back_images_for_blob = []
         orientations = ["horizontal", "vertical"]
         
+        # Use same output format as front cards for consistency
+        output_format = "TIFF"  # Currently hardcoded in card_utils.py for testing
+        file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
+        content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
+        
         for orientation in orientations:
             img_bytes = await generate_back_card_image_bytes(
                 note_text=note_text,
@@ -345,8 +356,8 @@ async def add_note_to_card(
             random_suffix = generate_random_suffix()
             back_images_for_blob.append({
                 "data": img_bytes,
-                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{random_suffix}.png",
-                "content_type": "image/png",
+                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{random_suffix}.{file_extension}",
+                "content_type": content_type,
                 "orientation": orientation
             })
 
