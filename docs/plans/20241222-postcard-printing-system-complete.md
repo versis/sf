@@ -60,7 +60,7 @@ BACK SIDE (Short-edge flip alignment):
 
 ### Phase 1: Core Card Generation (High-DPI) 
 - [x] **Step 1.1:** Update card dimensions to exact 709×1417 pixels (1:2 ratio)
-- [ ] **Step 1.2:** Implement automatic font scaling preservation
+- [x] **Step 1.2:** Implement automatic font scaling preservation
 - [ ] **Step 1.3:** Generate TIFF version alongside existing PNG
 - [ ] **Step 1.4:** Test single card generation and scaling
 

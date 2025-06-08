@@ -36,10 +36,10 @@ interface CardDisplayProps {
   isMobile?: boolean;
 }
 
-// Define known dimensions (assuming these are correct, adjust if needed)
+// Define known dimensions (updated for exact 1:2 ratio print quality)
 const KNOWN_DIMENSIONS = {
-  horizontal: { width: 1400, height: 700 },
-  vertical: { width: 700, height: 1400 },
+  horizontal: { width: 1417, height: 709 },
+  vertical: { width: 709, height: 1417 },
 };
 
 const CardDisplay: React.FC<CardDisplayProps> = ({
@@ -142,10 +142,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
   const revealButtonStyle = "px-6 py-3 font-medium bg-black text-white border-2 border-[#374151] shadow-[4px_4px_0_0_#374151] hover:shadow-[2px_2px_0_0_#374151] active:shadow-[1px_1px_0_0_#374151] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:bg-[#1F2937] disabled:text-[#9CA3AF] disabled:border-[#4B5563] disabled:shadow-none disabled:cursor-not-allowed";
 
   const downloadButtonText = () => {
-    let text = "Download";
-    const dimensions = KNOWN_DIMENSIONS[currentOrientation];
-    text += ` (${dimensions.width}x${dimensions.height}px)`;
-    return text;
+    return `Download ${currentOrientation}`;
   };
 
   return (
