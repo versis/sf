@@ -121,9 +121,9 @@ async def generate_card_image_bytes(
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Card dimensions (reverted to original for better quality)
-    VERTICAL_CARD_W, VERTICAL_CARD_H = 700, 1400
-    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1400, 700
+    # Card dimensions - Updated for exact 1:2 ratio print quality (300 DPI optimized)
+    VERTICAL_CARD_W, VERTICAL_CARD_H = 709, 1417  # Exact 1:2.000 ratio for print
+    HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = 1417, 709  # Exact 1:2.000 ratio for print
     bg_color_tuple = (0, 0, 0, 0) # Fully Transparent RGBA
 
     if orientation == "horizontal":
@@ -158,7 +158,7 @@ async def generate_card_image_bytes(
     pad_t = int(swatch_h * 0.02)
     pad_b = int(swatch_h * 0.08)
     
-    base_font_scale = swatch_w / 750
+    base_font_scale = swatch_w / 709  # Updated baseline for exact 1:2 ratio dimensions
     current_y = pad_t
 
     # Fonts (Final fine-tuning of base sizes)
@@ -363,16 +363,16 @@ async def generate_back_card_image_bytes(
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
         fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
-    # 1. Determine card dimensions and proportional font sizes
+    # 1. Determine card dimensions and proportional font sizes (Updated for exact 1:2 ratio)
     if orientation == "horizontal":
-        card_w, card_h = 1400, 700
+        card_w, card_h = 1417, 709  # Exact 1:2.000 ratio for print
         # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / 700  # Use 700 as baseline (minimum dimension)
+        base_scale = min(card_w, card_h) / 709  # Use 709 as baseline (minimum dimension)
         note_font_size_val = int(32 * base_scale)
     else: # vertical
-        card_w, card_h = 700, 1400
+        card_w, card_h = 709, 1417  # Exact 1:2.000 ratio for print
         # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / 700  # Use 700 as baseline (minimum dimension)
+        base_scale = min(card_w, card_h) / 709  # Use 709 as baseline (minimum dimension)
         note_font_size_val = int(32 * base_scale)
 
     # 2. Calculate effective background color
