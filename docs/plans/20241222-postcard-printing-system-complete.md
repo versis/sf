@@ -70,11 +70,11 @@ BACK SIDE (Short-edge flip alignment):
 - [x] **Step 2.3:** Implement parallel PNG/TIFF upload
 - [x] **Step 2.4:** Test database integration
 
-### Phase 3: A4 Layout Engine
-- [ ] **Step 3.1:** Create basic A4 canvas and card positioning
-- [ ] **Step 3.2:** Implement 3×2 grid with exact spacing
-- [ ] **Step 3.3:** Add cutting guide lines (grey, dashed)
-- [ ] **Step 3.4:** Test single-sided A4 layout generation
+### Phase 3: A4 Layout Engine ✅ COMPLETED
+- [x] **Step 3.1:** Create basic A4 canvas and card positioning
+- [x] **Step 3.2:** Implement 3×2 grid with exact spacing
+- [x] **Step 3.3:** Add cutting guide lines (grey, dashed)
+- [x] **Step 3.4:** Test single-sided A4 layout generation
 
 ### Phase 4: Double-Sided Print Alignment  
 - [ ] **Step 4.1:** Implement short-edge flip positioning logic
