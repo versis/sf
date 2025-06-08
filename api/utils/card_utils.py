@@ -22,6 +22,52 @@ VERTICAL_CARD_W, VERTICAL_CARD_H = CARD_WIDTH, CARD_HEIGHT
 HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = CARD_HEIGHT, CARD_WIDTH
 FONT_SCALE_BASELINE = CARD_WIDTH  # Baseline for font scaling
 
+# --- Print Quality Constants ---
+PRINT_DPI = 300  # High resolution for professional printing
+
+# --- Image Saving Helper Function ---
+def save_card_image(canvas: Image.Image, output_format: str = "PNG", request_id: Optional[str] = None) -> bytes:
+    """
+    Save card image in specified format with appropriate settings.
+    
+    Args:
+        canvas: PIL Image to save
+        output_format: "PNG" or "TIFF" 
+        request_id: Request tracking ID
+        
+    Returns:
+        bytes: Image data in specified format
+    """
+    img_byte_arr = io.BytesIO()
+    
+    if output_format.upper() == "TIFF":
+        # For TIFF (print quality): Convert RGBA to RGB with white background
+        if canvas.mode == 'RGBA':
+            # Create white background
+            rgb_image = Image.new('RGB', canvas.size, 'white')
+            # Paste RGBA image onto white background using alpha as mask
+            rgb_image.paste(canvas, mask=canvas.split()[-1])
+            canvas = rgb_image
+        
+        # Save as TIFF with professional print settings
+        canvas.save(
+            img_byte_arr, 
+            format='TIFF',
+            compression='lzw',  # Lossless compression ideal for print
+            dpi=(PRINT_DPI, PRINT_DPI)  # Embed 300 DPI metadata
+        )
+        debug(f"Saved as TIFF with LZW compression at {PRINT_DPI} DPI", request_id=request_id)
+    else:
+        # Default PNG (web quality): Preserve RGBA with transparency
+        canvas.save(
+            img_byte_arr, 
+            format='PNG', 
+            compress_level=2  # Light compression for web
+        )
+        debug(f"Saved as PNG with compression level 2", request_id=request_id)
+    
+    return img_byte_arr.getvalue()
+
 def get_font(size: int, weight: str = "Regular", style: str = "Normal", font_family: str = "Inter", request_id: Optional[str] = None):
     import os
     font_style_suffix = "Italic" if style.lower() == "italic" else ""
@@ -99,7 +145,8 @@ async def generate_card_image_bytes(
     orientation: str,
     request_id: Optional[str] = None,
     photo_date: Optional[str] = None,
-    photo_location: Optional[str] = None
+    photo_location: Optional[str] = None,
+    output_format: str = "PNG"
 ) -> bytes:
     log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}", request_id=request_id)
     
@@ -344,11 +391,9 @@ async def generate_card_image_bytes(
     canvas.putalpha(mask)
     debug("Applied rounded corners", request_id=request_id)
 
-    img_byte_arr = io.BytesIO()
-    # Save as PNG with compression to reduce file size, preserving RGBA
-    canvas.save(img_byte_arr, format='PNG', compress_level=2)
-    image_bytes = img_byte_arr.getvalue()
-    log(f"Card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
+    # Save card image in requested format (PNG for web, TIFF for print)
+    image_bytes = save_card_image(canvas, output_format, request_id)
+    log(f"Card image generated ({orientation}, {output_format}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
 
 # --- Back Card Generation Logic ---
@@ -357,7 +402,8 @@ async def generate_back_card_image_bytes(
     hex_color_input: str, 
     orientation: str,
     created_at_iso_str: Optional[str] = None, 
-    request_id: Optional[str] = None
+    request_id: Optional[str] = None,
+    output_format: str = "PNG"
 ) -> bytes:
     log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
 
@@ -608,10 +654,9 @@ async def generate_back_card_image_bytes(
     canvas.putalpha(mask)
     debug("Applied rounded corners to back card", request_id=request_id)
 
-    img_byte_arr = io.BytesIO()
-    canvas.save(img_byte_arr, format='PNG', compress_level=2)
-    image_bytes = img_byte_arr.getvalue()
-    log(f"Back card image generated ({orientation}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
+    # Save back card image in requested format (PNG for web, TIFF for print)
+    image_bytes = save_card_image(canvas, output_format, request_id)
+    log(f"Back card image generated ({orientation}, {output_format}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
 
 # --- Helper Functions for Drawing Custom Icons (REMOVED) ---
