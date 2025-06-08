@@ -28,11 +28,15 @@ class CardDetailsResponse(BaseModel):
     
     frontHorizontalImageUrl: Optional[str] = Field(None, alias="front_horizontal_image_url")
     frontVerticalImageUrl: Optional[str] = Field(None, alias="front_vertical_image_url")
+    frontHorizontalTiffUrl: Optional[str] = Field(None, alias="front_horizontal_tiff_url")
+    frontVerticalTiffUrl: Optional[str] = Field(None, alias="front_vertical_tiff_url")
     
     noteText: Optional[str] = Field(None, alias="note_text")
     hasNote: Optional[bool] = Field(None, alias="has_note")
     backHorizontalImageUrl: Optional[str] = Field(None, alias="back_horizontal_image_url")
     backVerticalImageUrl: Optional[str] = Field(None, alias="back_vertical_image_url")
+    backHorizontalTiffUrl: Optional[str] = Field(None, alias="back_horizontal_tiff_url")
+    backVerticalTiffUrl: Optional[str] = Field(None, alias="back_vertical_tiff_url")
     
     aiName: Optional[str] = Field(None, alias="ai_name")
     aiPhonetic: Optional[str] = Field(None, alias="ai_phonetic")
@@ -103,7 +107,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
             info(f"Using optimized batch ID query for {len(db_ids)} cards")
             db_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, front_horizontal_tiff_url, front_vertical_tiff_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, back_horizontal_tiff_url, back_vertical_tiff_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
                 .in_("id", db_ids)
                 .execute()
             )
@@ -207,7 +211,7 @@ async def get_generations(limit: int = 30, offset: int = 0):
     try:
         db_response = (
             supabase_client.table("card_generations")
-            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
+            .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, front_horizontal_tiff_url, front_vertical_tiff_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, back_horizontal_tiff_url, back_vertical_tiff_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
             .order("created_at", desc=True)
             .limit(limit)
             .offset(offset)

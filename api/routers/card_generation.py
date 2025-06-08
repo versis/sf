@@ -174,33 +174,51 @@ async def finalize_card_generation(
         generated_images_for_blob = []
         orientations = ["horizontal", "vertical"]
         
-        # Get the current output format from the card generation function
-        # TODO: Make this configurable later, for now detect from function signature
-        output_format = "PNG"  # Default format, will be configurable later
-        file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
-        content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
-        
         for orientation in orientations:
-            img_bytes = await generate_card_image_bytes(
+            # Generate PNG version (for web)
+            png_bytes = await generate_card_image_bytes(
                 cropped_image_data_url=user_image_data_url, 
                 card_details=card_details_for_image_gen,
                 hex_color_input=hex_color,
                 orientation=orientation,
                 request_id=str(db_id),
                 photo_date=photo_date,
-                photo_location=photo_location
+                photo_location=photo_location,
+                output_format="PNG"
             )
-            random_suffix = generate_random_suffix()
+            
+            # Generate TIFF version (for print)
+            tiff_bytes = await generate_card_image_bytes(
+                cropped_image_data_url=user_image_data_url, 
+                card_details=card_details_for_image_gen,
+                hex_color_input=hex_color,
+                orientation=orientation,
+                request_id=str(db_id),
+                photo_date=photo_date,
+                photo_location=photo_location,
+                output_format="TIFF"
+            )
+            
+            png_suffix = generate_random_suffix()
+            tiff_suffix = generate_random_suffix()
+            
+            # Add both PNG and TIFF to upload queue
+            generated_images_for_blob.append({
+                "data": png_bytes,
+                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{png_suffix}.png",
+                "content_type": "image/png",
+                "orientation": f"{orientation}_png"
+            })
             
             generated_images_for_blob.append({
-                "data": img_bytes,
-                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{random_suffix}.{file_extension}",
-                "content_type": content_type,
-                "orientation": orientation
+                "data": tiff_bytes,
+                "filename": f"{extended_id.replace(' ', '_')}_front_{orientation}_{tiff_suffix}.tiff",
+                "content_type": "image/tiff",
+                "orientation": f"{orientation}_tiff"
             })
 
-        # Upload images to Vercel Blob (now a synchronous call)
-        log(f"Uploading {len(generated_images_for_blob)} images for DB ID: {db_id}")
+        # Upload images to Vercel Blob (PNG + TIFF for each orientation)
+        log(f"Uploading {len(generated_images_for_blob)} images (PNG + TIFF) for DB ID: {db_id}")
         uploaded_image_info = blob_service.upload_multiple_images(generated_images_for_blob)
         log(f"Images uploaded for DB ID: {db_id}. Result: {uploaded_image_info}")
         
@@ -264,11 +282,15 @@ async def finalize_card_generation(
         if "photo_date" in update_payload:
             log(f"photo_date value: '{update_payload['photo_date']}'", request_id=str(db_id))
 
-        # Add direct columns for horizontal and vertical URLs if they exist in the table
-        if uploaded_image_info.get("horizontal", {}).get("url"):
-            update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal"]["url"]
-        if uploaded_image_info.get("vertical", {}).get("url"):
-            update_payload["front_vertical_image_url"] = uploaded_image_info["vertical"]["url"]
+        # Add direct columns for PNG and TIFF URLs
+        if uploaded_image_info.get("horizontal_png", {}).get("url"):
+            update_payload["front_horizontal_image_url"] = uploaded_image_info["horizontal_png"]["url"]
+        if uploaded_image_info.get("vertical_png", {}).get("url"):
+            update_payload["front_vertical_image_url"] = uploaded_image_info["vertical_png"]["url"]
+        if uploaded_image_info.get("horizontal_tiff", {}).get("url"):
+            update_payload["front_horizontal_tiff_url"] = uploaded_image_info["horizontal_tiff"]["url"]
+        if uploaded_image_info.get("vertical_tiff", {}).get("url"):
+            update_payload["front_vertical_tiff_url"] = uploaded_image_info["vertical_tiff"]["url"]
 
         # Update Supabase record with image URLs, metadata, and set status to completed
         final_record = await update_card_generation_status(
@@ -340,28 +362,46 @@ async def add_note_to_card(
         back_images_for_blob = []
         orientations = ["horizontal", "vertical"]
         
-        # Use same output format as front cards for consistency
-        output_format = "PNG"  # Default format, will be configurable later
-        file_extension = "tiff" if output_format.upper() == "TIFF" else "png"
-        content_type = "image/tiff" if output_format.upper() == "TIFF" else "image/png"
-        
         for orientation in orientations:
-            img_bytes = await generate_back_card_image_bytes(
+            # Generate PNG version (for web)
+            png_bytes = await generate_back_card_image_bytes(
                 note_text=note_text,
                 hex_color_input=hex_color, 
                 orientation=orientation,
                 created_at_iso_str=created_at_str, 
-                request_id=str(db_id)
+                request_id=str(db_id),
+                output_format="PNG"
             )
-            random_suffix = generate_random_suffix()
+            
+            # Generate TIFF version (for print)
+            tiff_bytes = await generate_back_card_image_bytes(
+                note_text=note_text,
+                hex_color_input=hex_color, 
+                orientation=orientation,
+                created_at_iso_str=created_at_str, 
+                request_id=str(db_id),
+                output_format="TIFF"
+            )
+            
+            png_suffix = generate_random_suffix()
+            tiff_suffix = generate_random_suffix()
+            
+            # Add both PNG and TIFF to upload queue
             back_images_for_blob.append({
-                "data": img_bytes,
-                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{random_suffix}.{file_extension}",
-                "content_type": content_type,
-                "orientation": orientation
+                "data": png_bytes,
+                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{png_suffix}.png",
+                "content_type": "image/png",
+                "orientation": f"{orientation}_png"
+            })
+            
+            back_images_for_blob.append({
+                "data": tiff_bytes,
+                "filename": f"{extended_id.replace(' ', '_')}_back_{orientation}_{tiff_suffix}.tiff",
+                "content_type": "image/tiff",
+                "orientation": f"{orientation}_tiff"
             })
 
-        log(f"Preparing to upload {len(back_images_for_blob)} back images for DB ID: {db_id}")
+        log(f"Preparing to upload {len(back_images_for_blob)} back images (PNG + TIFF) for DB ID: {db_id}")
         uploaded_back_image_info = blob_service.upload_multiple_images(back_images_for_blob)
         log(f"Back images uploaded for DB ID: {db_id}. Result: {uploaded_back_image_info}")
 
@@ -370,10 +410,16 @@ async def add_note_to_card(
             "note_text": note_text if note_text and note_text.strip() else None,
             "has_note": bool(note_text and note_text.strip()),
         }
-        if uploaded_back_image_info.get("horizontal", {}).get("url"):
-            update_payload_for_note["back_horizontal_image_url"] = uploaded_back_image_info["horizontal"]["url"]
-        if uploaded_back_image_info.get("vertical", {}).get("url"):
-            update_payload_for_note["back_vertical_image_url"] = uploaded_back_image_info["vertical"]["url"]
+        # Add PNG URLs
+        if uploaded_back_image_info.get("horizontal_png", {}).get("url"):
+            update_payload_for_note["back_horizontal_image_url"] = uploaded_back_image_info["horizontal_png"]["url"]
+        if uploaded_back_image_info.get("vertical_png", {}).get("url"):
+            update_payload_for_note["back_vertical_image_url"] = uploaded_back_image_info["vertical_png"]["url"]
+        # Add TIFF URLs
+        if uploaded_back_image_info.get("horizontal_tiff", {}).get("url"):
+            update_payload_for_note["back_horizontal_tiff_url"] = uploaded_back_image_info["horizontal_tiff"]["url"]
+        if uploaded_back_image_info.get("vertical_tiff", {}).get("url"):
+            update_payload_for_note["back_vertical_tiff_url"] = uploaded_back_image_info["vertical_tiff"]["url"]
 
         # 4. Update the database record
         # Note: We are not changing the main card 'status' here, just adding note-related info.

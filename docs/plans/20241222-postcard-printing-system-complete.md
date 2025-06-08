@@ -58,16 +58,16 @@ BACK SIDE (Short-edge flip alignment):
 
 ## Implementation Plan
 
-### Phase 1: Core Card Generation (High-DPI) 
-- [x] **Step 1.1:** Update card dimensions to exact 709×1417 pixels (1:2 ratio)
+### Phase 1: Core Card Generation (High-DPI) ✅ COMPLETED
+- [x] **Step 1.1:** Update card dimensions to exact 708×1416 pixels (1:2 ratio)
 - [x] **Step 1.2:** Implement automatic font scaling preservation
 - [x] **Step 1.3:** Generate TIFF version alongside existing PNG
-- [ ] **Step 1.4:** Test single card generation and scaling
+- [x] **Step 1.4:** Test single card generation and scaling
 
 ### Phase 2: Database Schema Updates
-- [ ] **Step 2.1:** Add TIFF URL columns to database
-- [ ] **Step 2.2:** Update API models for new fields
-- [ ] **Step 2.3:** Implement parallel PNG/TIFF upload
+- [x] **Step 2.1:** Add TIFF URL columns to database
+- [x] **Step 2.2:** Update API models for new fields
+- [x] **Step 2.3:** Implement parallel PNG/TIFF upload
 - [ ] **Step 2.4:** Test database integration
 
 ### Phase 3: A4 Layout Engine

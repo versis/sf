@@ -16,8 +16,8 @@ ASSETS_BASE_PATH = "assets"
 LOGO_PATH = "public/sf-icon.png"
 
 # --- Card Dimensions (Exact 1:2 ratio for print quality) ---
-CARD_WIDTH = 709   # Base width for vertical orientation
-CARD_HEIGHT = 1417  # Base height for vertical orientation (exactly 2:1 ratio)
+CARD_WIDTH = 708   # Base width for vertical orientation
+CARD_HEIGHT = 1416  # Base height for vertical orientation (exactly 2:1 ratio)
 VERTICAL_CARD_W, VERTICAL_CARD_H = CARD_WIDTH, CARD_HEIGHT
 HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = CARD_HEIGHT, CARD_WIDTH
 FONT_SCALE_BASELINE = CARD_WIDTH  # Baseline for font scaling
