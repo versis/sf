@@ -16,14 +16,31 @@ ASSETS_BASE_PATH = "assets"
 LOGO_PATH = "public/sf-icon.png"
 
 # --- Card Dimensions (Exact 1:2 ratio for print quality) ---
-CARD_WIDTH = 708   # Base width for vertical orientation
-CARD_HEIGHT = 1416  # Base height for vertical orientation (exactly 2:1 ratio)
-VERTICAL_CARD_W, VERTICAL_CARD_H = CARD_WIDTH, CARD_HEIGHT
-HORIZONTAL_CARD_W, HORIZONTAL_CARD_H = CARD_HEIGHT, CARD_WIDTH
-FONT_SCALE_BASELINE = CARD_WIDTH  # Baseline for font scaling
+# PNG dimensions (web quality)
+CARD_WIDTH_PNG = 700   # Base width for vertical orientation (PNG)
+CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
+
+# TIFF dimensions (print quality) 
+CARD_WIDTH_TIFF = 900   # Base width for vertical orientation (TIFF)
+CARD_HEIGHT_TIFF = 1800  # Base height for vertical orientation (TIFF)
 
 # --- Print Quality Constants ---
 PRINT_DPI = 300  # High resolution for professional printing
+
+def get_card_dimensions(output_format: str = "PNG") -> tuple:
+    """
+    Get card dimensions based on output format.
+    
+    Args:
+        output_format: "PNG" for web quality, "TIFF" for print quality
+        
+    Returns:
+        Tuple of (width, height) for the specified format
+    """
+    if output_format.upper() == "TIFF":
+        return CARD_WIDTH_TIFF, CARD_HEIGHT_TIFF
+    else:
+        return CARD_WIDTH_PNG, CARD_HEIGHT_PNG
 
 # --- Image Saving Helper Function ---
 def save_card_image(canvas: Image.Image, output_format: str = "PNG", request_id: Optional[str] = None) -> bytes:
@@ -175,16 +192,17 @@ async def generate_card_image_bytes(
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Use global card dimension constants
+    # Get format-specific card dimensions
+    base_card_w, base_card_h = get_card_dimensions(output_format)
     bg_color_tuple = (0, 0, 0, 0) # Fully Transparent RGBA
 
     if orientation == "horizontal":
-        card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+        card_w, card_h = base_card_h, base_card_w  # Swap for horizontal
         swatch_w, swatch_h = int(card_w * 0.5), card_h
         img_panel_w, img_panel_h = card_w - swatch_w, card_h
         img_paste_pos = (swatch_w, 0)
     else: # vertical
-        card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
+        card_w, card_h = base_card_w, base_card_h
         swatch_w, swatch_h = card_w, int(card_h * 0.5)
         img_panel_w, img_panel_h = card_w, card_h - swatch_h
         img_paste_pos = (0, swatch_h)
@@ -210,7 +228,7 @@ async def generate_card_image_bytes(
     pad_t = int(swatch_h * 0.02)
     pad_b = int(swatch_h * 0.08)
     
-    base_font_scale = swatch_w / FONT_SCALE_BASELINE  # Updated baseline for exact 1:2 ratio dimensions
+    base_font_scale = swatch_w / CARD_WIDTH_PNG  # Scale relative to PNG baseline for consistent proportions
     current_y = pad_t
 
     # Fonts (Final fine-tuning of base sizes)
@@ -414,16 +432,18 @@ async def generate_back_card_image_bytes(
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
         fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
-    # 1. Determine card dimensions and proportional font sizes (Use global constants)
+    # 1. Determine card dimensions and proportional font sizes (format-specific)
+    base_card_w, base_card_h = get_card_dimensions(output_format)
+    
     if orientation == "horizontal":
-        card_w, card_h = HORIZONTAL_CARD_W, HORIZONTAL_CARD_H
+        card_w, card_h = base_card_h, base_card_w  # Swap for horizontal
         # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / FONT_SCALE_BASELINE  # Use consistent baseline
+        base_scale = min(card_w, card_h) / CARD_WIDTH_PNG  # Use PNG baseline for consistent proportions
         note_font_size_val = int(32 * base_scale)
     else: # vertical
-        card_w, card_h = VERTICAL_CARD_W, VERTICAL_CARD_H
+        card_w, card_h = base_card_w, base_card_h
         # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / FONT_SCALE_BASELINE  # Use consistent baseline
+        base_scale = min(card_w, card_h) / CARD_WIDTH_PNG  # Use PNG baseline for consistent proportions
         note_font_size_val = int(32 * base_scale)
 
     # 2. Calculate effective background color

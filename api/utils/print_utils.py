@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 from typing import List, Dict, Tuple, Optional, Any
 import io
 from .logger import log, debug
-from .card_utils import CARD_WIDTH, CARD_HEIGHT, PRINT_DPI
+from .card_utils import CARD_WIDTH_PNG, CARD_HEIGHT_PNG, CARD_WIDTH_TIFF, CARD_HEIGHT_TIFF, PRINT_DPI
 
 # --- A4 Print Layout Constants (300 DPI) ---
 A4_WIDTH_MM = 210
@@ -18,9 +18,10 @@ MM_TO_PIXELS = PRINT_DPI / 25.4  # 300 DPI = 11.811 pixels per mm
 A4_WIDTH_PX = int(A4_WIDTH_MM * MM_TO_PIXELS + 0.5)  # 2480 pixels (rounded)
 A4_HEIGHT_PX = int(A4_HEIGHT_MM * MM_TO_PIXELS + 0.5)  # 3508 pixels (rounded)
 
-# Card dimensions in mm (for print calculations) - based on actual pixel dimensions
-CARD_WIDTH_MM = CARD_WIDTH / MM_TO_PIXELS   # ~59.95mm (708px at 300 DPI)
-CARD_HEIGHT_MM = CARD_HEIGHT / MM_TO_PIXELS  # ~119.90mm (1416px at 300 DPI)
+# Card dimensions in mm (for print calculations) - reference dimensions
+# These are used for general calculations and represent the PNG baseline
+CARD_WIDTH_MM = CARD_WIDTH_PNG / MM_TO_PIXELS   # ~59.95mm (708px at 300 DPI)
+CARD_HEIGHT_MM = CARD_HEIGHT_PNG / MM_TO_PIXELS  # ~119.90mm (1416px at 300 DPI)
 
 # NEW Layout specifications for 8×16cm landscape cards
 GRID_COLS = 1  # 1 card wide (single column)
@@ -144,7 +145,7 @@ class A4Layout:
         Place a card with your approach: content size + passepartout = final size.
         
         Args:
-            card_image: PIL Image of the card (original portrait CARD_WIDTH × CARD_HEIGHT)
+            card_image: PIL Image of the card (format-specific dimensions, portrait orientation)
             grid_x: Column position (0 for single column)
             grid_y: Row position (0-2 for 3 rows)
         """
@@ -152,12 +153,13 @@ class A4Layout:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
         # STEP 1: Rotate portrait card to landscape (90° counter-clockwise)
-        if card_image.size == (CARD_WIDTH, CARD_HEIGHT):  # Portrait 708×1416
-            rotated_card = card_image.rotate(-90, expand=True)  # Rotate counter-clockwise to landscape 1416×708
+        # Check if card is in portrait orientation (height > width) and rotate if needed
+        if card_image.size[1] > card_image.size[0]:  # Portrait orientation (height > width)
+            rotated_card = card_image.rotate(-90, expand=True)  # Rotate counter-clockwise to landscape
             debug(f"Rotated card from {card_image.size} portrait to {rotated_card.size} landscape (counter-clockwise)", request_id=self.request_id)
         else:
-            rotated_card = card_image  # Already correct size/orientation
-            debug(f"Using card as-is: {card_image.size}", request_id=self.request_id)
+            rotated_card = card_image  # Already landscape or square
+            debug(f"Using card as-is (already landscape): {card_image.size}", request_id=self.request_id)
         
         # STEP 2: Scale rotated card to EXACT target content size
         # This ensures 2:1 ratio with no white space around content
