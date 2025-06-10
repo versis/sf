@@ -27,11 +27,11 @@ GRID_COLS = 1  # 1 card wide (single column)
 GRID_ROWS = 3  # 3 cards tall (3 rows)
 A4_MARGINS_MM = 0           # No margins - use full page area
 
-# Target card dimensions: 8×16cm landscape (rotated from portrait)
-TARGET_CARD_WIDTH_MM = 160  # 16cm wide in landscape
-TARGET_CARD_HEIGHT_MM = 80  # 8cm tall in landscape  
-TARGET_CARD_WIDTH_PX = int(TARGET_CARD_WIDTH_MM * MM_TO_PIXELS)  # 1890px
-TARGET_CARD_HEIGHT_PX = int(TARGET_CARD_HEIGHT_MM * MM_TO_PIXELS)  # 945px
+# Target CONTENT size (always 2:1 ratio for card content)
+TARGET_CONTENT_WIDTH_MM = 146   # 14.6cm wide content
+TARGET_CONTENT_HEIGHT_MM = 73   # 7.3cm tall content (exactly 2:1 ratio)
+TARGET_CONTENT_WIDTH_PX = int(TARGET_CONTENT_WIDTH_MM * MM_TO_PIXELS)  # ~1724px
+TARGET_CONTENT_HEIGHT_PX = int(TARGET_CONTENT_HEIGHT_MM * MM_TO_PIXELS)  # ~862px
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
 TOTAL_SPACING_MM = 1  # 1mm total spacing (ultra-minimal for guillotine)
@@ -63,19 +63,13 @@ class A4Layout:
         self.canvas = None
         self.draw = None
         
-        # NEW: Calculate exact landscape card dimensions for 8×16cm target
-        # Current portrait card: 708×1416px → rotated to 1416×708px landscape
-        current_landscape_w = CARD_HEIGHT  # 1416px (rotated width)
-        current_landscape_h = CARD_WIDTH   # 708px (rotated height)
+        # Calculate final card size: content + passepartout
+        # Content is always 14.6×7.3cm (2:1 ratio), final size depends on passepartout
+        final_card_width_px = TARGET_CONTENT_WIDTH_PX + (2 * self.passepartout_px)
+        final_card_height_px = TARGET_CONTENT_HEIGHT_PX + (2 * self.passepartout_px)
         
-        # Scale to achieve target 8×16cm (1890×945px) landscape size
-        scale_factor_w = TARGET_CARD_WIDTH_PX / current_landscape_w   # 1890/1416 ≈ 1.335
-        scale_factor_h = TARGET_CARD_HEIGHT_PX / current_landscape_h  # 945/708 ≈ 1.335
-        scale_factor = min(scale_factor_w, scale_factor_h)  # Use smaller to maintain aspect ratio
-        
-        # Final card dimensions after scaling rotated cards
-        self.card_width = int(current_landscape_w * scale_factor)   # ~1888px
-        self.card_height = int(current_landscape_h * scale_factor)  # ~944px
+        self.card_width = final_card_width_px
+        self.card_height = final_card_height_px
         
         # Spacing with guillotine kerf consideration
         self.actual_spacing_x = SPACING_PX  # ~59px (5mm total)
@@ -94,9 +88,8 @@ class A4Layout:
         unused_height = A4_HEIGHT_PX - self.layout_height
         
         debug(f"A4 Canvas: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (210×297mm)", request_id=self.request_id)
-        debug(f"Target: {TARGET_CARD_WIDTH_PX}×{TARGET_CARD_HEIGHT_PX}px ({TARGET_CARD_WIDTH_MM}×{TARGET_CARD_HEIGHT_MM}mm)", request_id=self.request_id)
-        debug(f"ACTUAL card size: {self.card_width}×{self.card_height}px ({self.card_width*25.4/300:.1f}×{self.card_height*25.4/300:.1f}mm)", request_id=self.request_id)
-        debug(f"Scale factor: {scale_factor:.3f} (rotated {CARD_WIDTH}×{CARD_HEIGHT} → {self.card_width}×{self.card_height})", request_id=self.request_id)
+        debug(f"Content size: {TARGET_CONTENT_WIDTH_MM}×{TARGET_CONTENT_HEIGHT_MM}mm (2:1 ratio, no white space)", request_id=self.request_id)
+        debug(f"Final card size: {self.card_width*25.4/300:.1f}×{self.card_height*25.4/300:.1f}mm (content + {passepartout_mm}mm passepartout)", request_id=self.request_id)
         debug(f"Layout: {GRID_COLS}×{GRID_ROWS} grid = {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
         debug(f"UNUSED space: {unused_width}×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
         debug(f"Guillotine spacing: {self.actual_spacing_x}px = {TOTAL_SPACING_MM}mm (minimal for guillotine)", request_id=self.request_id)
@@ -131,7 +124,7 @@ class A4Layout:
     
     def place_card(self, card_image: Image.Image, grid_x: int, grid_y: int) -> None:
         """
-        Place a card image at the specified grid position with rotation and optional passepartout.
+        Place a card with your approach: content size + passepartout = final size.
         
         Args:
             card_image: PIL Image of the card (original portrait CARD_WIDTH × CARD_HEIGHT)
@@ -149,14 +142,27 @@ class A4Layout:
             rotated_card = card_image  # Already correct size/orientation
             debug(f"Using card as-is: {card_image.size}", request_id=self.request_id)
         
-        # STEP 2: Scale rotated card to target landscape dimensions (1888×944)
-        if rotated_card.size != (self.card_width, self.card_height):
-            scaled_card = rotated_card.resize((self.card_width, self.card_height), Image.Resampling.LANCZOS)
-            debug(f"Scaled rotated card from {rotated_card.size} to target {self.card_width}×{self.card_height}px", request_id=self.request_id)
-        else:
-            scaled_card = rotated_card
+        # STEP 2: Scale rotated card to EXACT target content size (14.6×7.3cm)
+        # This ensures 2:1 ratio with no white space around content
+        scaled_card = rotated_card.resize((TARGET_CONTENT_WIDTH_PX, TARGET_CONTENT_HEIGHT_PX), Image.Resampling.LANCZOS)
         
-        x, y = self.get_card_position(grid_x, grid_y)
+        scale_factor = TARGET_CONTENT_WIDTH_PX / rotated_card.size[0]  # Calculate for debug
+        debug(f"Scaled to EXACT content size: {rotated_card.size} → {scaled_card.size} (scale={scale_factor:.3f})", request_id=self.request_id)
+        
+        # STEP 3: Create final card with passepartout (if specified)
+        # Create canvas for final card size (content + passepartout)
+        final_card = Image.new('RGB', (self.card_width, self.card_height), 'white')
+        
+        if self.passepartout_mm > 0:
+            # Place content with exact passepartout borders
+            paste_x = self.passepartout_px
+            paste_y = self.passepartout_px
+            debug(f"Placing content with {self.passepartout_mm}mm ({self.passepartout_px}px) passepartout borders", request_id=self.request_id)
+        else:
+            # No passepartout - content fills entire final card (same size)
+            paste_x = 0
+            paste_y = 0
+            debug(f"No passepartout - content fills entire card", request_id=self.request_id)
         
         # Convert RGBA to RGB if needed (for TIFF compatibility)
         if scaled_card.mode == 'RGBA':
@@ -164,67 +170,21 @@ class A4Layout:
             rgb_image.paste(scaled_card, mask=scaled_card.split()[-1])
             scaled_card = rgb_image
         
-        # Apply passepartout if specified
-        if self.passepartout_mm > 0:
-            final_card = self._apply_passepartout_to_card(scaled_card)
-            debug(f"Applied {self.passepartout_mm}mm passepartout to card at [{grid_x},{grid_y}]", request_id=self.request_id)
-        else:
-            final_card = scaled_card
+        final_card.paste(scaled_card, (paste_x, paste_y))
         
+        # STEP 5: Place final card on A4 canvas
+        x, y = self.get_card_position(grid_x, grid_y)
         self.canvas.paste(final_card, (x, y))
-        debug(f"Placed landscape card at grid [{grid_x},{grid_y}] → pixel ({x}, {y})", request_id=self.request_id)
+        
+        # Calculate final size in cm for verification
+        final_width_cm = self.card_width * 25.4 / 300
+        final_height_cm = self.card_height * 25.4 / 300
+        content_width_cm = TARGET_CONTENT_WIDTH_MM / 10  # Convert mm to cm
+        content_height_cm = TARGET_CONTENT_HEIGHT_MM / 10
+        
+        debug(f"Placed card at [{grid_x},{grid_y}]: final size {final_width_cm:.1f}×{final_height_cm:.1f}cm, content {content_width_cm:.1f}×{content_height_cm:.1f}cm", request_id=self.request_id)
     
-    def _apply_passepartout_to_card(self, card_image: Image.Image) -> Image.Image:
-        """
-        Apply EXACTLY equal passepartout borders on all sides.
-        
-        Args:
-            card_image: Original card image
-            
-        Returns:
-            Card image with precisely equal passepartout borders
-        """
-        # Get current card dimensions (layout space allocated for this card)
-        card_width, card_height = card_image.size
-        
-        # Calculate content area (space inside passepartout borders)
-        content_width = card_width - (2 * self.passepartout_px)
-        content_height = card_height - (2 * self.passepartout_px)
-        
-        # Ensure content area is positive
-        if content_width <= 0 or content_height <= 0:
-            debug(f"Passepartout too large: {self.passepartout_px}px borders on {card_width}×{card_height}px card", request_id=self.request_id)
-            return card_image
-        
-        # Scale card to fit exactly within content area, maintaining aspect ratio
-        scale_x = content_width / card_width
-        scale_y = content_height / card_height
-        scale_factor = min(scale_x, scale_y)  # Use smaller scale to ensure it fits
-        
-        # Calculate final scaled dimensions
-        final_width = int(card_width * scale_factor)
-        final_height = int(card_height * scale_factor)
-        
-        # Scale the card
-        scaled_card = card_image.resize((final_width, final_height), Image.Resampling.LANCZOS)
-        
-        # Create white background canvas (full card space)
-        white_canvas = Image.new('RGB', (card_width, card_height), 'white')
-        
-        # Position to create EXACTLY equal borders on all sides
-        # Calculate borders to be exactly passepartout_px on all sides
-        border_x = self.passepartout_px
-        border_y = self.passepartout_px
-        
-        # Place scaled card with exact borders
-        white_canvas.paste(scaled_card, (border_x, border_y))
-        
-        # Verify actual borders
-        actual_border_right = card_width - border_x - final_width
-        actual_border_bottom = card_height - border_y - final_height
-        
-        debug(f"EXACT passepartout: L={border_x}px R={actual_border_right}px T={border_y}px B={actual_border_bottom}px, scale={scale_factor:.3f}", request_id=self.request_id)
-        return white_canvas
+    # Passepartout logic moved to place_card() method for correct calculation approach
     
     def draw_cutting_guides(self) -> None:
         """Draw guillotine cutting guides for 1×3 landscape layout with kerf considerations"""
@@ -457,7 +417,7 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
         log(f"Too many cards provided: {len(card_images)}. Maximum is {max_cards} for {GRID_COLS}×{GRID_ROWS} layout.", level="WARNING", request_id=request_id)
         card_images = card_images[:max_cards]
     
-    log(f"Creating NEW A4 layout: {len(card_images)} landscape cards ({TARGET_CARD_WIDTH_MM}×{TARGET_CARD_HEIGHT_MM}mm each), passepartout: {passepartout_mm}mm", request_id=request_id)
+    log(f"Creating A4 layout: {len(card_images)} cards ({TARGET_CONTENT_WIDTH_MM}×{TARGET_CONTENT_HEIGHT_MM}mm content + {passepartout_mm}mm passepartout)", request_id=request_id)
     
     # Create layout with passepartout and guillotine considerations
     layout = A4Layout(request_id=request_id, passepartout_mm=passepartout_mm)
