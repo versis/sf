@@ -30,7 +30,7 @@ CARD_IDS = [
 # Layout Settings
 PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
 CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
-ORIENTATION = "horizontal"             # "horizontal" or "vertical"
+ORIENTATION = "h"                     # "h" for horizontal, "v" for vertical
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
 OUTPUT_PREFIX = "wydruktestowy_sf"                   # Filename prefix (generates: sf_w156_pp12_cardids_front.tiff)
 
@@ -41,7 +41,7 @@ OUTPUT_PREFIX = "wydruktestowy_sf"                   # Filename prefix (generate
 # PASSEPARTOUT_MM = 0
 #
 # Vertical orientation with larger border:
-# ORIENTATION = "vertical"
+# ORIENTATION = "v"
 # PASSEPARTOUT_MM = 12
 #
 # Single-sided printing (no duplex):
@@ -73,7 +73,7 @@ def generate_a4_layout(
         card_ids: List of card extended IDs (max 3)
         passepartout_mm: White border in millimeters (0, 8, 12, etc.)
         target_content_width_mm: Content width in millimeters (default 146 = 14.6cm)
-        orientation: "horizontal" or "vertical" for card orientation
+        orientation: "h" for horizontal, "v" for vertical card orientation
         duplex_mode: If True, adjusts back layout for proper duplex printing
         output_prefix: Prefix for output filenames
         
@@ -85,10 +85,15 @@ def generate_a4_layout(
         print(f"❌ Error: Maximum 3 cards allowed, got {len(card_ids)}")
         return False
     
+    # Convert short orientation to full form for API
+    orientation_map = {"h": "horizontal", "v": "vertical"}
+    api_orientation = orientation_map.get(orientation, orientation)
+    orientation_display = api_orientation
+    
     print(f"🖨️  Generating A4 Layout")
     print(f"   📋 Cards: {len(card_ids)} cards")
     print(f"   🆔 IDs: {', '.join(card_ids)}")
-    print(f"   📐 Orientation: {orientation}")
+    print(f"   📐 Orientation: {orientation_display}")
     print(f"   🔲 Passepartout: {passepartout_mm}mm")
     print(f"   📄 Content size: {target_content_width_mm}×{target_content_width_mm/2}mm")
     print(f"   🔄 Duplex mode: {'ON' if duplex_mode else 'OFF'}")
@@ -99,7 +104,7 @@ def generate_a4_layout(
         "extended_ids": card_ids,
         "passepartout_mm": passepartout_mm,
         "target_content_width_mm": target_content_width_mm,
-        "orientation": orientation,
+        "orientation": api_orientation,  # Send full form to API
         "duplex_mode": duplex_mode,
         "output_prefix": output_prefix
     }
@@ -177,9 +182,12 @@ def check_api_status() -> bool:
 
 def print_configuration():
     """Print current configuration settings."""
+    # Convert orientation for display
+    orientation_display = {"h": "horizontal", "v": "vertical"}.get(ORIENTATION, ORIENTATION)
+    
     print("🛠️  Current Configuration:")
     print(f"   🆔 Card IDs: {', '.join(CARD_IDS)}")
-    print(f"   📐 Orientation: {ORIENTATION}")
+    print(f"   📐 Orientation: {orientation_display} ({ORIENTATION})")
     print(f"   🔲 Passepartout: {PASSEPARTOUT_MM}mm")
     print(f"   📄 Content size: {CONTENT_WIDTH_MM}×{CONTENT_WIDTH_MM/2}mm")
     print(f"   🔄 Duplex mode: {'ON' if DUPLEX_MODE else 'OFF'}")
@@ -215,8 +223,8 @@ def main():
         sys.exit(1)
     
     # Validate orientation
-    if ORIENTATION not in ["horizontal", "vertical"]:
-        print(f"❌ Error: Invalid orientation '{ORIENTATION}'. Must be 'horizontal' or 'vertical'")
+    if ORIENTATION not in ["h", "v"]:
+        print(f"❌ Error: Invalid orientation '{ORIENTATION}'. Must be 'h' or 'v'")
         sys.exit(1)
     
     # Check API status
