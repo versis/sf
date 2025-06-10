@@ -28,7 +28,7 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-PASSEPARTOUT_MM = 0                    # White border in millimeters (0, 8, 12, etc.)
+PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
 CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
 ORIENTATION = "h"                     # "h" for horizontal, "v" for vertical
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
