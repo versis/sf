@@ -29,6 +29,8 @@ class CreateA4LayoutRequest(BaseModel):
     extended_ids: List[str]
     passepartout_mm: float = 8
     target_content_width_mm: float = 146
+    orientation: str = "horizontal"  # "horizontal" or "vertical"
+    duplex_mode: bool = True  # If True, reverses back card order for proper duplex alignment
 
 class A4LayoutResponse(BaseModel):
     """Response model for A4 layout generation."""
@@ -138,9 +140,16 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             raise HTTPException(status_code=404, detail="No cards found for the provided extended IDs.")
         
         # Download front and back TIFF images
-        front_images = []
-        back_images = []
+        # Store images with their corresponding extended_ids for proper ordering
+        front_card_images = []  # List of tuples: (extended_id, image)
+        back_card_images = []   # List of tuples: (extended_id, image)
         cards_processed = 0
+        
+        # Choose TIFF URLs based on orientation
+        front_tiff_field = "front_horizontal_tiff_url" if request.orientation == "horizontal" else "front_vertical_tiff_url"
+        back_tiff_field = "back_horizontal_tiff_url" if request.orientation == "horizontal" else "back_vertical_tiff_url"
+        
+        log(f"Using {request.orientation} orientation: {front_tiff_field}, {back_tiff_field}", request_id=request_id)
         
         for extended_id in extended_ids:
             card_data = cards_data.get(extended_id)
@@ -148,14 +157,14 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 log(f"Card {extended_id} not found, skipping", level="WARNING", request_id=request_id)
                 continue
             
-            front_tiff_url = card_data.get("front_horizontal_tiff_url")
-            back_tiff_url = card_data.get("back_horizontal_tiff_url")
+            front_tiff_url = card_data.get(front_tiff_field)
+            back_tiff_url = card_data.get(back_tiff_field)
             
             # Download front TIFF
             if front_tiff_url:
                 front_image = download_image_from_url(front_tiff_url, request_id)
                 if front_image:
-                    front_images.append(front_image)
+                    front_card_images.append((extended_id, front_image))
                     debug(f"Added front image for card {extended_id}", request_id=request_id)
                 else:
                     log(f"Failed to download front TIFF for card {extended_id}", level="WARNING", request_id=request_id)
@@ -166,7 +175,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             if back_tiff_url:
                 back_image = download_image_from_url(back_tiff_url, request_id)
                 if back_image:
-                    back_images.append(back_image)
+                    back_card_images.append((extended_id, back_image))
                     debug(f"Added back image for card {extended_id}", request_id=request_id)
                 else:
                     log(f"Failed to download back TIFF for card {extended_id}", level="WARNING", request_id=request_id)
@@ -174,6 +183,19 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 log(f"No back TIFF URL for card {extended_id}", level="WARNING", request_id=request_id)
             
             cards_processed += 1
+        
+        # Extract images in the correct order for front and back
+        front_images = [image for _, image in front_card_images]
+        
+        # For duplex mode: reverse the order of back images for proper alignment
+        if request.duplex_mode and back_card_images:
+            back_card_images_ordered = list(reversed(back_card_images))
+            back_images = [image for _, image in back_card_images_ordered]
+            log(f"Duplex mode: Reversed back card order for proper alignment", request_id=request_id)
+            debug(f"Original back order: {[id for id, _ in back_card_images]}", request_id=request_id)
+            debug(f"Reversed back order: {[id for id, _ in back_card_images_ordered]}", request_id=request_id)
+        else:
+            back_images = [image for _, image in back_card_images]
         
         if not front_images and not back_images:
             raise HTTPException(status_code=404, detail="No TIFF images could be downloaded from the provided cards.")
@@ -186,10 +208,12 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
         front_layout_file = None
         back_layout_file = None
         
-        # Generate unique filename prefix using card IDs
+        # Generate unique filename prefix
         cards_hash = hash(''.join(extended_ids)) % 10000
         timestamp = int(time.time())
-        filename_prefix = f"a4_layout_{timestamp}_{cards_hash:04d}"
+        orientation_suffix = request.orientation[0]  # 'h' or 'v'
+        duplex_suffix = "_duplex" if request.duplex_mode else ""
+        filename_prefix = f"a4_{orientation_suffix}{duplex_suffix}_{timestamp}_{cards_hash:04d}"
         
         if front_images:
             log(f"Creating front A4 layout with {len(front_images)} cards", request_id=request_id)
@@ -226,9 +250,10 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             log(f"Back A4 layout created: {back_layout_size_mb:.1f}MB, saved as {back_layout_file}", request_id=request_id)
         
         # Return success with file sizes and file paths
+        duplex_info = " (duplex-ready)" if request.duplex_mode else ""
         return A4LayoutResponse(
             success=True,
-            message=f"A4 layouts created successfully for {cards_processed} cards",
+            message=f"A4 layouts created successfully for {cards_processed} cards in {request.orientation} orientation{duplex_info}",
             front_layout_size_mb=front_layout_size_mb,
             back_layout_size_mb=back_layout_size_mb,
             front_layout_file=front_layout_file,
