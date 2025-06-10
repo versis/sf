@@ -25,8 +25,8 @@ CARD_HEIGHT_MM = CARD_HEIGHT / MM_TO_PIXELS  # ~119.90mm (1416px at 300 DPI)
 # Layout specifications
 GRID_COLS = 3  # 3 cards wide
 GRID_ROWS = 2  # 2 cards tall
-A4_MARGINS_MM = 10          # Reduced outer A4 margins for better space usage
-CUTTING_ZONE_MM = 8         # Reduced cutting areas for more card space
+A4_MARGINS_MM = 0           # No margins - use full page area
+CUTTING_ZONE_MM = 3         # Reduced cutting areas for more card space
 
 # Convert to pixels
 A4_MARGINS_PX = int(A4_MARGINS_MM * MM_TO_PIXELS)
@@ -34,7 +34,7 @@ CUTTING_ZONE_PX = int(CUTTING_ZONE_MM * MM_TO_PIXELS)
 
 # Cutting guide appearance
 CUTTING_LINE_COLOR = "#333333"  # Much darker gray for visibility
-CUTTING_LINE_WIDTH = 3  # pixels - thicker lines
+CUTTING_LINE_WIDTH = 1  # pixels - thicker lines
 CUTTING_LINE_DASH_LENGTH = 12  # pixels - longer dashes
 
 # Card spacing (small gap for easier cutting)
@@ -62,19 +62,42 @@ class A4Layout:
         self.canvas = None
         self.draw = None
         
-        # Calculate layout dimensions
-        self.layout_width = GRID_COLS * CARD_WIDTH + (GRID_COLS - 1) * CARD_SPACING_PX
-        self.layout_height = GRID_ROWS * CARD_HEIGHT + (GRID_ROWS - 1) * CARD_SPACING_PX
+        # Calculate optimal card size to maximize page usage
+        desired_spacing_x = 40  # ~3.4mm spacing between cards
+        desired_spacing_y = 40  # ~3.4mm spacing between rows
         
-        # Calculate centering offsets
-        self.offset_x = (A4_WIDTH_PX - self.layout_width) // 2
-        self.offset_y = (A4_HEIGHT_PX - self.layout_height) // 2
+        # Calculate maximum card dimensions while maintaining 1:2 ratio
+        available_width_for_cards = A4_WIDTH_PX - (GRID_COLS - 1) * desired_spacing_x
+        available_height_for_cards = A4_HEIGHT_PX - (GRID_ROWS - 1) * desired_spacing_y
         
-        debug(f"A4 Layout initialized: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px", request_id=self.request_id)
-        debug(f"Card layout: {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
-        debug(f"Centering offset: {self.offset_x}, {self.offset_y}", request_id=self.request_id)
+        # Calculate optimal card width/height maintaining 1:2 ratio (width:height = 1:2)
+        max_card_width_from_width = available_width_for_cards // GRID_COLS
+        max_card_width_from_height = available_height_for_cards // (GRID_ROWS * 2)  # height = 2*width for 1:2 ratio
+        
+        # Use the smaller constraint to ensure cards fit
+        optimal_card_width = min(max_card_width_from_width, max_card_width_from_height)
+        optimal_card_height = optimal_card_width * 2  # Maintain 1:2 ratio
+        
+        # Store optimal card dimensions
+        self.card_width = optimal_card_width
+        self.card_height = optimal_card_height
+        
+        # Calculate actual spacing with optimal card size
+        self.actual_spacing_x = (A4_WIDTH_PX - GRID_COLS * self.card_width) // (GRID_COLS - 1) if GRID_COLS > 1 else 0
+        self.actual_spacing_y = (A4_HEIGHT_PX - GRID_ROWS * self.card_height) // (GRID_ROWS - 1) if GRID_ROWS > 1 else 0
+        
+        # Layout fills entire page
+        self.layout_width = A4_WIDTH_PX
+        self.layout_height = A4_HEIGHT_PX
+        self.offset_x = 0
+        self.offset_y = 0
+        
+        debug(f"A4 Layout initialized: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (full page)", request_id=self.request_id)
+        debug(f"Optimal card size: {self.card_width}×{self.card_height}px (vs original {CARD_WIDTH}×{CARD_HEIGHT}px)", request_id=self.request_id)
+        debug(f"Card spacing: {self.actual_spacing_x}px×{self.actual_spacing_y}px", request_id=self.request_id)
+        debug(f"Offset: {self.offset_x}, {self.offset_y} (no centering)", request_id=self.request_id)
         if passepartout_mm > 0:
-            debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px", request_id=self.request_id)
+            debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px (equal on all sides)", request_id=self.request_id)
     
     def create_canvas(self, background_color: str = "#FFFFFF") -> None:
         """Create A4 canvas with proper dimensions"""
@@ -96,8 +119,8 @@ class A4Layout:
         if not (0 <= grid_x < GRID_COLS and 0 <= grid_y < GRID_ROWS):
             raise ValueError(f"Invalid grid position: ({grid_x}, {grid_y}). Valid range: (0-{GRID_COLS-1}, 0-{GRID_ROWS-1})")
         
-        x = self.offset_x + grid_x * (CARD_WIDTH + CARD_SPACING_PX)
-        y = self.offset_y + grid_y * (CARD_HEIGHT + CARD_SPACING_PX)
+        x = self.offset_x + grid_x * (self.card_width + self.actual_spacing_x)
+        y = self.offset_y + grid_y * (self.card_height + self.actual_spacing_y)
         
         debug(f"Card position [{grid_x},{grid_y}]: ({x}, {y})", request_id=self.request_id)
         return x, y
@@ -114,10 +137,10 @@ class A4Layout:
         if not self.canvas:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
-        # Verify card dimensions
-        if card_image.size != (CARD_WIDTH, CARD_HEIGHT):
-            log(f"Warning: Card image size {card_image.size} doesn't match expected {CARD_WIDTH}×{CARD_HEIGHT}", 
-                level="WARNING", request_id=self.request_id)
+        # Resize card to optimal size (scale up from original size)
+        if card_image.size != (self.card_width, self.card_height):
+            debug(f"Resizing card from {card_image.size} to optimal {self.card_width}×{self.card_height}px", request_id=self.request_id)
+            card_image = card_image.resize((self.card_width, self.card_height), Image.Resampling.LANCZOS)
         
         x, y = self.get_card_position(grid_x, grid_y)
         
@@ -139,42 +162,42 @@ class A4Layout:
     
     def _apply_passepartout_to_card(self, card_image: Image.Image) -> Image.Image:
         """
-        Apply proportional passepartout (white border) maintaining 2:1 aspect ratio.
+        Apply equal passepartout (white border) on all sides.
         
         Args:
             card_image: Original card image
             
         Returns:
-            Card image with proportional passepartout applied
+            Card image with equal passepartout applied on all sides
         """
-        # Calculate proportional passepartout borders to maintain 2:1 ratio
-        # Card is 2:1 ratio (width:height), so passepartout should be proportional
+        # Equal passepartout borders on all sides
+        passepartout_width = self.passepartout_px   # Same amount for width
+        passepartout_height = self.passepartout_px  # Same amount for height
         
-        # For 2:1 ratio: if height border is X, width border should be X/2
-        passepartout_height = self.passepartout_px
-        passepartout_width = self.passepartout_px // 2  # Half of height passepartout
+        # Get current card dimensions (now optimal size)
+        card_width, card_height = card_image.size
         
-        # Calculate available space for card content after proportional borders
-        available_width = CARD_WIDTH - (2 * passepartout_width)
-        available_height = CARD_HEIGHT - (2 * passepartout_height)
+        # Calculate available space for card content after equal borders
+        available_width = card_width - (2 * passepartout_width)
+        available_height = card_height - (2 * passepartout_height)
         
         # Calculate scaling factor to fit card within available space
-        scale_factor = min(available_width / CARD_WIDTH, available_height / CARD_HEIGHT)
+        scale_factor = min(available_width / card_width, available_height / card_height)
         
         # Scale down the card
-        new_width = int(CARD_WIDTH * scale_factor)
-        new_height = int(CARD_HEIGHT * scale_factor)
+        new_width = int(card_width * scale_factor)
+        new_height = int(card_height * scale_factor)
         scaled_card = card_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
-        # Create white background canvas (same size as original card space)
-        white_canvas = Image.new('RGB', (CARD_WIDTH, CARD_HEIGHT), 'white')
+        # Create white background canvas (same size as current card space)
+        white_canvas = Image.new('RGB', (card_width, card_height), 'white')
         
-        # Center the scaled card on the white canvas with proportional borders
-        paste_x = (CARD_WIDTH - new_width) // 2
-        paste_y = (CARD_HEIGHT - new_height) // 2
+        # Center the scaled card on the white canvas with equal borders
+        paste_x = (card_width - new_width) // 2
+        paste_y = (card_height - new_height) // 2
         white_canvas.paste(scaled_card, (paste_x, paste_y))
         
-        debug(f"Proportional passepartout: {passepartout_width}px×{passepartout_height}px, scale={scale_factor:.3f}", request_id=self.request_id)
+        debug(f"Equal passepartout: {passepartout_width}px×{passepartout_height}px, scale={scale_factor:.3f}", request_id=self.request_id)
         return white_canvas
     
     def draw_cutting_guides(self) -> None:
@@ -189,7 +212,7 @@ class A4Layout:
             right_card_x, right_card_y = self.get_card_position(grid_x + 1, 0)
             
             # Line position is halfway between the cards
-            line_x = left_card_x + CARD_WIDTH + (CARD_SPACING_PX // 2)
+            line_x = left_card_x + self.card_width + (self.actual_spacing_x // 2)
             
             # Draw vertical line from top of layout to bottom
             top_y = self.offset_y
@@ -204,7 +227,7 @@ class A4Layout:
             bottom_card_x, bottom_card_y = self.get_card_position(0, grid_y + 1)
             
             # Line position is halfway between the cards
-            line_y = top_card_y + CARD_HEIGHT + (CARD_SPACING_PX // 2)
+            line_y = top_card_y + self.card_height + (self.actual_spacing_y // 2)
             
             # Draw horizontal line from left of layout to right
             left_x = self.offset_x
