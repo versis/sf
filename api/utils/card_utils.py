@@ -8,13 +8,13 @@ from datetime import datetime
 import os
 import math
 import random
+import qrcode
 
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
 
 # --- Font Loading ---
 ASSETS_BASE_PATH = "assets"
 LOGO_PATH = "public/sf-icon.png"
-QR_CODE_PATH = "public/sf_qr.png"
 
 # --- Card Dimensions (Exact 1:2 ratio for print quality) ---
 # PNG dimensions (web quality)
@@ -580,28 +580,34 @@ async def generate_back_card_image_bytes(
     draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
                          perf_dot_radius, perf_dot_step, perf_color)
 
-    # Load and place QR code image inside the "stamp"
+    # Generate and place QR code image inside the "stamp"
     try:
-        qr_img_original = Image.open(QR_CODE_PATH).convert("RGBA")
-        
         # Calculate inner area (like stamp padding) for QR code placement
         qr_padding_internal = int(min(qr_width, qr_height) * 0.1)  # Same padding logic as stamp
         qr_inner_width = qr_width - (2 * qr_padding_internal)
         qr_inner_height = qr_height - (2 * qr_padding_internal)
         
-        # Resize QR code to fit inner area while maintaining aspect ratio
-        qr_img_resized = qr_img_original.copy()
-        qr_img_resized.thumbnail((qr_inner_width, qr_inner_height), Image.Resampling.LANCZOS)
+        # QR codes must be square - use the smaller dimension to fit within stamp
+        qr_square_size = min(qr_inner_width, qr_inner_height)
+        
+        # Generate QR code dynamically with the same grey background as stamp
+        qr_data = "https://shadefreude.com"
+        qr_img_generated = generate_qr_code_image(
+            data=qr_data,
+            size=(qr_square_size, qr_square_size),  # Always square
+            background_color=qr_bg_color,  # Use same background as stamp
+            request_id=request_id
+        )
         
         # Center QR code within the "stamp" area
-        qr_inner_x = qr_x_start + (qr_width - qr_img_resized.width) // 2
-        qr_inner_y = qr_y_start + (qr_height - qr_img_resized.height) // 2
+        qr_inner_x = qr_x_start + (qr_width - qr_img_generated.width) // 2
+        qr_inner_y = qr_y_start + (qr_height - qr_img_generated.height) // 2
         
         # Paste QR code onto the canvas
-        canvas.paste(qr_img_resized, (qr_inner_x, qr_inner_y), qr_img_resized)
-        debug(f"QR code stamp added at position ({qr_x_start}, {qr_y_start}) with size {qr_width}x{qr_height}, QR image: {qr_img_resized.width}x{qr_img_resized.height}", request_id=request_id)
+        canvas.paste(qr_img_generated, (qr_inner_x, qr_inner_y), qr_img_generated)
+        debug(f"QR code stamp added at position ({qr_x_start}, {qr_y_start}) with stamp size {qr_width}x{qr_height}, QR data: {qr_data}, QR image: {qr_img_generated.width}x{qr_img_generated.height} (square)", request_id=request_id)
     except Exception as e: 
-        log(f"Error loading QR code: {e}", level="ERROR", request_id=request_id)
+        log(f"Error generating QR code: {e}", level="ERROR", request_id=request_id)
         debug("QR code will not be displayed on this card", request_id=request_id)
     # --- END QR CODE ---
 
@@ -741,6 +747,51 @@ def draw_perforation_dots(draw, x_start: int, y_start: int, width: int, height: 
             px, py = (x1 + curr_pos, y1) if is_horiz else (x1, y1 + curr_pos)
             draw.ellipse([(px - perf_dot_radius, py - perf_dot_radius), 
                          (px + perf_dot_radius, py + perf_dot_radius)], fill=perf_color)
+
+def generate_qr_code_image(data: str, size: tuple, background_color: tuple = (248, 249, 250), 
+                          request_id: Optional[str] = None) -> Image.Image:
+    """
+    Generate a QR code image with custom background color (matching stamp style).
+    
+    Args:
+        data: The data to encode in the QR code (e.g., URL)
+        size: Tuple of (width, height) for the final QR code image
+        background_color: RGB tuple for background color (default: stamp grey)
+        request_id: Request tracking ID
+        
+    Returns:
+        PIL Image containing the QR code
+    """
+    try:
+        # Create QR code
+        qr = qrcode.QRCode(
+            version=1,  # Controls the size of the QR code (1 = 21x21 modules)
+            error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction
+            box_size=10,  # Size of each box in pixels
+            border=2,  # Border size in boxes
+        )
+        
+        # Add data and generate
+        qr.add_data(data)
+        qr.make(fit=True)
+        
+        # Create image with custom colors
+        qr_img = qr.make_image(
+            fill_color='black',  # QR code pattern color (black)
+            back_color=background_color  # Background color (stamp grey)
+        ).convert('RGBA')
+        
+        # Resize to match the requested size
+        qr_img_resized = qr_img.resize(size, Image.Resampling.LANCZOS)
+        
+        debug(f"Generated QR code for data: {data[:50]}{'...' if len(data) > 50 else ''}, size: {size}", request_id=request_id)
+        return qr_img_resized
+        
+    except Exception as e:
+        log(f"Error generating QR code: {e}", level="ERROR", request_id=request_id)
+        # Return a blank image with the background color as fallback
+        fallback_img = Image.new('RGBA', size, background_color)
+        return fallback_img
 
 # --- Helper Functions for Drawing Custom Icons (REMOVED) ---
 # draw_pin_icon and draw_calendar_icon functions are now removed.
