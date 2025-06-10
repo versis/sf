@@ -215,9 +215,10 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
         # Build filename components
         width_part = f"w{int(request.target_content_width_mm)}"
         passepartout_part = f"pp{int(request.passepartout_mm)}"
+        orientation_part = "h" if request.orientation == "horizontal" else "v"
         
-        # Create filename prefix: sf_w156_pp12_000000632FEF_000000633FEF_000000634FEF
-        filename_prefix = f"{request.output_prefix}_{width_part}_{passepartout_part}_{ids_part}"
+        # Create filename prefix: sf_w156_pp12_v_000000632FEF_000000633FEF_000000634FEF
+        filename_prefix = f"{request.output_prefix}_{width_part}_{passepartout_part}_{orientation_part}_{ids_part}"
         
         if front_images:
             log(f"Creating front A4 layout with {len(front_images)} cards", request_id=request_id)

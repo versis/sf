@@ -166,11 +166,17 @@ class A4Layout:
         if not self.canvas:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
-        # STEP 1: Rotate portrait card to landscape (90° counter-clockwise)
+        # STEP 1: Rotate portrait card to landscape with proper duplex alignment
         # Check if card is in portrait orientation (height > width) and rotate if needed
         if card_image.size[1] > card_image.size[0]:  # Portrait orientation (height > width)
-            rotated_card = card_image.rotate(-90, expand=True)  # Rotate counter-clockwise to landscape
-            debug(f"Rotated card from {card_image.size} portrait to {rotated_card.size} landscape (counter-clockwise)", request_id=self.request_id)
+            if self.duplex_back_side:
+                # Back cards: rotate clockwise (+90°) for proper duplex alignment
+                rotated_card = card_image.rotate(90, expand=True)  # Rotate clockwise to landscape
+                debug(f"Rotated BACK card from {card_image.size} portrait to {rotated_card.size} landscape (clockwise for duplex)", request_id=self.request_id)
+            else:
+                # Front cards: rotate counter-clockwise (-90°) as usual
+                rotated_card = card_image.rotate(-90, expand=True)  # Rotate counter-clockwise to landscape
+                debug(f"Rotated FRONT card from {card_image.size} portrait to {rotated_card.size} landscape (counter-clockwise)", request_id=self.request_id)
         else:
             rotated_card = card_image  # Already landscape or square
             debug(f"Using card as-is (already landscape): {card_image.size}", request_id=self.request_id)
