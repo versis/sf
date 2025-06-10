@@ -28,7 +28,11 @@ GRID_ROWS = 3  # 3 cards tall (3 rows)
 A4_MARGINS_MM = 0           # No margins - use full page area
 
 # Target CONTENT size (always 2:1 ratio for card content)
-# This is now controlled by a parameter in the main A4Layout class
+# Default content size: 14.6cm × 7.3cm (2:1 ratio)
+TARGET_CONTENT_WIDTH_MM = 146  # 14.6cm
+TARGET_CONTENT_HEIGHT_MM = 73   # 7.3cm (exactly half of width)
+TARGET_CONTENT_WIDTH_PX = int(TARGET_CONTENT_WIDTH_MM * MM_TO_PIXELS)   # ~1724px
+TARGET_CONTENT_HEIGHT_PX = int(TARGET_CONTENT_HEIGHT_MM * MM_TO_PIXELS)  # ~862px
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
 TOTAL_SPACING_MM = 1  # 1mm total spacing (ultra-minimal for guillotine)
@@ -53,17 +57,22 @@ class A4Layout:
     Handles exact positioning, cutting guides, print alignment, and passepartout.
     """
     
-    def __init__(self, request_id: Optional[str] = None, passepartout_mm: float = 0):
+    def __init__(self, target_content_width_mm: float = 146, passepartout_mm: float = 0, request_id: Optional[str] = None):
         self.request_id = request_id
+        self.target_content_width_mm = target_content_width_mm
+        self.target_content_height_mm = target_content_width_mm / 2  # Always 2:1 ratio
         self.passepartout_mm = passepartout_mm
         self.passepartout_px = int(passepartout_mm * MM_TO_PIXELS) if passepartout_mm > 0 else 0
         self.canvas = None
         self.draw = None
         
+        # Calculate target content size in pixels
+        self.target_content_width_px = int(self.target_content_width_mm * MM_TO_PIXELS)
+        self.target_content_height_px = int(self.target_content_height_mm * MM_TO_PIXELS)
+        
         # Calculate final card size: content + passepartout
-        # Content is always 14.6×7.3cm (2:1 ratio), final size depends on passepartout
-        final_card_width_px = TARGET_CONTENT_WIDTH_PX + (2 * self.passepartout_px)
-        final_card_height_px = TARGET_CONTENT_HEIGHT_PX + (2 * self.passepartout_px)
+        final_card_width_px = self.target_content_width_px + (2 * self.passepartout_px)
+        final_card_height_px = self.target_content_height_px + (2 * self.passepartout_px)
         
         self.card_width = final_card_width_px
         self.card_height = final_card_height_px
@@ -85,7 +94,7 @@ class A4Layout:
         unused_height = A4_HEIGHT_PX - self.layout_height
         
         debug(f"A4 Canvas: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (210×297mm)", request_id=self.request_id)
-        debug(f"Content size: {TARGET_CONTENT_WIDTH_MM}×{TARGET_CONTENT_HEIGHT_MM}mm (2:1 ratio, no white space)", request_id=self.request_id)
+        debug(f"Content size: {self.target_content_width_mm}×{self.target_content_height_mm}mm (2:1 ratio, no white space)", request_id=self.request_id)
         debug(f"Final card size: {self.card_width*25.4/300:.1f}×{self.card_height*25.4/300:.1f}mm (content + {passepartout_mm}mm passepartout)", request_id=self.request_id)
         debug(f"Layout: {GRID_COLS}×{GRID_ROWS} grid = {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
         debug(f"UNUSED space: {unused_width}×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
@@ -139,11 +148,11 @@ class A4Layout:
             rotated_card = card_image  # Already correct size/orientation
             debug(f"Using card as-is: {card_image.size}", request_id=self.request_id)
         
-        # STEP 2: Scale rotated card to EXACT target content size (14.6×7.3cm)
+        # STEP 2: Scale rotated card to EXACT target content size
         # This ensures 2:1 ratio with no white space around content
-        scaled_card = rotated_card.resize((TARGET_CONTENT_WIDTH_PX, TARGET_CONTENT_HEIGHT_PX), Image.Resampling.LANCZOS)
+        scaled_card = rotated_card.resize((self.target_content_width_px, self.target_content_height_px), Image.Resampling.LANCZOS)
         
-        scale_factor = TARGET_CONTENT_WIDTH_PX / rotated_card.size[0]  # Calculate for debug
+        scale_factor = self.target_content_width_px / rotated_card.size[0]  # Calculate for debug
         debug(f"Scaled to EXACT content size: {rotated_card.size} → {scaled_card.size} (scale={scale_factor:.3f})", request_id=self.request_id)
         
         # STEP 3: Create final card with passepartout (if specified)
@@ -176,8 +185,8 @@ class A4Layout:
         # Calculate final size in cm for verification
         final_width_cm = self.card_width * 25.4 / 300
         final_height_cm = self.card_height * 25.4 / 300
-        content_width_cm = TARGET_CONTENT_WIDTH_MM / 10  # Convert mm to cm
-        content_height_cm = TARGET_CONTENT_HEIGHT_MM / 10
+        content_width_cm = self.target_content_width_mm / 10  # Convert mm to cm
+        content_height_cm = self.target_content_height_mm / 10
         
         debug(f"Placed card at [{grid_x},{grid_y}]: final size {final_width_cm:.1f}×{final_height_cm:.1f}cm, content {content_width_cm:.1f}×{content_height_cm:.1f}cm", request_id=self.request_id)
     
