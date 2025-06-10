@@ -52,11 +52,13 @@ def px_to_mm(px: int) -> float:
 class A4Layout:
     """
     A4 layout engine for professional postcard printing.
-    Handles exact positioning, cutting guides, and print alignment.
+    Handles exact positioning, cutting guides, print alignment, and passepartout.
     """
     
-    def __init__(self, request_id: Optional[str] = None):
+    def __init__(self, request_id: Optional[str] = None, passepartout_mm: float = 0):
         self.request_id = request_id
+        self.passepartout_mm = passepartout_mm
+        self.passepartout_px = int(passepartout_mm * MM_TO_PIXELS) if passepartout_mm > 0 else 0
         self.canvas = None
         self.draw = None
         
@@ -71,6 +73,8 @@ class A4Layout:
         debug(f"A4 Layout initialized: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px", request_id=self.request_id)
         debug(f"Card layout: {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
         debug(f"Centering offset: {self.offset_x}, {self.offset_y}", request_id=self.request_id)
+        if passepartout_mm > 0:
+            debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px", request_id=self.request_id)
     
     def create_canvas(self, background_color: str = "#FFFFFF") -> None:
         """Create A4 canvas with proper dimensions"""
@@ -100,7 +104,7 @@ class A4Layout:
     
     def place_card(self, card_image: Image.Image, grid_x: int, grid_y: int) -> None:
         """
-        Place a card image at the specified grid position.
+        Place a card image at the specified grid position with optional passepartout.
         
         Args:
             card_image: PIL Image of the card (should be CARD_WIDTH × CARD_HEIGHT)
@@ -123,8 +127,48 @@ class A4Layout:
             rgb_image.paste(card_image, mask=card_image.split()[-1])
             card_image = rgb_image
         
-        self.canvas.paste(card_image, (x, y))
+        # Apply passepartout if specified
+        if self.passepartout_mm > 0:
+            final_card = self._apply_passepartout_to_card(card_image)
+            debug(f"Applied {self.passepartout_mm}mm passepartout to card at [{grid_x},{grid_y}]", request_id=self.request_id)
+        else:
+            final_card = card_image
+        
+        self.canvas.paste(final_card, (x, y))
         debug(f"Placed card at grid [{grid_x},{grid_y}] → pixel ({x}, {y})", request_id=self.request_id)
+    
+    def _apply_passepartout_to_card(self, card_image: Image.Image) -> Image.Image:
+        """
+        Apply passepartout (white border) to a card by shrinking it and adding white space.
+        
+        Args:
+            card_image: Original card image
+            
+        Returns:
+            Card image with passepartout applied
+        """
+        # Calculate available space for the card content after passepartout border
+        available_width = CARD_WIDTH - (2 * self.passepartout_px)
+        available_height = CARD_HEIGHT - (2 * self.passepartout_px)
+        
+        # Calculate scaling factor to fit card within available space
+        scale_factor = min(available_width / CARD_WIDTH, available_height / CARD_HEIGHT)
+        
+        # Scale down the card
+        new_width = int(CARD_WIDTH * scale_factor)
+        new_height = int(CARD_HEIGHT * scale_factor)
+        scaled_card = card_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Create white background canvas (same size as original card space)
+        white_canvas = Image.new('RGB', (CARD_WIDTH, CARD_HEIGHT), 'white')
+        
+        # Center the scaled card on the white canvas
+        paste_x = (CARD_WIDTH - new_width) // 2
+        paste_y = (CARD_HEIGHT - new_height) // 2
+        white_canvas.paste(scaled_card, (paste_x, paste_y))
+        
+        debug(f"Passepartout applied: scale={scale_factor:.3f}, new_size={new_width}×{new_height}px", request_id=self.request_id)
+        return white_canvas
     
     def draw_cutting_guides(self) -> None:
         """Draw cutting guide lines around the card layout area"""
@@ -280,14 +324,16 @@ GRID_POSITIONS = {
 def create_a4_layout_with_cards(card_images: List[Image.Image], 
                                layout_title: Optional[str] = None,
                                output_format: str = "TIFF",
+                               passepartout_mm: float = 0,
                                request_id: Optional[str] = None) -> bytes:
     """
-    Create an A4 layout with up to 6 card images.
+    Create an A4 layout with up to 6 card images and optional passepartout.
     
     Args:
         card_images: List of PIL Images (up to 6 cards)
         layout_title: Optional title for the layout
         output_format: "TIFF" for print, "PNG" for preview
+        passepartout_mm: White border around each card in millimeters (0 = no passepartout)
         request_id: Request tracking ID
         
     Returns:
@@ -297,10 +343,10 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
         log(f"Too many cards provided: {len(card_images)}. Maximum is 6.", level="WARNING", request_id=request_id)
         card_images = card_images[:6]
     
-    log(f"Creating A4 layout with {len(card_images)} cards", request_id=request_id)
+    log(f"Creating A4 layout with {len(card_images)} cards, passepartout: {passepartout_mm}mm", request_id=request_id)
     
-    # Create layout
-    layout = A4Layout(request_id=request_id)
+    # Create layout with passepartout
+    layout = A4Layout(request_id=request_id, passepartout_mm=passepartout_mm)
     layout.create_canvas()
     
     # Place cards in grid (left-to-right, top-to-bottom)
@@ -313,10 +359,11 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
     layout.draw_cutting_guides()
     
     # Add print information
+    title_suffix = f" | Passepartout: {passepartout_mm}mm" if passepartout_mm > 0 else ""
     if layout_title:
-        layout.add_print_info(f"{layout_title} | 300 DPI | A4", "bottom_right")
+        layout.add_print_info(f"{layout_title} | 300 DPI | A4{title_suffix}", "bottom_right")
     else:
-        layout.add_print_info("ShadeFreude Postcards | 300 DPI | A4", "bottom_right")
+        layout.add_print_info(f"ShadeFreude Postcards | 300 DPI | A4{title_suffix}", "bottom_right")
     
     # Save and return
     return layout.save_layout(output_format) 
