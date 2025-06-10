@@ -28,11 +28,11 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-PASSEPARTOUT_MM = 12                   # White border in millimeters (0, 8, 12, etc.)
-CONTENT_WIDTH_MM = 156                 # Content width in mm (default 146 = 14.6cm)
+PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
+CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
 ORIENTATION = "horizontal"             # "horizontal" or "vertical"
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
-OUTPUT_PREFIX = "sf"                   # Filename prefix (generates: sf_w156_pp12_cardids_front.tiff)
+OUTPUT_PREFIX = "wydruktestowy_sf"                   # Filename prefix (generates: sf_w156_pp12_cardids_front.tiff)
 
 # =============================================================================
 # COMMON CONFIGURATION EXAMPLES:
