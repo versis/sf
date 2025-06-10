@@ -30,7 +30,8 @@ class CreateA4LayoutRequest(BaseModel):
     passepartout_mm: float = 8
     target_content_width_mm: float = 146
     orientation: str = "horizontal"  # "horizontal" or "vertical"
-    duplex_mode: bool = True  # If True, reverses back card order for proper duplex alignment
+    duplex_mode: bool = True  # If True, adjusts back layout for proper duplex printing
+    output_prefix: str = "sf"  # Filename prefix
 
 class A4LayoutResponse(BaseModel):
     """Response model for A4 layout generation."""
@@ -186,16 +187,10 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
         
         # Extract images in the correct order for front and back
         front_images = [image for _, image in front_card_images]
+        back_images = [image for _, image in back_card_images]
         
-        # For duplex mode: reverse the order of back images for proper alignment
-        if request.duplex_mode and back_card_images:
-            back_card_images_ordered = list(reversed(back_card_images))
-            back_images = [image for _, image in back_card_images_ordered]
-            log(f"Duplex mode: Reversed back card order for proper alignment", request_id=request_id)
-            debug(f"Original back order: {[id for id, _ in back_card_images]}", request_id=request_id)
-            debug(f"Reversed back order: {[id for id, _ in back_card_images_ordered]}", request_id=request_id)
-        else:
-            back_images = [image for _, image in back_card_images]
+        # Note: Card order stays the same for both front and back
+        # The duplex alignment is handled by horizontal positioning (left vs right)
         
         if not front_images and not back_images:
             raise HTTPException(status_code=404, detail="No TIFF images could be downloaded from the provided cards.")
@@ -208,12 +203,21 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
         front_layout_file = None
         back_layout_file = None
         
-        # Generate unique filename prefix
-        cards_hash = hash(''.join(extended_ids)) % 10000
-        timestamp = int(time.time())
-        orientation_suffix = request.orientation[0]  # 'h' or 'v'
-        duplex_suffix = "_duplex" if request.duplex_mode else ""
-        filename_prefix = f"a4_{orientation_suffix}{duplex_suffix}_{timestamp}_{cards_hash:04d}"
+        # Generate filename using new format: sf_w156_pp12_extendedids
+        def clean_extended_id(extended_id: str) -> str:
+            """Remove spaces and dashes from extended ID."""
+            return extended_id.replace(" ", "").replace("-", "")
+        
+        # Clean extended IDs and join with underscores
+        cleaned_ids = [clean_extended_id(ext_id) for ext_id in extended_ids]
+        ids_part = "_".join(cleaned_ids)
+        
+        # Build filename components
+        width_part = f"w{int(request.target_content_width_mm)}"
+        passepartout_part = f"pp{int(request.passepartout_mm)}"
+        
+        # Create filename prefix: sf_w156_pp12_000000632FEF_000000633FEF_000000634FEF
+        filename_prefix = f"{request.output_prefix}_{width_part}_{passepartout_part}_{ids_part}"
         
         if front_images:
             log(f"Creating front A4 layout with {len(front_images)} cards", request_id=request_id)
@@ -227,7 +231,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             front_layout_size_mb = len(front_layout_bytes) / 1024 / 1024
             
             # Save front layout to local file
-            front_layout_file = f"{filename_prefix}_front_{request.passepartout_mm}mm.tiff"
+            front_layout_file = f"{filename_prefix}_front.tiff"
             with open(front_layout_file, "wb") as f:
                 f.write(front_layout_bytes)
             
@@ -245,7 +249,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             back_layout_size_mb = len(back_layout_bytes) / 1024 / 1024
             
             # Save back layout to local file
-            back_layout_file = f"{filename_prefix}_back_{request.passepartout_mm}mm.tiff"
+            back_layout_file = f"{filename_prefix}_back.tiff"
             with open(back_layout_file, "wb") as f:
                 f.write(back_layout_bytes)
             

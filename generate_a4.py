@@ -9,7 +9,6 @@ Instructions:
 """
 
 import requests
-import json
 import time
 import sys
 from typing import List, Optional
@@ -29,11 +28,11 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
-CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)  
+PASSEPARTOUT_MM = 12                   # White border in millimeters (0, 8, 12, etc.)
+CONTENT_WIDTH_MM = 156                 # Content width in mm (default 146 = 14.6cm)
 ORIENTATION = "horizontal"             # "horizontal" or "vertical"
-DUPLEX_MODE = True                     # True = back cards reversed for proper duplex alignment
-OUTPUT_PREFIX = "postcards"            # Filename prefix (not used yet)
+DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
+OUTPUT_PREFIX = "sf"                   # Filename prefix (generates: sf_w156_pp12_cardids_front.tiff)
 
 # =============================================================================
 # COMMON CONFIGURATION EXAMPLES:
@@ -54,6 +53,9 @@ OUTPUT_PREFIX = "postcards"            # Filename prefix (not used yet)
 # Professional print settings (thick border):
 # PASSEPARTOUT_MM = 12
 # CONTENT_WIDTH_MM = 140  # Slightly smaller content for cutting room
+#
+# Custom output prefix:
+# OUTPUT_PREFIX = "myprint"  # Generates: myprint_w140_pp12_cardids_front.tiff
 # =============================================================================
 
 def generate_a4_layout(
@@ -62,7 +64,7 @@ def generate_a4_layout(
     target_content_width_mm: float = 146,
     orientation: str = "horizontal",
     duplex_mode: bool = True,
-    output_prefix: str = "postcards"
+    output_prefix: str = "wydruktestowy"
 ) -> bool:
     """
     Generate A4 layouts for front and back sides.
@@ -98,13 +100,14 @@ def generate_a4_layout(
         "passepartout_mm": passepartout_mm,
         "target_content_width_mm": target_content_width_mm,
         "orientation": orientation,
-        "duplex_mode": duplex_mode
+        "duplex_mode": duplex_mode,
+        "output_prefix": output_prefix
     }
     
-    # For duplex printing, we need to reverse the order of cards for the back side
+    # For duplex printing, the back side is positioned on the right side of A4
     # This ensures proper alignment when the paper is flipped
     if duplex_mode:
-        print("🔄 Duplex mode: Will reverse card order for back side alignment")
+        print("🔄 Duplex mode: Back side will be positioned on right for proper alignment")
     
     try:
         start_time = time.time()
@@ -135,7 +138,7 @@ def generate_a4_layout(
                 
                 if duplex_mode:
                     print(f"   💡 Back layout is ready for duplex printing")
-                    print(f"      (Card order reversed for proper alignment)")
+                    print(f"      (Positioned on right side for proper alignment)")
             
             print(f"\n💬 {result['message']}")
             return True
@@ -184,9 +187,9 @@ def print_configuration():
     
     if DUPLEX_MODE:
         print("💡 Duplex mode explanation:")
-        print("   Front side: [Card1] [Card2] [Card3] (top to bottom)")
-        print("   Back side:  [Card3_back] [Card2_back] [Card1_back] (top to bottom)")
-        print("   After flipping: Card1_front ↔ Card1_back (aligned)")
+        print("   Front side: [Card1] [Card2] [Card3] positioned on LEFT")
+        print("   Back side:  [Card1_back] [Card2_back] [Card3_back] positioned on RIGHT")
+        print("   After flipping: Perfect alignment due to horizontal positioning")
         print()
 
 def main():
