@@ -32,7 +32,7 @@ A4_MARGINS_MM = 0           # No margins - use full page area
 # NO hardcoded defaults here - always maintains 2:1 ratio for card content
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
-TOTAL_SPACING_MM = 10  # 1mm total spacing (ultra-minimal for guillotine)
+TOTAL_SPACING_MM = 1.5  # 1mm total spacing (ultra-minimal for guillotine)
 SPACING_PX = int(TOTAL_SPACING_MM * MM_TO_PIXELS)  # ~12px
 
 # Cutting guide appearance  
