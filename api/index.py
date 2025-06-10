@@ -71,6 +71,7 @@ app = FastAPI()
 from api.routers import card_generation as card_generation_router # Added
 from api.routers import card_retrieval as card_retrieval_router # New router for card retrieval
 from api.routers import color_suggestions as color_suggestions_router # New router for color suggestions
+from api.routers import print_generation as print_generation_router # New router for print generation
 
 # Add CORS middleware
 app.add_middleware(
@@ -108,6 +109,7 @@ async def global_exception_handler(request: FastAPIRequest, exc: Exception):
 app.include_router(card_generation_router.router, prefix="/api", tags=["Card Generation"]) # Added, assuming /api prefix for all
 app.include_router(card_retrieval_router.router, prefix="/api", tags=["Card Retrieval"]) # Include the new router
 app.include_router(color_suggestions_router.router, prefix="/api", tags=["Color Suggestions"]) # Include the new color suggestions router
+app.include_router(print_generation_router.router, prefix="/api", tags=["Print Generation"]) # Include the new print generation router
 
 # --- Unified API Endpoint --- # This entire block will be removed
 # @app.post("/api/generate-cards", response_model=GenerateCardsResponse)
