@@ -62,40 +62,46 @@ class A4Layout:
         self.canvas = None
         self.draw = None
         
-        # Calculate optimal card size to maximize page usage
-        desired_spacing_x = 40  # ~3.4mm spacing between cards
-        desired_spacing_y = 40  # ~3.4mm spacing between rows
+        # EXACT calculation based on professional printing standards
+        # 3mm spacing = 35px at 300 DPI (exact conversion)
+        spacing_mm = 3
+        spacing_px = int(spacing_mm * MM_TO_PIXELS)  # 35px exactly
         
-        # Calculate maximum card dimensions while maintaining 1:2 ratio
-        available_width_for_cards = A4_WIDTH_PX - (GRID_COLS - 1) * desired_spacing_x
-        available_height_for_cards = A4_HEIGHT_PX - (GRID_ROWS - 1) * desired_spacing_y
+        # Available space for cards after exact spacing
+        available_width = A4_WIDTH_PX - (GRID_COLS - 1) * spacing_px
+        available_height = A4_HEIGHT_PX - (GRID_ROWS - 1) * spacing_px
         
-        # Calculate optimal card width/height maintaining 1:2 ratio (width:height = 1:2)
-        max_card_width_from_width = available_width_for_cards // GRID_COLS
-        max_card_width_from_height = available_height_for_cards // (GRID_ROWS * 2)  # height = 2*width for 1:2 ratio
+        # Calculate exact optimal card size maintaining 1:2 ratio
+        max_card_width_from_width = available_width // GRID_COLS
+        max_card_width_from_height = available_height // (GRID_ROWS * 2)  # height = 2*width
         
-        # Use the smaller constraint to ensure cards fit
+        # Use the constraint that limits us (should be width-limited)
         optimal_card_width = min(max_card_width_from_width, max_card_width_from_height)
-        optimal_card_height = optimal_card_width * 2  # Maintain 1:2 ratio
+        optimal_card_height = optimal_card_width * 2  # Exact 1:2 ratio
         
-        # Store optimal card dimensions
+        # Store EXACT card dimensions
         self.card_width = optimal_card_width
         self.card_height = optimal_card_height
+        self.actual_spacing_x = spacing_px
+        self.actual_spacing_y = spacing_px
         
-        # Calculate actual spacing with optimal card size
-        self.actual_spacing_x = (A4_WIDTH_PX - GRID_COLS * self.card_width) // (GRID_COLS - 1) if GRID_COLS > 1 else 0
-        self.actual_spacing_y = (A4_HEIGHT_PX - GRID_ROWS * self.card_height) // (GRID_ROWS - 1) if GRID_ROWS > 1 else 0
+        # Calculate ACTUAL layout dimensions (not A4 full size!)
+        self.layout_width = GRID_COLS * self.card_width + (GRID_COLS - 1) * spacing_px
+        self.layout_height = GRID_ROWS * self.card_height + (GRID_ROWS - 1) * spacing_px
         
-        # Layout fills entire page
-        self.layout_width = A4_WIDTH_PX
-        self.layout_height = A4_HEIGHT_PX
+        # Layout starts at page edge (no offset)
         self.offset_x = 0
         self.offset_y = 0
         
-        debug(f"A4 Layout initialized: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (full page)", request_id=self.request_id)
-        debug(f"Optimal card size: {self.card_width}×{self.card_height}px (vs original {CARD_WIDTH}×{CARD_HEIGHT}px)", request_id=self.request_id)
-        debug(f"Card spacing: {self.actual_spacing_x}px×{self.actual_spacing_y}px", request_id=self.request_id)
-        debug(f"Offset: {self.offset_x}, {self.offset_y} (no centering)", request_id=self.request_id)
+        # Calculate and display exact usage
+        unused_width = A4_WIDTH_PX - self.layout_width
+        unused_height = A4_HEIGHT_PX - self.layout_height
+        
+        debug(f"A4 Canvas: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (210×297mm)", request_id=self.request_id)
+        debug(f"EXACT card size: {self.card_width}×{self.card_height}px (vs original {CARD_WIDTH}×{CARD_HEIGHT}px)", request_id=self.request_id)
+        debug(f"Layout area: {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
+        debug(f"UNUSED space: {unused_width}px×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
+        debug(f"Card spacing: {self.actual_spacing_x}px = {spacing_mm}mm (exact)", request_id=self.request_id)
         if passepartout_mm > 0:
             debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px (equal on all sides)", request_id=self.request_id)
     
@@ -201,7 +207,7 @@ class A4Layout:
         return white_canvas
     
     def draw_cutting_guides(self) -> None:
-        """Draw cutting guide lines only between cards (no outer edges, no double lines)"""
+        """Draw cutting guide lines between cards AND bottom trim line for unused space"""
         if not self.draw:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
@@ -214,7 +220,7 @@ class A4Layout:
             # Line position is halfway between the cards
             line_x = left_card_x + self.card_width + (self.actual_spacing_x // 2)
             
-            # Draw vertical line from top of layout to bottom
+            # Draw vertical line from top of layout to bottom of actual layout
             top_y = self.offset_y
             bottom_y = self.offset_y + self.layout_height
             
@@ -235,7 +241,23 @@ class A4Layout:
             
             self._draw_dashed_line((left_x, line_y), (right_x, line_y), CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH)
         
-        log(f"Added cutting guides between cards only (no outer edges, no double lines)", request_id=self.request_id)
+        # CRITICAL: Draw BOTTOM trim line since we have unused space at bottom
+        unused_height = A4_HEIGHT_PX - self.layout_height
+        if unused_height > 10:  # Only if significant unused space (>10px = ~0.8mm)
+            trim_line_y = self.offset_y + self.layout_height
+            
+            # Draw full-width bottom trim line
+            self._draw_dashed_line(
+                (0, trim_line_y), 
+                (A4_WIDTH_PX, trim_line_y), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            
+            unused_mm = unused_height * 25.4 / 300
+            debug(f"Added BOTTOM trim line at {trim_line_y}px (unused: {unused_height}px = {unused_mm:.1f}mm)", request_id=self.request_id)
+        
+        log(f"Added cutting guides between cards + bottom trim line", request_id=self.request_id)
     
     def _draw_cutting_rectangle(self, left: int, top: int, right: int, bottom: int, width: int = None) -> None:
         """Draw a dashed rectangle for cutting guides"""
