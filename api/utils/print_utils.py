@@ -28,18 +28,15 @@ GRID_ROWS = 3  # 3 cards tall (3 rows)
 A4_MARGINS_MM = 0           # No margins - use full page area
 
 # Target CONTENT size (always 2:1 ratio for card content)
-TARGET_CONTENT_WIDTH_MM = 146   # 14.6cm wide content
-TARGET_CONTENT_HEIGHT_MM = 73   # 7.3cm tall content (exactly 2:1 ratio)
-TARGET_CONTENT_WIDTH_PX = int(TARGET_CONTENT_WIDTH_MM * MM_TO_PIXELS)  # ~1724px
-TARGET_CONTENT_HEIGHT_PX = int(TARGET_CONTENT_HEIGHT_MM * MM_TO_PIXELS)  # ~862px
+# This is now controlled by a parameter in the main A4Layout class
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
 TOTAL_SPACING_MM = 1  # 1mm total spacing (ultra-minimal for guillotine)
 SPACING_PX = int(TOTAL_SPACING_MM * MM_TO_PIXELS)  # ~12px
 
 # Cutting guide appearance  
-CUTTING_LINE_COLOR = "#333333"  # Much darker gray for visibility
-CUTTING_LINE_WIDTH = 1  # pixels - thicker lines
+CUTTING_LINE_COLOR = "#888888"  # Light gray for subtle cutting guides
+CUTTING_LINE_WIDTH = 1  # pixels - thinnest possible for precision
 CUTTING_LINE_DASH_LENGTH = 12  # pixels - longer dashes
 
 def mm_to_px(mm: float) -> int:
@@ -393,46 +390,44 @@ GRID_POSITIONS = {
     'bottom': (0, 2)   # Bottom card
 }
 
-def create_a4_layout_with_cards(card_images: List[Image.Image], 
-                               layout_title: Optional[str] = None,
-                               output_format: str = "TIFF",
-                               passepartout_mm: float = 0,
+def create_a4_layout_with_cards(card_images: List[Image.Image],
+                               target_content_width_mm: float = 146,
+                               passepartout_mm: float = 8,
                                request_id: Optional[str] = None) -> bytes:
     """
-    Create an A4 layout with up to 3 landscape card images (8×16cm each) and optional passepartout.
-    
+    Create an A4 layout with up to 3 landscape card images.
+
     Args:
         card_images: List of PIL Images (up to 3 cards - portrait cards will be rotated to landscape)
-        layout_title: Optional title for the layout
-        output_format: "TIFF" for print, "PNG" for preview
-        passepartout_mm: White border around each card in millimeters (0 = no passepartout)
-        request_id: Request tracking ID
-        
+        target_content_width_mm: The desired width of the card's content in millimeters.
+                                 Height will be calculated to maintain a 2:1 aspect ratio.
+        passepartout_mm: White border to add around the content in millimeters.
+        request_id: Request tracking ID.
+
     Returns:
-        A4 layout image bytes with 3 landscape cards in 1×3 grid
+        A4 layout image as TIFF bytes.
     """
-    max_cards = GRID_COLS * GRID_ROWS  # 1×3 = 3 cards max
-    
+    max_cards = GRID_COLS * GRID_ROWS
     if len(card_images) > max_cards:
-        log(f"Too many cards provided: {len(card_images)}. Maximum is {max_cards} for {GRID_COLS}×{GRID_ROWS} layout.", level="WARNING", request_id=request_id)
+        log(f"Too many cards provided: {len(card_images)}. Maximum is {max_cards}.", level="WARNING", request_id=request_id)
         card_images = card_images[:max_cards]
-    
-    log(f"Creating A4 layout: {len(card_images)} cards ({TARGET_CONTENT_WIDTH_MM}×{TARGET_CONTENT_HEIGHT_MM}mm content + {passepartout_mm}mm passepartout)", request_id=request_id)
-    
-    # Create layout with passepartout and guillotine considerations
-    layout = A4Layout(request_id=request_id, passepartout_mm=passepartout_mm)
+
+    log(f"Creating A4 layout for {len(card_images)} cards: "
+        f"{target_content_width_mm}mm content width + {passepartout_mm}mm passepartout.",
+        request_id=request_id)
+
+    layout = A4Layout(
+        target_content_width_mm=target_content_width_mm,
+        passepartout_mm=passepartout_mm,
+        request_id=request_id
+    )
     layout.create_canvas()
-    
-    # Place cards in 1×3 grid (single column, top-to-bottom)
+
     for i, card_image in enumerate(card_images):
-        grid_x = 0  # Always column 0 (single column)
-        grid_y = i  # Row index (0, 1, 2)
+        grid_x = i % GRID_COLS
+        grid_y = i // GRID_COLS
         layout.place_card(card_image, grid_x, grid_y)
-    
-    # Add guillotine cutting guides
+
     layout.draw_cutting_guides()
-    
-    # No print information text - removed per user request
-    
-    # Save and return
-    return layout.save_layout(output_format) 
+
+    return layout.save_layout() 
