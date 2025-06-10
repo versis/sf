@@ -486,20 +486,9 @@ async def generate_back_card_image_bytes(
     perf_dot_step = int(perf_dot_radius * 2.2)
     perf_color = fixed_back_card_rgb # Perforations match the card back
     
-    stamp_edges_coords = [
-        (stamp_x_start, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start, True), # Top
-        (stamp_x_start, stamp_y_start + stamp_height, stamp_x_start + stamp_width, stamp_y_start + stamp_height, True), # Bottom
-        (stamp_x_start, stamp_y_start, stamp_x_start, stamp_y_start + stamp_height, False), # Left
-        (stamp_x_start + stamp_width, stamp_y_start, stamp_x_start + stamp_width, stamp_y_start + stamp_height, False)  # Right
-    ]
-    for x1, y1, x2, y2, is_horiz in stamp_edges_coords:
-        length = (x2 - x1) if is_horiz else (y2 - y1)
-        num_dots = max(1, int(length / perf_dot_step))
-        actual_step = length / num_dots if num_dots > 0 else length
-        for i in range(num_dots + 1):
-            curr_pos = i * actual_step
-            px, py = (x1 + curr_pos, y1) if is_horiz else (x1, y1 + curr_pos)
-            draw.ellipse([(px - perf_dot_radius, py - perf_dot_radius), (px + perf_dot_radius, py + perf_dot_radius)], fill=perf_color)
+    # Use reusable perforation function
+    draw_perforation_dots(draw, stamp_x_start, stamp_y_start, stamp_width, stamp_height,
+                         perf_dot_radius, perf_dot_step, perf_color)
     
     # Draw Logo in rectangular stamp
     try:
@@ -574,19 +563,43 @@ async def generate_back_card_image_bytes(
     canvas.paste(rotated_postmark, (paste_x, paste_y), rotated_postmark) # Paste using alpha channel
     # --- END CIRCULAR POSTMARK ---
 
-    # --- QR CODE (Bottom-Right, Same Column as Stamp) ---
-    qr_size = int(stamp_width * 0.75)  # QR code is 75% of stamp width for better proportion
-    qr_x_start = stamp_x_start + (stamp_width - qr_size) // 2  # Center QR code in stamp column
-    qr_y_start = card_h - pad_y - qr_size  # Position at bottom of card
+    # --- QR CODE (Bottom-Right, Same Column as Stamp, Same Style as Stamp) ---
+    qr_width = stamp_width  # Same width as stamp
+    qr_height = stamp_height  # Same height as stamp  
+    qr_x_start = stamp_x_start  # Same X position as stamp (aligned in column)
+    qr_y_start = card_h - pad_y - qr_height  # Position at bottom of card
 
+    # Draw QR code background (same style as stamp)
+    qr_bg_color = stamp_bg_color  # Use same background color as stamp
+    draw.rectangle([
+        (qr_x_start, qr_y_start), 
+        (qr_x_start + qr_width, qr_y_start + qr_height)
+    ], fill=qr_bg_color)
+
+    # Draw QR code perforation dots (same style as stamp)
+    draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
+                         perf_dot_radius, perf_dot_step, perf_color)
+
+    # Load and place QR code image inside the "stamp"
     try:
         qr_img_original = Image.open(QR_CODE_PATH).convert("RGBA")
-        # Resize QR code to the calculated size while maintaining aspect ratio
-        qr_img_resized = qr_img_original.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
+        
+        # Calculate inner area (like stamp padding) for QR code placement
+        qr_padding_internal = int(min(qr_width, qr_height) * 0.1)  # Same padding logic as stamp
+        qr_inner_width = qr_width - (2 * qr_padding_internal)
+        qr_inner_height = qr_height - (2 * qr_padding_internal)
+        
+        # Resize QR code to fit inner area while maintaining aspect ratio
+        qr_img_resized = qr_img_original.copy()
+        qr_img_resized.thumbnail((qr_inner_width, qr_inner_height), Image.Resampling.LANCZOS)
+        
+        # Center QR code within the "stamp" area
+        qr_inner_x = qr_x_start + (qr_width - qr_img_resized.width) // 2
+        qr_inner_y = qr_y_start + (qr_height - qr_img_resized.height) // 2
         
         # Paste QR code onto the canvas
-        canvas.paste(qr_img_resized, (qr_x_start, qr_y_start), qr_img_resized)
-        debug(f"QR code added at position ({qr_x_start}, {qr_y_start}) with size {qr_size}x{qr_size}", request_id=request_id)
+        canvas.paste(qr_img_resized, (qr_inner_x, qr_inner_y), qr_img_resized)
+        debug(f"QR code stamp added at position ({qr_x_start}, {qr_y_start}) with size {qr_width}x{qr_height}, QR image: {qr_img_resized.width}x{qr_img_resized.height}", request_id=request_id)
     except Exception as e: 
         log(f"Error loading QR code: {e}", level="ERROR", request_id=request_id)
         debug("QR code will not be displayed on this card", request_id=request_id)
@@ -697,6 +710,37 @@ async def generate_back_card_image_bytes(
     image_bytes = save_card_image(canvas, output_format, request_id)
     log(f"Back card image generated ({orientation}, {output_format}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
     return image_bytes 
+
+# --- Helper Functions for Drawing Postage Elements ---
+def draw_perforation_dots(draw, x_start: int, y_start: int, width: int, height: int, 
+                         perf_dot_radius: int, perf_dot_step: int, perf_color: tuple):
+    """
+    Draw perforation dots around a rectangular area (reusable for stamps and QR codes).
+    
+    Args:
+        draw: PIL ImageDraw object
+        x_start, y_start: Top-left corner of the rectangle
+        width, height: Dimensions of the rectangle
+        perf_dot_radius: Radius of each perforation dot
+        perf_dot_step: Distance between perforation dots
+        perf_color: Color tuple for the dots
+    """
+    edges_coords = [
+        (x_start, y_start, x_start + width, y_start, True),  # Top
+        (x_start, y_start + height, x_start + width, y_start + height, True),  # Bottom
+        (x_start, y_start, x_start, y_start + height, False),  # Left
+        (x_start + width, y_start, x_start + width, y_start + height, False)  # Right
+    ]
+    
+    for x1, y1, x2, y2, is_horiz in edges_coords:
+        length = (x2 - x1) if is_horiz else (y2 - y1)
+        num_dots = max(1, int(length / perf_dot_step))
+        actual_step = length / num_dots if num_dots > 0 else length
+        for i in range(num_dots + 1):
+            curr_pos = i * actual_step
+            px, py = (x1 + curr_pos, y1) if is_horiz else (x1, y1 + curr_pos)
+            draw.ellipse([(px - perf_dot_radius, py - perf_dot_radius), 
+                         (px + perf_dot_radius, py + perf_dot_radius)], fill=perf_color)
 
 # --- Helper Functions for Drawing Custom Icons (REMOVED) ---
 # draw_pin_icon and draw_calendar_icon functions are now removed.
