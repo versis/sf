@@ -25,20 +25,20 @@ CARD_HEIGHT_MM = CARD_HEIGHT / MM_TO_PIXELS  # ~119.90mm (1416px at 300 DPI)
 # Layout specifications
 GRID_COLS = 3  # 3 cards wide
 GRID_ROWS = 2  # 2 cards tall
-A4_MARGINS_MM = 15          # Outer A4 margins
-CUTTING_ZONE_MM = 13.5      # Top/bottom cutting areas
+A4_MARGINS_MM = 10          # Reduced outer A4 margins for better space usage
+CUTTING_ZONE_MM = 8         # Reduced cutting areas for more card space
 
 # Convert to pixels
 A4_MARGINS_PX = int(A4_MARGINS_MM * MM_TO_PIXELS)
 CUTTING_ZONE_PX = int(CUTTING_ZONE_MM * MM_TO_PIXELS)
 
 # Cutting guide appearance
-CUTTING_LINE_COLOR = "#CCCCCC"
-CUTTING_LINE_WIDTH = 2  # pixels
-CUTTING_LINE_DASH_LENGTH = 6  # pixels
+CUTTING_LINE_COLOR = "#333333"  # Much darker gray for visibility
+CUTTING_LINE_WIDTH = 3  # pixels - thicker lines
+CUTTING_LINE_DASH_LENGTH = 12  # pixels - longer dashes
 
-# Card spacing (tight layout for maximum efficiency)
-CARD_SPACING_MM = 0  # No spacing between cards
+# Card spacing (small gap for easier cutting)
+CARD_SPACING_MM = 3  # 3mm spacing between cards for easier cutting
 CARD_SPACING_PX = int(CARD_SPACING_MM * MM_TO_PIXELS)
 
 def mm_to_px(mm: float) -> int:
@@ -139,17 +139,24 @@ class A4Layout:
     
     def _apply_passepartout_to_card(self, card_image: Image.Image) -> Image.Image:
         """
-        Apply passepartout (white border) to a card by shrinking it and adding white space.
+        Apply proportional passepartout (white border) maintaining 2:1 aspect ratio.
         
         Args:
             card_image: Original card image
             
         Returns:
-            Card image with passepartout applied
+            Card image with proportional passepartout applied
         """
-        # Calculate available space for the card content after passepartout border
-        available_width = CARD_WIDTH - (2 * self.passepartout_px)
-        available_height = CARD_HEIGHT - (2 * self.passepartout_px)
+        # Calculate proportional passepartout borders to maintain 2:1 ratio
+        # Card is 2:1 ratio (width:height), so passepartout should be proportional
+        
+        # For 2:1 ratio: if height border is X, width border should be X/2
+        passepartout_height = self.passepartout_px
+        passepartout_width = self.passepartout_px // 2  # Half of height passepartout
+        
+        # Calculate available space for card content after proportional borders
+        available_width = CARD_WIDTH - (2 * passepartout_width)
+        available_height = CARD_HEIGHT - (2 * passepartout_height)
         
         # Calculate scaling factor to fit card within available space
         scale_factor = min(available_width / CARD_WIDTH, available_height / CARD_HEIGHT)
@@ -162,56 +169,81 @@ class A4Layout:
         # Create white background canvas (same size as original card space)
         white_canvas = Image.new('RGB', (CARD_WIDTH, CARD_HEIGHT), 'white')
         
-        # Center the scaled card on the white canvas
+        # Center the scaled card on the white canvas with proportional borders
         paste_x = (CARD_WIDTH - new_width) // 2
         paste_y = (CARD_HEIGHT - new_height) // 2
         white_canvas.paste(scaled_card, (paste_x, paste_y))
         
-        debug(f"Passepartout applied: scale={scale_factor:.3f}, new_size={new_width}×{new_height}px", request_id=self.request_id)
+        debug(f"Proportional passepartout: {passepartout_width}px×{passepartout_height}px, scale={scale_factor:.3f}", request_id=self.request_id)
         return white_canvas
     
     def draw_cutting_guides(self) -> None:
-        """Draw cutting guide lines around the card layout area"""
+        """Draw cutting guide lines only between cards (no outer edges, no double lines)"""
         if not self.draw:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
-        # Calculate cutting zone boundaries
-        top_cutting_y = self.offset_y - CUTTING_ZONE_PX
-        bottom_cutting_y = self.offset_y + self.layout_height + CUTTING_ZONE_PX
-        left_cutting_x = self.offset_x - CUTTING_ZONE_PX
-        right_cutting_x = self.offset_x + self.layout_width + CUTTING_ZONE_PX
+        # Draw vertical cutting lines between columns (not at edges)
+        for grid_x in range(GRID_COLS - 1):  # Between columns only
+            # Get positions of adjacent cards
+            left_card_x, left_card_y = self.get_card_position(grid_x, 0)
+            right_card_x, right_card_y = self.get_card_position(grid_x + 1, 0)
+            
+            # Line position is halfway between the cards
+            line_x = left_card_x + CARD_WIDTH + (CARD_SPACING_PX // 2)
+            
+            # Draw vertical line from top of layout to bottom
+            top_y = self.offset_y
+            bottom_y = self.offset_y + self.layout_height
+            
+            self._draw_dashed_line((line_x, top_y), (line_x, bottom_y), CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH)
         
-        # Ensure boundaries are within A4 canvas
-        top_cutting_y = max(A4_MARGINS_PX, top_cutting_y)
-        bottom_cutting_y = min(A4_HEIGHT_PX - A4_MARGINS_PX, bottom_cutting_y)
-        left_cutting_x = max(A4_MARGINS_PX, left_cutting_x)
-        right_cutting_x = min(A4_WIDTH_PX - A4_MARGINS_PX, right_cutting_x)
+        # Draw horizontal cutting lines between rows (not at edges)
+        for grid_y in range(GRID_ROWS - 1):  # Between rows only
+            # Get positions of adjacent cards
+            top_card_x, top_card_y = self.get_card_position(0, grid_y)
+            bottom_card_x, bottom_card_y = self.get_card_position(0, grid_y + 1)
+            
+            # Line position is halfway between the cards
+            line_y = top_card_y + CARD_HEIGHT + (CARD_SPACING_PX // 2)
+            
+            # Draw horizontal line from left of layout to right
+            left_x = self.offset_x
+            right_x = self.offset_x + self.layout_width
+            
+            self._draw_dashed_line((left_x, line_y), (right_x, line_y), CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH)
         
-        # Draw horizontal cutting lines (top and bottom)
-        self._draw_dashed_line(
-            (left_cutting_x, top_cutting_y), 
-            (right_cutting_x, top_cutting_y), 
-            CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH
-        )
-        self._draw_dashed_line(
-            (left_cutting_x, bottom_cutting_y), 
-            (right_cutting_x, bottom_cutting_y), 
-            CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH
-        )
+        log(f"Added cutting guides between cards only (no outer edges, no double lines)", request_id=self.request_id)
+    
+    def _draw_cutting_rectangle(self, left: int, top: int, right: int, bottom: int, width: int = None) -> None:
+        """Draw a dashed rectangle for cutting guides"""
+        if width is None:
+            width = CUTTING_LINE_WIDTH
+            
+        # Draw four sides of rectangle
+        self._draw_dashed_line((left, top), (right, top), CUTTING_LINE_COLOR, width)      # Top
+        self._draw_dashed_line((right, top), (right, bottom), CUTTING_LINE_COLOR, width)  # Right  
+        self._draw_dashed_line((right, bottom), (left, bottom), CUTTING_LINE_COLOR, width) # Bottom
+        self._draw_dashed_line((left, bottom), (left, top), CUTTING_LINE_COLOR, width)    # Left
+    
+    def _draw_crop_marks(self, left: int, top: int, right: int, bottom: int) -> None:
+        """Draw corner crop marks for precision cutting"""
+        mark_length = 20  # Length of crop marks in pixels
         
-        # Draw vertical cutting lines (left and right)
-        self._draw_dashed_line(
-            (left_cutting_x, top_cutting_y), 
-            (left_cutting_x, bottom_cutting_y), 
-            CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH
-        )
-        self._draw_dashed_line(
-            (right_cutting_x, top_cutting_y), 
-            (right_cutting_x, bottom_cutting_y), 
-            CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH
-        )
+        # Top-left corner
+        self.draw.line([(left - mark_length, top), (left + mark_length, top)], fill=CUTTING_LINE_COLOR, width=2)
+        self.draw.line([(left, top - mark_length), (left, top + mark_length)], fill=CUTTING_LINE_COLOR, width=2)
         
-        log(f"Added cutting guides at margins: {px_to_mm(CUTTING_ZONE_PX):.1f}mm", request_id=self.request_id)
+        # Top-right corner  
+        self.draw.line([(right - mark_length, top), (right + mark_length, top)], fill=CUTTING_LINE_COLOR, width=2)
+        self.draw.line([(right, top - mark_length), (right, top + mark_length)], fill=CUTTING_LINE_COLOR, width=2)
+        
+        # Bottom-left corner
+        self.draw.line([(left - mark_length, bottom), (left + mark_length, bottom)], fill=CUTTING_LINE_COLOR, width=2)
+        self.draw.line([(left, bottom - mark_length), (left, bottom + mark_length)], fill=CUTTING_LINE_COLOR, width=2)
+        
+        # Bottom-right corner
+        self.draw.line([(right - mark_length, bottom), (right + mark_length, bottom)], fill=CUTTING_LINE_COLOR, width=2)
+        self.draw.line([(right, bottom - mark_length), (right, bottom + mark_length)], fill=CUTTING_LINE_COLOR, width=2)
     
     def _draw_dashed_line(self, start: Tuple[int, int], end: Tuple[int, int], 
                          color: str, width: int) -> None:
