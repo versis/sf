@@ -57,12 +57,13 @@ class A4Layout:
     Handles exact positioning, cutting guides, print alignment, and passepartout.
     """
     
-    def __init__(self, target_content_width_mm: float = 146, passepartout_mm: float = 0, request_id: Optional[str] = None):
+    def __init__(self, target_content_width_mm: float = 146, passepartout_mm: float = 0, duplex_back_side: bool = False, request_id: Optional[str] = None):
         self.request_id = request_id
         self.target_content_width_mm = target_content_width_mm
         self.target_content_height_mm = target_content_width_mm / 2  # Always 2:1 ratio
         self.passepartout_mm = passepartout_mm
         self.passepartout_px = int(passepartout_mm * MM_TO_PIXELS) if passepartout_mm > 0 else 0
+        self.duplex_back_side = duplex_back_side
         self.canvas = None
         self.draw = None
         
@@ -85,12 +86,22 @@ class A4Layout:
         self.layout_width = GRID_COLS * self.card_width + (GRID_COLS - 1) * self.actual_spacing_x
         self.layout_height = GRID_ROWS * self.card_height + (GRID_ROWS - 1) * self.actual_spacing_y
         
-        # Layout starts at page edge (no offset) 
-        self.offset_x = 0
-        self.offset_y = 0
+        # Calculate layout positioning for duplex alignment
+        unused_width = A4_WIDTH_PX - self.layout_width
+        
+        if duplex_back_side:
+            # For back side: position layout on the RIGHT (so when flipped, it aligns with front)
+            self.offset_x = unused_width  # Move content to the right edge
+            debug(f"DUPLEX BACK SIDE: Moving layout to RIGHT edge (offset_x = {unused_width}px)", request_id=self.request_id)
+        else:
+            # For front side: position layout on the LEFT
+            self.offset_x = 0  # Content starts from left edge
+            debug(f"FRONT SIDE: Layout positioned at LEFT edge (offset_x = 0)", request_id=self.request_id)
+        
+        self.offset_y = 0  # Always start from top
         
         # Calculate exact usage and display metrics
-        unused_width = A4_WIDTH_PX - self.layout_width
+        # Note: unused_width is already calculated above for duplex positioning
         unused_height = A4_HEIGHT_PX - self.layout_height
         
         debug(f"A4 Canvas: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (210×297mm)", request_id=self.request_id)
@@ -226,17 +237,31 @@ class A4Layout:
         unused_width = A4_WIDTH_PX - self.layout_width
         unused_height = A4_HEIGHT_PX - self.layout_height
         
-        # Right edge trim line (if significant unused width)
-        if unused_width > 10:  # >0.8mm
-            right_trim_x = self.offset_x + self.layout_width
-            self._draw_dashed_line(
-                (right_trim_x, 0), 
-                (right_trim_x, A4_HEIGHT_PX), 
-                CUTTING_LINE_COLOR, 
-                CUTTING_LINE_WIDTH
-            )
-            cutting_lines_added.append(f"Right trim at {right_trim_x}px")
-            debug(f"RIGHT trim line at {right_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
+        # Trim lines depend on duplex positioning
+        if self.duplex_back_side:
+            # Back side: content is on the right, so trim left edge
+            if unused_width > 10:  # >0.8mm
+                left_trim_x = self.offset_x
+                self._draw_dashed_line(
+                    (left_trim_x, 0), 
+                    (left_trim_x, A4_HEIGHT_PX), 
+                    CUTTING_LINE_COLOR, 
+                    CUTTING_LINE_WIDTH
+                )
+                cutting_lines_added.append(f"Left trim at {left_trim_x}px")
+                debug(f"LEFT trim line at {left_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
+        else:
+            # Front side: content is on the left, so trim right edge
+            if unused_width > 10:  # >0.8mm
+                right_trim_x = self.offset_x + self.layout_width
+                self._draw_dashed_line(
+                    (right_trim_x, 0), 
+                    (right_trim_x, A4_HEIGHT_PX), 
+                    CUTTING_LINE_COLOR, 
+                    CUTTING_LINE_WIDTH
+                )
+                cutting_lines_added.append(f"Right trim at {right_trim_x}px")
+                debug(f"RIGHT trim line at {right_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
         
         # Bottom edge trim line (if significant unused height)
         if unused_height > 10:  # >0.8mm
@@ -402,6 +427,7 @@ GRID_POSITIONS = {
 def create_a4_layout_with_cards(card_images: List[Image.Image],
                                target_content_width_mm: float = 146,
                                passepartout_mm: float = 8,
+                               duplex_back_side: bool = False,
                                request_id: Optional[str] = None) -> bytes:
     """
     Create an A4 layout with up to 3 landscape card images.
@@ -411,6 +437,7 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
         target_content_width_mm: The desired width of the card's content in millimeters.
                                  Height will be calculated to maintain a 2:1 aspect ratio.
         passepartout_mm: White border to add around the content in millimeters.
+        duplex_back_side: If True, positions layout on the right side for duplex back alignment.
         request_id: Request tracking ID.
 
     Returns:
@@ -421,13 +448,15 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
         log(f"Too many cards provided: {len(card_images)}. Maximum is {max_cards}.", level="WARNING", request_id=request_id)
         card_images = card_images[:max_cards]
 
-    log(f"Creating A4 layout for {len(card_images)} cards: "
+    side_type = "back" if duplex_back_side else "front"
+    log(f"Creating A4 layout for {len(card_images)} cards ({side_type} side): "
         f"{target_content_width_mm}mm content width + {passepartout_mm}mm passepartout.",
         request_id=request_id)
 
     layout = A4Layout(
         target_content_width_mm=target_content_width_mm,
         passepartout_mm=passepartout_mm,
+        duplex_back_side=duplex_back_side,
         request_id=request_id
     )
     layout.create_canvas()

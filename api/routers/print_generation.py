@@ -221,6 +221,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 card_images=front_images,
                 target_content_width_mm=request.target_content_width_mm,
                 passepartout_mm=request.passepartout_mm,
+                duplex_back_side=False,  # Front side: positioned on left
                 request_id=f"{request_id}_front"
             )
             front_layout_size_mb = len(front_layout_bytes) / 1024 / 1024
@@ -238,6 +239,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 card_images=back_images,
                 target_content_width_mm=request.target_content_width_mm,
                 passepartout_mm=request.passepartout_mm,
+                duplex_back_side=True,  # Back side: positioned on right for duplex alignment
                 request_id=f"{request_id}_back"
             )
             back_layout_size_mb = len(back_layout_bytes) / 1024 / 1024
