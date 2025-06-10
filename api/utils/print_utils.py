@@ -22,24 +22,25 @@ A4_HEIGHT_PX = int(A4_HEIGHT_MM * MM_TO_PIXELS + 0.5)  # 3508 pixels (rounded)
 CARD_WIDTH_MM = CARD_WIDTH / MM_TO_PIXELS   # ~59.95mm (708px at 300 DPI)
 CARD_HEIGHT_MM = CARD_HEIGHT / MM_TO_PIXELS  # ~119.90mm (1416px at 300 DPI)
 
-# Layout specifications
-GRID_COLS = 3  # 3 cards wide
-GRID_ROWS = 2  # 2 cards tall
+# NEW Layout specifications for 8×16cm landscape cards
+GRID_COLS = 1  # 1 card wide (single column)
+GRID_ROWS = 3  # 3 cards tall (3 rows)
 A4_MARGINS_MM = 0           # No margins - use full page area
-CUTTING_ZONE_MM = 3         # Reduced cutting areas for more card space
 
-# Convert to pixels
-A4_MARGINS_PX = int(A4_MARGINS_MM * MM_TO_PIXELS)
-CUTTING_ZONE_PX = int(CUTTING_ZONE_MM * MM_TO_PIXELS)
+# Target card dimensions: 8×16cm landscape (rotated from portrait)
+TARGET_CARD_WIDTH_MM = 160  # 16cm wide in landscape
+TARGET_CARD_HEIGHT_MM = 80  # 8cm tall in landscape  
+TARGET_CARD_WIDTH_PX = int(TARGET_CARD_WIDTH_MM * MM_TO_PIXELS)  # 1890px
+TARGET_CARD_HEIGHT_PX = int(TARGET_CARD_HEIGHT_MM * MM_TO_PIXELS)  # 945px
 
-# Cutting guide appearance
+# Guillotine considerations - MINIMAL 1mm spacing for maximum card size
+TOTAL_SPACING_MM = 1  # 1mm total spacing (ultra-minimal for guillotine)
+SPACING_PX = int(TOTAL_SPACING_MM * MM_TO_PIXELS)  # ~12px
+
+# Cutting guide appearance  
 CUTTING_LINE_COLOR = "#333333"  # Much darker gray for visibility
 CUTTING_LINE_WIDTH = 1  # pixels - thicker lines
 CUTTING_LINE_DASH_LENGTH = 12  # pixels - longer dashes
-
-# Card spacing (small gap for easier cutting)
-CARD_SPACING_MM = 3  # 3mm spacing between cards for easier cutting
-CARD_SPACING_PX = int(CARD_SPACING_MM * MM_TO_PIXELS)
 
 def mm_to_px(mm: float) -> int:
     """Convert millimeters to pixels at 300 DPI"""
@@ -62,46 +63,43 @@ class A4Layout:
         self.canvas = None
         self.draw = None
         
-        # EXACT calculation based on professional printing standards
-        # 3mm spacing = 35px at 300 DPI (exact conversion)
-        spacing_mm = 3
-        spacing_px = int(spacing_mm * MM_TO_PIXELS)  # 35px exactly
+        # NEW: Calculate exact landscape card dimensions for 8×16cm target
+        # Current portrait card: 708×1416px → rotated to 1416×708px landscape
+        current_landscape_w = CARD_HEIGHT  # 1416px (rotated width)
+        current_landscape_h = CARD_WIDTH   # 708px (rotated height)
         
-        # Available space for cards after exact spacing
-        available_width = A4_WIDTH_PX - (GRID_COLS - 1) * spacing_px
-        available_height = A4_HEIGHT_PX - (GRID_ROWS - 1) * spacing_px
+        # Scale to achieve target 8×16cm (1890×945px) landscape size
+        scale_factor_w = TARGET_CARD_WIDTH_PX / current_landscape_w   # 1890/1416 ≈ 1.335
+        scale_factor_h = TARGET_CARD_HEIGHT_PX / current_landscape_h  # 945/708 ≈ 1.335
+        scale_factor = min(scale_factor_w, scale_factor_h)  # Use smaller to maintain aspect ratio
         
-        # Calculate exact optimal card size maintaining 1:2 ratio
-        max_card_width_from_width = available_width // GRID_COLS
-        max_card_width_from_height = available_height // (GRID_ROWS * 2)  # height = 2*width
+        # Final card dimensions after scaling rotated cards
+        self.card_width = int(current_landscape_w * scale_factor)   # ~1888px
+        self.card_height = int(current_landscape_h * scale_factor)  # ~944px
         
-        # Use the constraint that limits us (should be width-limited)
-        optimal_card_width = min(max_card_width_from_width, max_card_width_from_height)
-        optimal_card_height = optimal_card_width * 2  # Exact 1:2 ratio
+        # Spacing with guillotine kerf consideration
+        self.actual_spacing_x = SPACING_PX  # ~59px (5mm total)
+        self.actual_spacing_y = SPACING_PX  # ~59px (5mm total)
         
-        # Store EXACT card dimensions
-        self.card_width = optimal_card_width
-        self.card_height = optimal_card_height
-        self.actual_spacing_x = spacing_px
-        self.actual_spacing_y = spacing_px
+        # Calculate ACTUAL layout dimensions for 1×3 grid
+        self.layout_width = GRID_COLS * self.card_width + (GRID_COLS - 1) * self.actual_spacing_x
+        self.layout_height = GRID_ROWS * self.card_height + (GRID_ROWS - 1) * self.actual_spacing_y
         
-        # Calculate ACTUAL layout dimensions (not A4 full size!)
-        self.layout_width = GRID_COLS * self.card_width + (GRID_COLS - 1) * spacing_px
-        self.layout_height = GRID_ROWS * self.card_height + (GRID_ROWS - 1) * spacing_px
-        
-        # Layout starts at page edge (no offset)
+        # Layout starts at page edge (no offset) 
         self.offset_x = 0
         self.offset_y = 0
         
-        # Calculate and display exact usage
+        # Calculate exact usage and display metrics
         unused_width = A4_WIDTH_PX - self.layout_width
         unused_height = A4_HEIGHT_PX - self.layout_height
         
         debug(f"A4 Canvas: {A4_WIDTH_PX}×{A4_HEIGHT_PX}px (210×297mm)", request_id=self.request_id)
-        debug(f"EXACT card size: {self.card_width}×{self.card_height}px (vs original {CARD_WIDTH}×{CARD_HEIGHT}px)", request_id=self.request_id)
-        debug(f"Layout area: {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
-        debug(f"UNUSED space: {unused_width}px×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
-        debug(f"Card spacing: {self.actual_spacing_x}px = {spacing_mm}mm (exact)", request_id=self.request_id)
+        debug(f"Target: {TARGET_CARD_WIDTH_PX}×{TARGET_CARD_HEIGHT_PX}px ({TARGET_CARD_WIDTH_MM}×{TARGET_CARD_HEIGHT_MM}mm)", request_id=self.request_id)
+        debug(f"ACTUAL card size: {self.card_width}×{self.card_height}px ({self.card_width*25.4/300:.1f}×{self.card_height*25.4/300:.1f}mm)", request_id=self.request_id)
+        debug(f"Scale factor: {scale_factor:.3f} (rotated {CARD_WIDTH}×{CARD_HEIGHT} → {self.card_width}×{self.card_height})", request_id=self.request_id)
+        debug(f"Layout: {GRID_COLS}×{GRID_ROWS} grid = {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
+        debug(f"UNUSED space: {unused_width}×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
+        debug(f"Guillotine spacing: {self.actual_spacing_x}px = {TOTAL_SPACING_MM}mm (minimal for guillotine)", request_id=self.request_id)
         if passepartout_mm > 0:
             debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px (equal on all sides)", request_id=self.request_id)
     
@@ -133,131 +131,165 @@ class A4Layout:
     
     def place_card(self, card_image: Image.Image, grid_x: int, grid_y: int) -> None:
         """
-        Place a card image at the specified grid position with optional passepartout.
+        Place a card image at the specified grid position with rotation and optional passepartout.
         
         Args:
-            card_image: PIL Image of the card (should be CARD_WIDTH × CARD_HEIGHT)
-            grid_x: Column position (0-2)
-            grid_y: Row position (0-1)
+            card_image: PIL Image of the card (original portrait CARD_WIDTH × CARD_HEIGHT)
+            grid_x: Column position (0 for single column)
+            grid_y: Row position (0-2 for 3 rows)
         """
         if not self.canvas:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
-        # Resize card to optimal size (scale up from original size)
-        if card_image.size != (self.card_width, self.card_height):
-            debug(f"Resizing card from {card_image.size} to optimal {self.card_width}×{self.card_height}px", request_id=self.request_id)
-            card_image = card_image.resize((self.card_width, self.card_height), Image.Resampling.LANCZOS)
+        # STEP 1: Rotate portrait card to landscape (90° counter-clockwise)
+        if card_image.size == (CARD_WIDTH, CARD_HEIGHT):  # Portrait 708×1416
+            rotated_card = card_image.rotate(90, expand=True)  # Now 1416×708 landscape
+            debug(f"Rotated card from {card_image.size} portrait to {rotated_card.size} landscape", request_id=self.request_id)
+        else:
+            rotated_card = card_image  # Already correct size/orientation
+            debug(f"Using card as-is: {card_image.size}", request_id=self.request_id)
+        
+        # STEP 2: Scale rotated card to target landscape dimensions (1888×944)
+        if rotated_card.size != (self.card_width, self.card_height):
+            scaled_card = rotated_card.resize((self.card_width, self.card_height), Image.Resampling.LANCZOS)
+            debug(f"Scaled rotated card from {rotated_card.size} to target {self.card_width}×{self.card_height}px", request_id=self.request_id)
+        else:
+            scaled_card = rotated_card
         
         x, y = self.get_card_position(grid_x, grid_y)
         
         # Convert RGBA to RGB if needed (for TIFF compatibility)
-        if card_image.mode == 'RGBA':
-            rgb_image = Image.new('RGB', card_image.size, 'white')
-            rgb_image.paste(card_image, mask=card_image.split()[-1])
-            card_image = rgb_image
+        if scaled_card.mode == 'RGBA':
+            rgb_image = Image.new('RGB', scaled_card.size, 'white')
+            rgb_image.paste(scaled_card, mask=scaled_card.split()[-1])
+            scaled_card = rgb_image
         
         # Apply passepartout if specified
         if self.passepartout_mm > 0:
-            final_card = self._apply_passepartout_to_card(card_image)
+            final_card = self._apply_passepartout_to_card(scaled_card)
             debug(f"Applied {self.passepartout_mm}mm passepartout to card at [{grid_x},{grid_y}]", request_id=self.request_id)
         else:
-            final_card = card_image
+            final_card = scaled_card
         
         self.canvas.paste(final_card, (x, y))
-        debug(f"Placed card at grid [{grid_x},{grid_y}] → pixel ({x}, {y})", request_id=self.request_id)
+        debug(f"Placed landscape card at grid [{grid_x},{grid_y}] → pixel ({x}, {y})", request_id=self.request_id)
     
     def _apply_passepartout_to_card(self, card_image: Image.Image) -> Image.Image:
         """
-        Apply equal passepartout (white border) on all sides.
+        Apply EXACTLY equal passepartout borders on all sides.
         
         Args:
             card_image: Original card image
             
         Returns:
-            Card image with equal passepartout applied on all sides
+            Card image with precisely equal passepartout borders
         """
-        # Equal passepartout borders on all sides
-        passepartout_width = self.passepartout_px   # Same amount for width
-        passepartout_height = self.passepartout_px  # Same amount for height
-        
-        # Get current card dimensions (now optimal size)
+        # Get current card dimensions (layout space allocated for this card)
         card_width, card_height = card_image.size
         
-        # Calculate available space for card content after equal borders
-        available_width = card_width - (2 * passepartout_width)
-        available_height = card_height - (2 * passepartout_height)
+        # Calculate content area (space inside passepartout borders)
+        content_width = card_width - (2 * self.passepartout_px)
+        content_height = card_height - (2 * self.passepartout_px)
         
-        # Calculate scaling factor to fit card within available space
-        scale_factor = min(available_width / card_width, available_height / card_height)
+        # Ensure content area is positive
+        if content_width <= 0 or content_height <= 0:
+            debug(f"Passepartout too large: {self.passepartout_px}px borders on {card_width}×{card_height}px card", request_id=self.request_id)
+            return card_image
         
-        # Scale down the card
-        new_width = int(card_width * scale_factor)
-        new_height = int(card_height * scale_factor)
-        scaled_card = card_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        # Scale card to fit exactly within content area, maintaining aspect ratio
+        scale_x = content_width / card_width
+        scale_y = content_height / card_height
+        scale_factor = min(scale_x, scale_y)  # Use smaller scale to ensure it fits
         
-        # Create white background canvas (same size as current card space)
+        # Calculate final scaled dimensions
+        final_width = int(card_width * scale_factor)
+        final_height = int(card_height * scale_factor)
+        
+        # Scale the card
+        scaled_card = card_image.resize((final_width, final_height), Image.Resampling.LANCZOS)
+        
+        # Create white background canvas (full card space)
         white_canvas = Image.new('RGB', (card_width, card_height), 'white')
         
-        # Center the scaled card on the white canvas with equal borders
-        paste_x = (card_width - new_width) // 2
-        paste_y = (card_height - new_height) // 2
-        white_canvas.paste(scaled_card, (paste_x, paste_y))
+        # Position to create EXACTLY equal borders on all sides
+        # Calculate borders to be exactly passepartout_px on all sides
+        border_x = self.passepartout_px
+        border_y = self.passepartout_px
         
-        debug(f"Equal passepartout: {passepartout_width}px×{passepartout_height}px, scale={scale_factor:.3f}", request_id=self.request_id)
+        # Place scaled card with exact borders
+        white_canvas.paste(scaled_card, (border_x, border_y))
+        
+        # Verify actual borders
+        actual_border_right = card_width - border_x - final_width
+        actual_border_bottom = card_height - border_y - final_height
+        
+        debug(f"EXACT passepartout: L={border_x}px R={actual_border_right}px T={border_y}px B={actual_border_bottom}px, scale={scale_factor:.3f}", request_id=self.request_id)
         return white_canvas
     
     def draw_cutting_guides(self) -> None:
-        """Draw cutting guide lines between cards AND bottom trim line for unused space"""
+        """Draw guillotine cutting guides for 1×3 landscape layout with kerf considerations"""
         if not self.draw:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
-        # Draw vertical cutting lines between columns (not at edges)
-        for grid_x in range(GRID_COLS - 1):  # Between columns only
-            # Get positions of adjacent cards
-            left_card_x, left_card_y = self.get_card_position(grid_x, 0)
-            right_card_x, right_card_y = self.get_card_position(grid_x + 1, 0)
-            
-            # Line position is halfway between the cards
-            line_x = left_card_x + self.card_width + (self.actual_spacing_x // 2)
-            
-            # Draw vertical line from top of layout to bottom of actual layout
-            top_y = self.offset_y
-            bottom_y = self.offset_y + self.layout_height
-            
-            self._draw_dashed_line((line_x, top_y), (line_x, bottom_y), CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH)
+        cutting_lines_added = []
         
-        # Draw horizontal cutting lines between rows (not at edges)
-        for grid_y in range(GRID_ROWS - 1):  # Between rows only
+        # For 1×3 grid: NO vertical cuts needed (single column)
+        # Only horizontal cuts between rows
+        
+        # Draw horizontal cutting lines between rows (for guillotine)
+        for grid_y in range(GRID_ROWS - 1):  # Between rows only (2 cuts for 3 rows)
             # Get positions of adjacent cards
             top_card_x, top_card_y = self.get_card_position(0, grid_y)
             bottom_card_x, bottom_card_y = self.get_card_position(0, grid_y + 1)
             
-            # Line position is halfway between the cards
-            line_y = top_card_y + self.card_height + (self.actual_spacing_y // 2)
+            # Guillotine cut position - center of spacing between cards
+            cut_y = top_card_y + self.card_height + (self.actual_spacing_y // 2)
             
-            # Draw horizontal line from left of layout to right
-            left_x = self.offset_x
-            right_x = self.offset_x + self.layout_width
-            
-            self._draw_dashed_line((left_x, line_y), (right_x, line_y), CUTTING_LINE_COLOR, CUTTING_LINE_WIDTH)
-        
-        # CRITICAL: Draw BOTTOM trim line since we have unused space at bottom
-        unused_height = A4_HEIGHT_PX - self.layout_height
-        if unused_height > 10:  # Only if significant unused space (>10px = ~0.8mm)
-            trim_line_y = self.offset_y + self.layout_height
-            
-            # Draw full-width bottom trim line
+            # Draw horizontal cut line across full width
             self._draw_dashed_line(
-                (0, trim_line_y), 
-                (A4_WIDTH_PX, trim_line_y), 
+                (0, cut_y), 
+                (A4_WIDTH_PX, cut_y), 
                 CUTTING_LINE_COLOR, 
                 CUTTING_LINE_WIDTH
             )
             
-            unused_mm = unused_height * 25.4 / 300
-            debug(f"Added BOTTOM trim line at {trim_line_y}px (unused: {unused_height}px = {unused_mm:.1f}mm)", request_id=self.request_id)
+            cutting_lines_added.append(f"Row {grid_y+1}-{grid_y+2} at {cut_y}px")
+            debug(f"Guillotine cut between row {grid_y+1}-{grid_y+2} at y={cut_y}px", request_id=self.request_id)
         
-        log(f"Added cutting guides between cards + bottom trim line", request_id=self.request_id)
+        # OUTER CUTTING LINES: Show where to trim unused areas
+        unused_width = A4_WIDTH_PX - self.layout_width
+        unused_height = A4_HEIGHT_PX - self.layout_height
+        
+        # Right edge trim line (if significant unused width)
+        if unused_width > 10:  # >0.8mm
+            right_trim_x = self.offset_x + self.layout_width
+            self._draw_dashed_line(
+                (right_trim_x, 0), 
+                (right_trim_x, A4_HEIGHT_PX), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            cutting_lines_added.append(f"Right trim at {right_trim_x}px")
+            debug(f"RIGHT trim line at {right_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
+        
+        # Bottom edge trim line (if significant unused height)
+        if unused_height > 10:  # >0.8mm
+            bottom_trim_y = self.offset_y + self.layout_height
+            self._draw_dashed_line(
+                (0, bottom_trim_y), 
+                (A4_WIDTH_PX, bottom_trim_y), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            cutting_lines_added.append(f"Bottom trim at {bottom_trim_y}px")
+            debug(f"BOTTOM trim line at {bottom_trim_y}px (unused: {unused_height}px = {unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
+        
+        # Summary
+        num_horizontal_cuts = GRID_ROWS - 1  # 2 cuts for 3 rows
+        total_cuts = num_horizontal_cuts + (1 if unused_height > 10 else 0)
+        
+        log(f"Guillotine cutting guides: {num_horizontal_cuts} horizontal cuts + bottom trim = {total_cuts} total cuts", request_id=self.request_id)
+        log(f"Cuts added: {'; '.join(cutting_lines_added)}", request_id=self.request_id)
     
     def _draw_cutting_rectangle(self, left: int, top: int, right: int, bottom: int, width: int = None) -> None:
         """Draw a dashed rectangle for cutting guides"""
@@ -341,16 +373,18 @@ class A4Layout:
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
         
-        # Position text
+        # Position text (using 0 margins for full page usage)
+        margin_px = int(A4_MARGINS_MM * MM_TO_PIXELS)  # 0px since A4_MARGINS_MM = 0
+        
         if position == "bottom_right":
-            x = A4_WIDTH_PX - A4_MARGINS_PX - text_width
-            y = A4_HEIGHT_PX - A4_MARGINS_PX - text_height
+            x = A4_WIDTH_PX - margin_px - text_width
+            y = A4_HEIGHT_PX - margin_px - text_height
         elif position == "bottom_left":
-            x = A4_MARGINS_PX
-            y = A4_HEIGHT_PX - A4_MARGINS_PX - text_height
+            x = margin_px
+            y = A4_HEIGHT_PX - margin_px - text_height
         else:
-            x = A4_MARGINS_PX
-            y = A4_MARGINS_PX
+            x = margin_px
+            y = margin_px
         
         self.draw.text((x, y), text, fill="#666666", font=font)
         debug(f"Added print info at {position}: '{text}'", request_id=self.request_id)
@@ -392,10 +426,11 @@ class A4Layout:
         log(f"A4 layout saved ({output_format}). Size: {len(layout_bytes)/1024:.2f}KB", request_id=self.request_id)
         return layout_bytes
 
-# Grid position constants for easy reference
+# Grid position constants for 1×3 layout (single column, 3 rows)
 GRID_POSITIONS = {
-    'top_left': (0, 0),     'top_center': (1, 0),     'top_right': (2, 0),
-    'bottom_left': (0, 1),  'bottom_center': (1, 1),  'bottom_right': (2, 1)
+    'top': (0, 0),     # Top card
+    'middle': (0, 1),  # Middle card  
+    'bottom': (0, 2)   # Bottom card
 }
 
 def create_a4_layout_with_cards(card_images: List[Image.Image], 
@@ -404,43 +439,40 @@ def create_a4_layout_with_cards(card_images: List[Image.Image],
                                passepartout_mm: float = 0,
                                request_id: Optional[str] = None) -> bytes:
     """
-    Create an A4 layout with up to 6 card images and optional passepartout.
+    Create an A4 layout with up to 3 landscape card images (8×16cm each) and optional passepartout.
     
     Args:
-        card_images: List of PIL Images (up to 6 cards)
+        card_images: List of PIL Images (up to 3 cards - portrait cards will be rotated to landscape)
         layout_title: Optional title for the layout
         output_format: "TIFF" for print, "PNG" for preview
         passepartout_mm: White border around each card in millimeters (0 = no passepartout)
         request_id: Request tracking ID
         
     Returns:
-        A4 layout image bytes
+        A4 layout image bytes with 3 landscape cards in 1×3 grid
     """
-    if len(card_images) > 6:
-        log(f"Too many cards provided: {len(card_images)}. Maximum is 6.", level="WARNING", request_id=request_id)
-        card_images = card_images[:6]
+    max_cards = GRID_COLS * GRID_ROWS  # 1×3 = 3 cards max
     
-    log(f"Creating A4 layout with {len(card_images)} cards, passepartout: {passepartout_mm}mm", request_id=request_id)
+    if len(card_images) > max_cards:
+        log(f"Too many cards provided: {len(card_images)}. Maximum is {max_cards} for {GRID_COLS}×{GRID_ROWS} layout.", level="WARNING", request_id=request_id)
+        card_images = card_images[:max_cards]
     
-    # Create layout with passepartout
+    log(f"Creating NEW A4 layout: {len(card_images)} landscape cards ({TARGET_CARD_WIDTH_MM}×{TARGET_CARD_HEIGHT_MM}mm each), passepartout: {passepartout_mm}mm", request_id=request_id)
+    
+    # Create layout with passepartout and guillotine considerations
     layout = A4Layout(request_id=request_id, passepartout_mm=passepartout_mm)
     layout.create_canvas()
     
-    # Place cards in grid (left-to-right, top-to-bottom)
+    # Place cards in 1×3 grid (single column, top-to-bottom)
     for i, card_image in enumerate(card_images):
-        grid_x = i % GRID_COLS
-        grid_y = i // GRID_COLS
+        grid_x = 0  # Always column 0 (single column)
+        grid_y = i  # Row index (0, 1, 2)
         layout.place_card(card_image, grid_x, grid_y)
     
-    # Add cutting guides
+    # Add guillotine cutting guides
     layout.draw_cutting_guides()
     
-    # Add print information
-    title_suffix = f" | Passepartout: {passepartout_mm}mm" if passepartout_mm > 0 else ""
-    if layout_title:
-        layout.add_print_info(f"{layout_title} | 300 DPI | A4{title_suffix}", "bottom_right")
-    else:
-        layout.add_print_info(f"ShadeFreude Postcards | 300 DPI | A4{title_suffix}", "bottom_right")
+    # No print information text - removed per user request
     
     # Save and return
     return layout.save_layout(output_format) 
