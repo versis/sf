@@ -28,7 +28,7 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
+PASSEPARTOUT_MM = 0                    # White border in millimeters (0, 8, 12, etc.)
 CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
 ORIENTATION = "h"                     # "h" for horizontal, "v" for vertical
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
@@ -60,7 +60,7 @@ OUTPUT_PREFIX = "wydruktestowy_sf"                   # Filename prefix (generate
 
 def generate_a4_layout(
     card_ids: List[str],
-    passepartout_mm: float = 8,
+    passepartout_mm: float = 0,
     target_content_width_mm: float = 146,
     orientation: str = "horizontal",
     duplex_mode: bool = True,

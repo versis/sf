@@ -27,8 +27,8 @@ else:
 class CreateA4LayoutRequest(BaseModel):
     """Request model for creating A4 layouts from existing card TIFFs."""
     extended_ids: List[str]
-    passepartout_mm: float = 8
-    target_content_width_mm: float = 146
+    passepartout_mm: float = 0
+    target_content_width_mm: float
     orientation: str = "horizontal"  # "horizontal" or "vertical"
     duplex_mode: bool = True  # If True, adjusts back layout for proper duplex printing
     output_prefix: str = "sf"  # Filename prefix

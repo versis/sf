@@ -28,15 +28,11 @@ GRID_COLS = 1  # 1 card wide (single column)
 GRID_ROWS = 3  # 3 cards tall (3 rows)
 A4_MARGINS_MM = 0           # No margins - use full page area
 
-# Target CONTENT size (always 2:1 ratio for card content)
-# Default content size: 14.6cm × 7.3cm (2:1 ratio)
-TARGET_CONTENT_WIDTH_MM = 146  # 14.6cm
-TARGET_CONTENT_HEIGHT_MM = 73   # 7.3cm (exactly half of width)
-TARGET_CONTENT_WIDTH_PX = int(TARGET_CONTENT_WIDTH_MM * MM_TO_PIXELS)   # ~1724px
-TARGET_CONTENT_HEIGHT_PX = int(TARGET_CONTENT_HEIGHT_MM * MM_TO_PIXELS)  # ~862px
+# Content size is DYNAMIC - passed from generate_a4.py configuration
+# NO hardcoded defaults here - always maintains 2:1 ratio for card content
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
-TOTAL_SPACING_MM = 1  # 1mm total spacing (ultra-minimal for guillotine)
+TOTAL_SPACING_MM = 5  # 1mm total spacing (ultra-minimal for guillotine)
 SPACING_PX = int(TOTAL_SPACING_MM * MM_TO_PIXELS)  # ~12px
 
 # Cutting guide appearance  
@@ -58,7 +54,7 @@ class A4Layout:
     Handles exact positioning, cutting guides, print alignment, and passepartout.
     """
     
-    def __init__(self, target_content_width_mm: float = 146, passepartout_mm: float = 0, duplex_back_side: bool = False, request_id: Optional[str] = None):
+    def __init__(self, target_content_width_mm: float, passepartout_mm: float = 0, duplex_back_side: bool = False, request_id: Optional[str] = None):
         self.request_id = request_id
         self.target_content_width_mm = target_content_width_mm
         self.target_content_height_mm = target_content_width_mm / 2  # Always 2:1 ratio
@@ -427,8 +423,8 @@ GRID_POSITIONS = {
 }
 
 def create_a4_layout_with_cards(card_images: List[Image.Image],
-                               target_content_width_mm: float = 146,
-                               passepartout_mm: float = 8,
+                               target_content_width_mm: float,
+                               passepartout_mm: float = 0,
                                duplex_back_side: bool = False,
                                request_id: Optional[str] = None) -> bytes:
     """
