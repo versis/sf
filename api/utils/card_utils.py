@@ -14,6 +14,7 @@ from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color,
 # --- Font Loading ---
 ASSETS_BASE_PATH = "assets"
 LOGO_PATH = "public/sf-icon.png"
+QR_CODE_PATH = "public/sf_qr.png"
 
 # --- Card Dimensions (Exact 1:2 ratio for print quality) ---
 # PNG dimensions (web quality)
@@ -572,6 +573,24 @@ async def generate_back_card_image_bytes(
 
     canvas.paste(rotated_postmark, (paste_x, paste_y), rotated_postmark) # Paste using alpha channel
     # --- END CIRCULAR POSTMARK ---
+
+    # --- QR CODE (Bottom-Right, Same Column as Stamp) ---
+    qr_size = int(stamp_width * 0.75)  # QR code is 75% of stamp width for better proportion
+    qr_x_start = stamp_x_start + (stamp_width - qr_size) // 2  # Center QR code in stamp column
+    qr_y_start = card_h - pad_y - qr_size  # Position at bottom of card
+
+    try:
+        qr_img_original = Image.open(QR_CODE_PATH).convert("RGBA")
+        # Resize QR code to the calculated size while maintaining aspect ratio
+        qr_img_resized = qr_img_original.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
+        
+        # Paste QR code onto the canvas
+        canvas.paste(qr_img_resized, (qr_x_start, qr_y_start), qr_img_resized)
+        debug(f"QR code added at position ({qr_x_start}, {qr_y_start}) with size {qr_size}x{qr_size}", request_id=request_id)
+    except Exception as e: 
+        log(f"Error loading QR code: {e}", level="ERROR", request_id=request_id)
+        debug("QR code will not be displayed on this card", request_id=request_id)
+    # --- END QR CODE ---
 
     # Adjust Note Area based on the RECTANGULAR stamp (top-right)
     note_text_area_start_x = pad_x
