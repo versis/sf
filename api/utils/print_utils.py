@@ -32,7 +32,7 @@ A4_MARGINS_MM = 0           # No margins - use full page area
 # NO hardcoded defaults here - always maintains 2:1 ratio for card content
 
 # Guillotine considerations - MINIMAL 1mm spacing for maximum card size
-TOTAL_SPACING_MM = 5  # 1mm total spacing (ultra-minimal for guillotine)
+TOTAL_SPACING_MM = 10  # 1mm total spacing (ultra-minimal for guillotine)
 SPACING_PX = int(TOTAL_SPACING_MM * MM_TO_PIXELS)  # ~12px
 
 # Cutting guide appearance  
@@ -76,12 +76,29 @@ class A4Layout:
         self.card_height = final_card_height_px
         
         # Spacing with guillotine kerf consideration
-        self.actual_spacing_x = SPACING_PX  # ~59px (5mm total)
-        self.actual_spacing_y = SPACING_PX  # ~59px (5mm total)
+        self.actual_spacing_x = SPACING_PX  # Between cards
+        self.actual_spacing_y = SPACING_PX  # Between cards
         
-        # Calculate ACTUAL layout dimensions for 1×3 grid
-        self.layout_width = GRID_COLS * self.card_width + (GRID_COLS - 1) * self.actual_spacing_x
-        self.layout_height = GRID_ROWS * self.card_height + (GRID_ROWS - 1) * self.actual_spacing_y
+        # Guillotine cutting margins (only where cutting lines exist)
+        self.guillotine_margin = SPACING_PX  # Margin for guillotine cutting
+        
+        # Determine which edges need cutting margins based on duplex positioning
+        if duplex_back_side:
+            # BACK side: cards on RIGHT, so cutting margin only on LEFT and BOTTOM
+            self.margin_left = self.guillotine_margin   # Cutting line on left to trim excess
+            self.margin_right = 0                       # No cutting - cards against paper edge
+            self.margin_top = 0                         # No cutting - cards against paper edge  
+            self.margin_bottom = self.guillotine_margin # Cutting line on bottom to trim excess
+        else:
+            # FRONT side: cards on LEFT, so cutting margin only on RIGHT and BOTTOM
+            self.margin_left = 0                        # No cutting - cards against paper edge
+            self.margin_right = self.guillotine_margin  # Cutting line on right to trim excess
+            self.margin_top = 0                         # No cutting - cards against paper edge
+            self.margin_bottom = self.guillotine_margin # Cutting line on bottom to trim excess
+        
+        # Calculate ACTUAL layout dimensions INCLUDING only necessary cutting margins
+        self.layout_width = self.margin_left + (GRID_COLS * self.card_width) + ((GRID_COLS - 1) * self.actual_spacing_x) + self.margin_right
+        self.layout_height = self.margin_top + (GRID_ROWS * self.card_height) + ((GRID_ROWS - 1) * self.actual_spacing_y) + self.margin_bottom
         
         # Calculate layout positioning for duplex alignment
         unused_width = A4_WIDTH_PX - self.layout_width
@@ -106,7 +123,7 @@ class A4Layout:
         debug(f"Final card size: {self.card_width*25.4/300:.1f}×{self.card_height*25.4/300:.1f}mm (content + {passepartout_mm}mm passepartout)", request_id=self.request_id)
         debug(f"Layout: {GRID_COLS}×{GRID_ROWS} grid = {self.layout_width}×{self.layout_height}px", request_id=self.request_id)
         debug(f"UNUSED space: {unused_width}×{unused_height}px ({unused_width*25.4/300:.1f}×{unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
-        debug(f"Guillotine spacing: {self.actual_spacing_x}px = {TOTAL_SPACING_MM}mm (minimal for guillotine)", request_id=self.request_id)
+        debug(f"Guillotine margins: L:{self.margin_left} R:{self.margin_right} T:{self.margin_top} B:{self.margin_bottom} ({TOTAL_SPACING_MM}mm where cutting)", request_id=self.request_id)
         if passepartout_mm > 0:
             debug(f"Passepartout: {passepartout_mm}mm = {self.passepartout_px}px (equal on all sides)", request_id=self.request_id)
     
@@ -118,11 +135,11 @@ class A4Layout:
     
     def get_card_position(self, grid_x: int, grid_y: int) -> Tuple[int, int]:
         """
-        Calculate exact pixel position for a card in the 3×2 grid.
+        Calculate exact pixel position for a card in the 1×3 grid.
         
         Args:
-            grid_x: Column position (0-2)
-            grid_y: Row position (0-1)
+            grid_x: Column position (0 for single column)
+            grid_y: Row position (0-2 for 3 rows)
             
         Returns:
             Tuple of (x, y) pixel coordinates for top-left corner
@@ -130,10 +147,11 @@ class A4Layout:
         if not (0 <= grid_x < GRID_COLS and 0 <= grid_y < GRID_ROWS):
             raise ValueError(f"Invalid grid position: ({grid_x}, {grid_y}). Valid range: (0-{GRID_COLS-1}, 0-{GRID_ROWS-1})")
         
-        x = self.offset_x + grid_x * (self.card_width + self.actual_spacing_x)
-        y = self.offset_y + grid_y * (self.card_height + self.actual_spacing_y)
+        # Add appropriate margins to card positions (only where cutting lines exist)
+        x = self.offset_x + self.margin_left + grid_x * (self.card_width + self.actual_spacing_x)
+        y = self.offset_y + self.margin_top + grid_y * (self.card_height + self.actual_spacing_y)
         
-        debug(f"Card position [{grid_x},{grid_y}]: ({x}, {y})", request_id=self.request_id)
+        debug(f"Card position [{grid_x},{grid_y}]: ({x}, {y}) with margins L:{self.margin_left} T:{self.margin_top}", request_id=self.request_id)
         return x, y
     
     def place_card(self, card_image: Image.Image, grid_x: int, grid_y: int) -> None:
@@ -231,53 +249,67 @@ class A4Layout:
             cutting_lines_added.append(f"Row {grid_y+1}-{grid_y+2} at {cut_y}px")
             debug(f"Guillotine cut between row {grid_y+1}-{grid_y+2} at y={cut_y}px", request_id=self.request_id)
         
-        # OUTER CUTTING LINES: Show where to trim unused areas
+        # OUTER CUTTING LINES: Guillotine cutting margins around the layout
         unused_width = A4_WIDTH_PX - self.layout_width
         unused_height = A4_HEIGHT_PX - self.layout_height
         
-        # Trim lines depend on duplex positioning
-        if self.duplex_back_side:
-            # Back side: content is on the right, so trim left edge
-            if unused_width > 10:  # >0.8mm
-                left_trim_x = self.offset_x
-                self._draw_dashed_line(
-                    (left_trim_x, 0), 
-                    (left_trim_x, A4_HEIGHT_PX), 
-                    CUTTING_LINE_COLOR, 
-                    CUTTING_LINE_WIDTH
-                )
-                cutting_lines_added.append(f"Left trim at {left_trim_x}px")
-                debug(f"LEFT trim line at {left_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
-        else:
-            # Front side: content is on the left, so trim right edge
-            if unused_width > 10:  # >0.8mm
-                right_trim_x = self.offset_x + self.layout_width
-                self._draw_dashed_line(
-                    (right_trim_x, 0), 
-                    (right_trim_x, A4_HEIGHT_PX), 
-                    CUTTING_LINE_COLOR, 
-                    CUTTING_LINE_WIDTH
-                )
-                cutting_lines_added.append(f"Right trim at {right_trim_x}px")
-                debug(f"RIGHT trim line at {right_trim_x}px (unused: {unused_width}px = {unused_width*25.4/300:.1f}mm)", request_id=self.request_id)
+        # Draw cutting lines ONLY where margins exist (where actual cutting will happen)
         
-        # Bottom edge trim line (if significant unused height)
-        if unused_height > 10:  # >0.8mm
-            bottom_trim_y = self.offset_y + self.layout_height
+        # LEFT cutting line (only for BACK side)
+        if self.margin_left > 0:
+            left_cut_x = self.offset_x + (self.margin_left // 2)
             self._draw_dashed_line(
-                (0, bottom_trim_y), 
-                (A4_WIDTH_PX, bottom_trim_y), 
+                (left_cut_x, 0), 
+                (left_cut_x, A4_HEIGHT_PX), 
                 CUTTING_LINE_COLOR, 
                 CUTTING_LINE_WIDTH
             )
-            cutting_lines_added.append(f"Bottom trim at {bottom_trim_y}px")
-            debug(f"BOTTOM trim line at {bottom_trim_y}px (unused: {unused_height}px = {unused_height*25.4/300:.1f}mm)", request_id=self.request_id)
+            cutting_lines_added.append(f"Left guillotine cut at {left_cut_x}px")
+            debug(f"LEFT guillotine cut at {left_cut_x}px (center of {self.margin_left*25.4/300:.1f}mm margin)", request_id=self.request_id)
+        
+        # RIGHT cutting line (only for FRONT side)
+        if self.margin_right > 0:
+            right_cut_x = self.offset_x + self.layout_width - (self.margin_right // 2)
+            self._draw_dashed_line(
+                (right_cut_x, 0), 
+                (right_cut_x, A4_HEIGHT_PX), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            cutting_lines_added.append(f"Right guillotine cut at {right_cut_x}px")
+            debug(f"RIGHT guillotine cut at {right_cut_x}px (center of {self.margin_right*25.4/300:.1f}mm margin)", request_id=self.request_id)
+        
+        # TOP cutting line (only if margin exists - currently none)
+        if self.margin_top > 0:
+            top_cut_y = self.offset_y + (self.margin_top // 2)
+            self._draw_dashed_line(
+                (0, top_cut_y), 
+                (A4_WIDTH_PX, top_cut_y), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            cutting_lines_added.append(f"Top guillotine cut at {top_cut_y}px")
+            debug(f"TOP guillotine cut at {top_cut_y}px (center of {self.margin_top*25.4/300:.1f}mm margin)", request_id=self.request_id)
+        
+        # BOTTOM cutting line (both FRONT and BACK sides)
+        if self.margin_bottom > 0:
+            bottom_cut_y = self.offset_y + self.layout_height - (self.margin_bottom // 2)
+            self._draw_dashed_line(
+                (0, bottom_cut_y), 
+                (A4_WIDTH_PX, bottom_cut_y), 
+                CUTTING_LINE_COLOR, 
+                CUTTING_LINE_WIDTH
+            )
+            cutting_lines_added.append(f"Bottom guillotine cut at {bottom_cut_y}px")
+            debug(f"BOTTOM guillotine cut at {bottom_cut_y}px (center of {self.margin_bottom*25.4/300:.1f}mm margin)", request_id=self.request_id)
         
         # Summary
         num_horizontal_cuts = GRID_ROWS - 1  # 2 cuts for 3 rows
-        total_cuts = num_horizontal_cuts + (1 if unused_height > 10 else 0)
+        num_margin_lines = sum([1 for margin in [self.margin_left, self.margin_right, self.margin_top, self.margin_bottom] if margin > 0])
+        total_cuts = num_horizontal_cuts + num_margin_lines
         
-        log(f"Guillotine cutting guides: {num_horizontal_cuts} horizontal cuts + bottom trim = {total_cuts} total cuts", request_id=self.request_id)
+        side_type = "BACK" if self.duplex_back_side else "FRONT"
+        log(f"Guillotine cutting guides ({side_type}): {num_horizontal_cuts} inter-card cuts + {num_margin_lines} edge cuts = {total_cuts} total", request_id=self.request_id)
         log(f"Cuts added: {'; '.join(cutting_lines_added)}", request_id=self.request_id)
     
     def _draw_cutting_rectangle(self, left: int, top: int, right: int, bottom: int, width: int = None) -> None:
