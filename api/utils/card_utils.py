@@ -629,7 +629,7 @@ async def generate_back_card_image_bytes(
         
         # Position call-to-action text at top (aligned with stamp's internal padding)
         current_y = qr_y_start + qr_padding_internal
-        text_x = qr_x_start + qr_padding_internal  # Align with stamp's left edge + padding
+        text_x = qr_x_start + 1.5 * qr_padding_internal  # Align with stamp's left edge + padding
         for word in cta_words:
             draw.text((text_x, current_y), word, font=cta_font, fill=cta_text_color)
             current_y += cta_line_height + int(cta_line_height * 0.1)  # Small line spacing
