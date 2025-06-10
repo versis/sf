@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import requests
 from PIL import Image
 import io
+import time
 
 from ..config import SUPABASE_URL, SUPABASE_SERVICE_KEY
 from ..utils.logger import log, debug, error
@@ -35,6 +36,8 @@ class A4LayoutResponse(BaseModel):
     message: str
     front_layout_size_mb: Optional[float] = None
     back_layout_size_mb: Optional[float] = None
+    front_layout_file: Optional[str] = None
+    back_layout_file: Optional[str] = None
     cards_processed: int = 0
     cards_found: int = 0
 
@@ -175,11 +178,18 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
         if not front_images and not back_images:
             raise HTTPException(status_code=404, detail="No TIFF images could be downloaded from the provided cards.")
         
-        # Create A4 layouts
+        # Create A4 layouts and save to local files
         front_layout_bytes = None
         back_layout_bytes = None
         front_layout_size_mb = None
         back_layout_size_mb = None
+        front_layout_file = None
+        back_layout_file = None
+        
+        # Generate unique filename prefix using card IDs
+        cards_hash = hash(''.join(extended_ids)) % 10000
+        timestamp = int(time.time())
+        filename_prefix = f"a4_layout_{timestamp}_{cards_hash:04d}"
         
         if front_images:
             log(f"Creating front A4 layout with {len(front_images)} cards", request_id=request_id)
@@ -190,7 +200,13 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 request_id=f"{request_id}_front"
             )
             front_layout_size_mb = len(front_layout_bytes) / 1024 / 1024
-            log(f"Front A4 layout created: {front_layout_size_mb:.1f}MB", request_id=request_id)
+            
+            # Save front layout to local file
+            front_layout_file = f"{filename_prefix}_front_{request.passepartout_mm}mm.tiff"
+            with open(front_layout_file, "wb") as f:
+                f.write(front_layout_bytes)
+            
+            log(f"Front A4 layout created: {front_layout_size_mb:.1f}MB, saved as {front_layout_file}", request_id=request_id)
         
         if back_images:
             log(f"Creating back A4 layout with {len(back_images)} cards", request_id=request_id)
@@ -201,15 +217,22 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
                 request_id=f"{request_id}_back"
             )
             back_layout_size_mb = len(back_layout_bytes) / 1024 / 1024
-            log(f"Back A4 layout created: {back_layout_size_mb:.1f}MB", request_id=request_id)
+            
+            # Save back layout to local file
+            back_layout_file = f"{filename_prefix}_back_{request.passepartout_mm}mm.tiff"
+            with open(back_layout_file, "wb") as f:
+                f.write(back_layout_bytes)
+            
+            log(f"Back A4 layout created: {back_layout_size_mb:.1f}MB, saved as {back_layout_file}", request_id=request_id)
         
-        # For now, return success with file sizes. 
-        # In a production system, you'd upload these to blob storage and return URLs
+        # Return success with file sizes and file paths
         return A4LayoutResponse(
             success=True,
             message=f"A4 layouts created successfully for {cards_processed} cards",
             front_layout_size_mb=front_layout_size_mb,
             back_layout_size_mb=back_layout_size_mb,
+            front_layout_file=front_layout_file,
+            back_layout_file=back_layout_file,
             cards_processed=cards_processed,
             cards_found=cards_found
         )

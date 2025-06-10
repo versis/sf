@@ -17,7 +17,7 @@ TEST_CARD_IDS = [
     "000000634 FE F"
 ]
 
-def run():
+def run_a4():
     """Test the print generation with hardcoded IDs."""
     
     print("🖨️  Testing Print Generation API")
@@ -51,9 +51,13 @@ def run():
             
             if result.get('front_layout_size_mb'):
                 print(f"   📄 Front layout: {result['front_layout_size_mb']:.1f}MB")
+                if result.get('front_layout_file'):
+                    print(f"   💾 Front file: {result['front_layout_file']}")
             
             if result.get('back_layout_size_mb'):
                 print(f"   📄 Back layout: {result['back_layout_size_mb']:.1f}MB")
+                if result.get('back_layout_file'):
+                    print(f"   💾 Back file: {result['back_layout_file']}")
                 
             print(f"   💬 {result['message']}")
             
@@ -64,82 +68,6 @@ def run():
     except requests.exceptions.RequestException as e:
         print(f"   ❌ Request failed: {str(e)}")
     
-    # Test case 2: No passepartout  
-    print("\n🎨 Test 2: No passepartout (0mm border)")
-    request_data_no_border = {
-        "extended_ids": TEST_CARD_IDS[:2],  # Just 2 cards for variety
-        "passepartout_mm": 0,
-        "target_content_width_mm": 146
-    }
-    
-    print(f"   📋 Request: {len(TEST_CARD_IDS[:2])} cards with no border")
-    
-    try:
-        start_time = time.time()
-        response = requests.post(
-            f"{API_BASE_URL}/create-a4-layouts",
-            json=request_data_no_border,
-            timeout=60
-        )
-        duration = time.time() - start_time
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"   ✅ Success! ({duration:.1f}s)")
-            print(f"   📊 Cards processed: {result['cards_processed']}")
-            
-            if result.get('front_layout_size_mb'):
-                print(f"   📄 Front layout: {result['front_layout_size_mb']:.1f}MB")
-            
-            if result.get('back_layout_size_mb'):
-                print(f"   📄 Back layout: {result['back_layout_size_mb']:.1f}MB")
-                
-        else:
-            print(f"   ❌ Error {response.status_code}")
-            print(f"   📝 Response: {response.text}")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"   ❌ Request failed: {str(e)}")
-
-def test_single_card():
-    """Test with a single card."""
-    
-    print("\n🎨 Test 3: Single card")
-    single_card_data = {
-        "extended_ids": [TEST_CARD_IDS[0]],  # Just first card
-        "passepartout_mm": 12,  # 12mm border
-        "target_content_width_mm": 146
-    }
-    
-    print(f"   📋 Request: 1 card with 12mm border")
-    print(f"   🆔 ID: {TEST_CARD_IDS[0]}")
-    
-    try:
-        start_time = time.time()
-        response = requests.post(
-            f"{API_BASE_URL}/create-a4-layouts",
-            json=single_card_data,
-            timeout=30
-        )
-        duration = time.time() - start_time
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"   ✅ Success! ({duration:.1f}s)")
-            print(f"   📊 Cards processed: {result['cards_processed']}")
-            
-            if result.get('front_layout_size_mb'):
-                print(f"   📄 Front layout: {result['front_layout_size_mb']:.1f}MB")
-            
-            if result.get('back_layout_size_mb'):
-                print(f"   📄 Back layout: {result['back_layout_size_mb']:.1f}MB")
-                
-        else:
-            print(f"   ❌ Error {response.status_code}")
-            print(f"   📝 Response: {response.text}")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"   ❌ Request failed: {str(e)}")
 
 def check_api_status():
     """Check if the API is running."""
@@ -176,14 +104,14 @@ def main():
     print("\n" + "="*50)
     
     # Run tests
-    run()
-    test_single_card()
-    
+    run_a4()
+
     print("\n" + "="*50)
     print("🎉 Testing complete!")
     print()
     print("💡 To modify test cards, edit the TEST_CARD_IDS list at the top of this script")
     print("💡 Make sure the card IDs exist in your database and have TIFF files")
+
 
 if __name__ == "__main__":
     main() 
