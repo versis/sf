@@ -30,7 +30,7 @@ CARD_IDS = [
 # Layout Settings
 PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
 CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
-ORIENTATION = "h"                     # "h" for horizontal, "v" for vertical
+ORIENTATION = "v"                     # "h" for horizontal, "v" for vertical
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
 OUTPUT_PREFIX = "wydruktestowy_sf"                   # Filename prefix (generates: sf_w156_pp12_cardids_front.tiff)
 

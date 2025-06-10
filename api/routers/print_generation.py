@@ -107,7 +107,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             debug(f"Querying database for {len(db_ids)} cards by ID", request_id=request_id)
             db_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, front_horizontal_tiff_url, back_horizontal_tiff_url, metadata")
+                .select("id, extended_id, front_horizontal_tiff_url, back_horizontal_tiff_url, front_vertical_tiff_url, back_vertical_tiff_url, metadata")
                 .in_("id", db_ids)
                 .execute()
             )
@@ -123,7 +123,7 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
             debug(f"Querying database for {len(fallback_extended_ids)} cards by extended_id", request_id=request_id)
             fallback_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, front_horizontal_tiff_url, back_horizontal_tiff_url, metadata")
+                .select("id, extended_id, front_horizontal_tiff_url, back_horizontal_tiff_url, front_vertical_tiff_url, back_vertical_tiff_url, metadata")
                 .in_("extended_id", fallback_extended_ids)
                 .execute()
             )
