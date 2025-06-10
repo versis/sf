@@ -273,27 +273,3 @@ async def create_a4_layouts_from_cards(request: CreateA4LayoutRequest):
     except Exception as e:
         error(f"Error creating A4 layouts: {str(e)}", request_id=request_id)
         raise HTTPException(status_code=500, detail=f"An error occurred while creating A4 layouts: {str(e)}")
-
-@router.post("/create-a4-layouts-files")
-async def create_a4_layouts_files(request: CreateA4LayoutRequest):
-    """
-    Create A4 layouts and return the actual TIFF files as response.
-    
-    This endpoint returns the binary TIFF files directly.
-    """
-    if not supabase_client:
-        raise HTTPException(status_code=503, detail="Database service unavailable.")
-    
-    extended_ids = request.extended_ids
-    if not extended_ids:
-        raise HTTPException(status_code=400, detail="No extended IDs provided.")
-    
-    if len(extended_ids) > 3:
-        raise HTTPException(status_code=400, detail="Maximum 3 cards allowed per A4 layout.")
-    
-    request_id = f"a4_files_{hash(''.join(extended_ids)) % 10000:04d}"
-    log(f"Creating A4 layout files for {len(extended_ids)} cards", request_id=request_id)
-    
-    # This endpoint would need to be implemented to return actual files
-    # For now, return a placeholder response
-    raise HTTPException(status_code=501, detail="File download endpoint not yet implemented. Use /create-a4-layouts for now.") 
