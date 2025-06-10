@@ -142,8 +142,8 @@ class A4Layout:
         
         # STEP 1: Rotate portrait card to landscape (90° counter-clockwise)
         if card_image.size == (CARD_WIDTH, CARD_HEIGHT):  # Portrait 708×1416
-            rotated_card = card_image.rotate(90, expand=True)  # Now 1416×708 landscape
-            debug(f"Rotated card from {card_image.size} portrait to {rotated_card.size} landscape", request_id=self.request_id)
+            rotated_card = card_image.rotate(-90, expand=True)  # Rotate counter-clockwise to landscape 1416×708
+            debug(f"Rotated card from {card_image.size} portrait to {rotated_card.size} landscape (counter-clockwise)", request_id=self.request_id)
         else:
             rotated_card = card_image  # Already correct size/orientation
             debug(f"Using card as-is: {card_image.size}", request_id=self.request_id)
