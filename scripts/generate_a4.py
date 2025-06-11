@@ -11,6 +11,7 @@ Instructions:
 import requests
 import time
 import sys
+import os
 from typing import List, Optional
 
 # =============================================================================
@@ -28,7 +29,8 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-PASSEPARTOUT_MM = 8                    # White border in millimeters (0, 8, 12, etc.)
+OUTPUT_DIR = "data/a4_generations"     # Directory to save generated files
+PASSEPARTOUT_MM = 8                   # White border in millimeters (0, 8, 12, etc.)
 CONTENT_WIDTH_MM = 146                 # Content width in mm (default 146 = 14.6cm)
 ORIENTATION = "h"                     # "h" for horizontal, "v" for vertical
 DUPLEX_MODE = True                     # True = back side positioned on right for proper duplex alignment
@@ -191,6 +193,7 @@ def print_configuration():
     print(f"   🔲 Passepartout: {PASSEPARTOUT_MM}mm")
     print(f"   📄 Content size: {CONTENT_WIDTH_MM}×{CONTENT_WIDTH_MM/2}mm")
     print(f"   🔄 Duplex mode: {'ON' if DUPLEX_MODE else 'OFF'}")
+    print(f"   💾 Output directory: {OUTPUT_DIR}")
     print()
     
     if DUPLEX_MODE:
@@ -235,6 +238,10 @@ def main():
     
     print("\n" + "="*50)
     
+    # Ensure output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    full_output_prefix = os.path.join(OUTPUT_DIR, OUTPUT_PREFIX)
+    
     # Generate layouts using configuration variables
     success = generate_a4_layout(
         card_ids=CARD_IDS,
@@ -242,7 +249,7 @@ def main():
         target_content_width_mm=CONTENT_WIDTH_MM,
         orientation=ORIENTATION,
         duplex_mode=DUPLEX_MODE,
-        output_prefix=OUTPUT_PREFIX
+        output_prefix=full_output_prefix
     )
     
     print("\n" + "="*50)
