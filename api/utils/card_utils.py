@@ -669,17 +669,23 @@ async def generate_back_card_image_bytes(
                     draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
                                          perf_dot_radius, perf_dot_step, perf_color)
 
-                    # Calculate inner area for QR code to be centered
+                    # Calculate inner area for QR code
                     qr_padding_internal = int(min(qr_width, qr_height) * 0.1)
                     qr_inner_width = qr_width - (2 * qr_padding_internal)
                     qr_inner_height = qr_height - (2 * qr_padding_internal)
-                    qr_square_size = min(qr_inner_width, qr_inner_height)
                     
-                    qr_data = f"https://shadefreude.com/card/{extended_id}"
+                    # Max size for the QR code to fit with padding
+                    max_qr_size = min(qr_inner_width, qr_inner_height)
+
+                    # Make the QR code ~20% smaller than the max available size
+                    final_qr_size = int(max_qr_size * 0.85)
+                    
+                    # Correct URL format
+                    qr_data = f"https://shadefreude.com/color/{extended_id}"
                     
                     qr_img_generated = generate_qr_code_image(
                         data=qr_data,
-                        size=(qr_square_size, qr_square_size),
+                        size=(final_qr_size, final_qr_size), # Use smaller size
                         background_color=qr_bg_color, # Match stamp background
                         request_id=request_id
                     )
