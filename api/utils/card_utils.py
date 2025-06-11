@@ -652,34 +652,47 @@ async def generate_back_card_image_bytes(
                 log(f"Extended ID not provided for CARD_PAGE QR code mode.", level="WARNING", request_id=request_id)
             else:
                 try:
-                    # Use same dimensions and position as the main page's stamp for alignment
-                    qr_area_width = stamp_width
-                    qr_area_height = stamp_height
-                    qr_area_x_start = stamp_x_start
-                    qr_area_y_start = card_h - pad_y - qr_area_height
+                    # --- QR CODE Stamp for Card Page (same style as main page) ---
+                    qr_width = stamp_width
+                    qr_height = stamp_height
+                    qr_x_start = stamp_x_start
+                    qr_y_start = card_h - pad_y - qr_height
 
-                    # Make the QR code slightly smaller than the area it occupies, similar to padding
-                    qr_padding = int(min(qr_area_width, qr_area_height) * 0.1)
-                    qr_size = min(qr_area_width, qr_area_height) - (2 * qr_padding)
+                    # Draw QR code background (same style as stamp)
+                    qr_bg_color = stamp_bg_color
+                    draw.rectangle([
+                        (qr_x_start, qr_y_start),
+                        (qr_x_start + qr_width, qr_y_start + qr_height)
+                    ], fill=qr_bg_color)
+
+                    # Draw QR code perforation dots (same style as stamp)
+                    draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
+                                         perf_dot_radius, perf_dot_step, perf_color)
+
+                    # Calculate inner area for QR code to be centered
+                    qr_padding_internal = int(min(qr_width, qr_height) * 0.1)
+                    qr_inner_width = qr_width - (2 * qr_padding_internal)
+                    qr_inner_height = qr_height - (2 * qr_padding_internal)
+                    qr_square_size = min(qr_inner_width, qr_inner_height)
                     
                     qr_data = f"https://shadefreude.com/card/{extended_id}"
                     
                     qr_img_generated = generate_qr_code_image(
                         data=qr_data,
-                        size=(qr_size, qr_size),
-                        background_color=solid_lightened_bg_rgb,  # Use card's background color, not stamp's
+                        size=(qr_square_size, qr_square_size),
+                        background_color=qr_bg_color, # Match stamp background
                         request_id=request_id
                     )
 
-                    # Center the QR code within the virtual stamp area
-                    qr_x = qr_area_x_start + (qr_area_width - qr_size) // 2
-                    qr_y = qr_area_y_start + (qr_area_height - qr_size) // 2
+                    # Center the QR code within the stamp area
+                    qr_inner_x = qr_x_start + (qr_width - qr_img_generated.width) // 2
+                    qr_inner_y = qr_y_start + (qr_height - qr_img_generated.height) // 2
                     
-                    canvas.paste(qr_img_generated, (qr_x, qr_y), qr_img_generated)
-                    log(f"Aligned card page QR code added. Data: {qr_data}", request_id=request_id)
+                    canvas.paste(qr_img_generated, (qr_inner_x, qr_inner_y), qr_img_generated)
+                    log(f"Card page QR code with stamp added. Data: {qr_data}", request_id=request_id)
 
                 except Exception as e:
-                    log(f"Error generating aligned card page QR code: {e}", level="ERROR", request_id=request_id)
+                    log(f"Error generating card page QR code with stamp: {e}", level="ERROR", request_id=request_id)
 
     # Adjust Note Area based on the RECTANGULAR stamp (top-right)
     note_text_area_start_x = pad_x
