@@ -22,9 +22,9 @@ API_BASE_URL = "http://localhost:8000/api"
 
 # Card Configuration
 CARD_IDS = [
-    "000000632 FE F",
-    "000000633 FE F", 
-    "000000634 FE F"
+    "000000666 FE F",
+    "000000667 FE F",
+    "000000668 FE F"
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
