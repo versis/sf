@@ -11,6 +11,7 @@ import random
 import qrcode
 
 from api.utils.color_utils import hex_to_rgb, rgb_to_cmyk, desaturate_hex_color, adjust_hls
+from api.core.enums import QrCodeMode
 
 # --- Font Loading ---
 ASSETS_BASE_PATH = "assets"
@@ -420,6 +421,8 @@ async def generate_back_card_image_bytes(
     note_text: Optional[str],
     hex_color_input: str, 
     orientation: str,
+    qr_code_mode: QrCodeMode,
+    extended_id: Optional[str] = None,
     created_at_iso_str: Optional[str] = None, 
     request_id: Optional[str] = None,
     output_format: str = "PNG"
@@ -563,85 +566,120 @@ async def generate_back_card_image_bytes(
     canvas.paste(rotated_postmark, (paste_x, paste_y), rotated_postmark) # Paste using alpha channel
     # --- END CIRCULAR POSTMARK ---
 
-    # --- QR CODE (Bottom-Right, Same Column as Stamp, Same Style as Stamp) ---
-    qr_width = stamp_width  # Same width as stamp
-    qr_height = stamp_height  # Same height as stamp  
-    qr_x_start = stamp_x_start  # Same X position as stamp (aligned in column)
-    qr_y_start = card_h - pad_y - qr_height  # Position at bottom of card
+    if qr_code_mode != QrCodeMode.NO_QR_CODE:
+        if qr_code_mode == QrCodeMode.MAIN_PAGE:
+            # --- QR CODE (Bottom-Right, Same Column as Stamp, Same Style as Stamp) ---
+            qr_width = stamp_width  # Same width as stamp
+            qr_height = stamp_height  # Same height as stamp
+            qr_x_start = stamp_x_start  # Same X position as stamp (aligned in column)
+            qr_y_start = card_h - pad_y - qr_height  # Position at bottom of card
 
-    # Draw QR code background (same style as stamp)
-    qr_bg_color = stamp_bg_color  # Use same background color as stamp
-    draw.rectangle([
-        (qr_x_start, qr_y_start), 
-        (qr_x_start + qr_width, qr_y_start + qr_height)
-    ], fill=qr_bg_color)
+            # Draw QR code background (same style as stamp)
+            qr_bg_color = stamp_bg_color  # Use same background color as stamp
+            draw.rectangle([
+                (qr_x_start, qr_y_start),
+                (qr_x_start + qr_width, qr_y_start + qr_height)
+            ], fill=qr_bg_color)
 
-    # Draw QR code perforation dots (same style as stamp)
-    draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
-                         perf_dot_radius, perf_dot_step, perf_color)
+            # Draw QR code perforation dots (same style as stamp)
+            draw_perforation_dots(draw, qr_x_start, qr_y_start, qr_width, qr_height,
+                                 perf_dot_radius, perf_dot_step, perf_color)
 
-    # Generate and place QR code image inside the "stamp"
-    try:
-        # Calculate inner area (like stamp padding) for QR code placement
-        qr_padding_internal = int(min(qr_width, qr_height) * 0.1)  # Same padding logic as stamp
-        qr_inner_width = qr_width - (2 * qr_padding_internal)
-        qr_inner_height = qr_height - (2 * qr_padding_internal)
-        
-        # QR codes must be square - use the smaller dimension to fit within stamp
-        qr_square_size = min(qr_inner_width, qr_inner_height)
-        
-        # Generate QR code dynamically with the same grey background as stamp
-        qr_data = "https://shadefreude.com"
-        qr_img_generated = generate_qr_code_image(
-            data=qr_data,
-            size=(qr_square_size, qr_square_size),  # Always square
-            background_color=qr_bg_color,  # Use same background as stamp
-            request_id=request_id
-        )
-        
-        # Add "CREATE YOUR POSTCARD" text above QR code (each word on separate line)
-        cta_words = ["CREATE", "YOUR", "POSTCARD"]
-        cta_font_size = max(8, int(qr_width * 0.11))  # Smaller font for call-to-action
-        cta_font = get_font(cta_font_size, weight="Regular", font_family="Inter", request_id=request_id)
-        cta_text_color = (20, 20, 20)  # Dark text for readability
-        
-        # Calculate space needed for call-to-action text
-        _, cta_line_height = get_text_dimensions("CREATE", cta_font)
-        cta_total_height = len(cta_words) * cta_line_height + (len(cta_words) - 1) * int(cta_line_height * 0.1)  # Small line spacing
-        
-        # Reserve space: top for CTA, rest for QR (no URL text)
-        cta_space = cta_total_height + int(qr_padding_internal * 0.4)  # CTA + spacing
-        available_height_for_qr = qr_inner_height - cta_space  # Use all remaining space for QR
-        qr_final_size = min(qr_square_size, available_height_for_qr)
-        
-        # If we had to shrink for text, regenerate QR code at correct size
-        if qr_final_size < qr_square_size:
-            qr_img_generated = generate_qr_code_image(
-                data=qr_data,
-                size=(qr_final_size, qr_final_size),
-                background_color=qr_bg_color,
-                request_id=request_id
-            )
-        
-        # Calculate QR code position first (centered horizontally)
-        qr_inner_x = qr_x_start + (qr_width - qr_img_generated.width) // 2
-        qr_inner_y = qr_y_start + qr_padding_internal + cta_space + int((available_height_for_qr - qr_img_generated.height) // 2)
-        
-        # Position call-to-action text at top (aligned with stamp's internal padding)
-        current_y = qr_y_start + qr_padding_internal
-        text_x = qr_x_start + 1.5 * qr_padding_internal  # Align with stamp's left edge + padding
-        for word in cta_words:
-            draw.text((text_x, current_y), word, font=cta_font, fill=cta_text_color)
-            current_y += cta_line_height + int(cta_line_height * 0.1)  # Small line spacing
-        
-        # Paste QR code onto the canvas
-        canvas.paste(qr_img_generated, (qr_inner_x, qr_inner_y), qr_img_generated)
-        
-        debug(f"QR code stamp added at position ({qr_x_start}, {qr_y_start}) with stamp size {qr_width}x{qr_height}, QR data: {qr_data}, QR image: {qr_img_generated.width}x{qr_img_generated.height} (square), CTA: 'CREATE YOUR POSTCARD' (aligned with QR code)", request_id=request_id)
-    except Exception as e: 
-        log(f"Error generating QR code: {e}", level="ERROR", request_id=request_id)
-        debug("QR code will not be displayed on this card", request_id=request_id)
-    # --- END QR CODE ---
+            # Generate and place QR code image inside the "stamp"
+            try:
+                # Calculate inner area (like stamp padding) for QR code placement
+                qr_padding_internal = int(min(qr_width, qr_height) * 0.1)  # Same padding logic as stamp
+                qr_inner_width = qr_width - (2 * qr_padding_internal)
+                qr_inner_height = qr_height - (2 * qr_padding_internal)
+                
+                # QR codes must be square - use the smaller dimension to fit within stamp
+                qr_square_size = min(qr_inner_width, qr_inner_height)
+                
+                # Generate QR code dynamically with the same grey background as stamp
+                qr_data = "https://shadefreude.com"
+                qr_img_generated = generate_qr_code_image(
+                    data=qr_data,
+                    size=(qr_square_size, qr_square_size),  # Always square
+                    background_color=qr_bg_color,  # Use same background as stamp
+                    request_id=request_id
+                )
+                
+                # Add "CREATE YOUR POSTCARD" text above QR code (each word on separate line)
+                cta_words = ["CREATE", "YOUR", "POSTCARD"]
+                cta_font_size = max(8, int(qr_width * 0.11))  # Smaller font for call-to-action
+                cta_font = get_font(cta_font_size, weight="Regular", font_family="Inter", request_id=request_id)
+                cta_text_color = (20, 20, 20)  # Dark text for readability
+                
+                # Calculate space needed for call-to-action text
+                _, cta_line_height = get_text_dimensions("CREATE", cta_font)
+                cta_total_height = len(cta_words) * cta_line_height + (len(cta_words) - 1) * int(cta_line_height * 0.1)  # Small line spacing
+                
+                # Reserve space: top for CTA, rest for QR (no URL text)
+                cta_space = cta_total_height + int(qr_padding_internal * 0.4)  # CTA + spacing
+                available_height_for_qr = qr_inner_height - cta_space  # Use all remaining space for QR
+                qr_final_size = min(qr_square_size, available_height_for_qr)
+                
+                # If we had to shrink for text, regenerate QR code at correct size
+                if qr_final_size < qr_square_size:
+                    qr_img_generated = generate_qr_code_image(
+                        data=qr_data,
+                        size=(qr_final_size, qr_final_size),
+                        background_color=qr_bg_color,
+                        request_id=request_id
+                    )
+                
+                # Calculate QR code position first (centered horizontally)
+                qr_inner_x = qr_x_start + (qr_width - qr_img_generated.width) // 2
+                qr_inner_y = qr_y_start + qr_padding_internal + cta_space + int((available_height_for_qr - qr_img_generated.height) // 2)
+                
+                # Position call-to-action text at top (aligned with stamp's internal padding)
+                current_y = qr_y_start + qr_padding_internal
+                text_x = qr_x_start + 1.5 * qr_padding_internal  # Align with stamp's left edge + padding
+                for word in cta_words:
+                    draw.text((text_x, current_y), word, font=cta_font, fill=cta_text_color)
+                    current_y += cta_line_height + int(cta_line_height * 0.1)  # Small line spacing
+                
+                # Paste QR code onto the canvas
+                canvas.paste(qr_img_generated, (qr_inner_x, qr_inner_y), qr_img_generated)
+                
+                debug(f"QR code stamp added at position ({qr_x_start}, {qr_y_start}) with stamp size {qr_width}x{qr_height}, QR data: {qr_data}, QR image: {qr_img_generated.width}x{qr_img_generated.height} (square), CTA: 'CREATE YOUR POSTCARD' (aligned with QR code)", request_id=request_id)
+            except Exception as e: 
+                log(f"Error generating QR code: {e}", level="ERROR", request_id=request_id)
+                debug("QR code will not be displayed on this card", request_id=request_id)
+            # --- END QR CODE ---
+        elif qr_code_mode == QrCodeMode.CARD_PAGE:
+            if not extended_id:
+                log(f"Extended ID not provided for CARD_PAGE QR code mode.", level="WARNING", request_id=request_id)
+            else:
+                try:
+                    # Use same dimensions and position as the main page's stamp for alignment
+                    qr_area_width = stamp_width
+                    qr_area_height = stamp_height
+                    qr_area_x_start = stamp_x_start
+                    qr_area_y_start = card_h - pad_y - qr_area_height
+
+                    # Make the QR code slightly smaller than the area it occupies, similar to padding
+                    qr_padding = int(min(qr_area_width, qr_area_height) * 0.1)
+                    qr_size = min(qr_area_width, qr_area_height) - (2 * qr_padding)
+                    
+                    qr_data = f"https://shadefreude.com/card/{extended_id}"
+                    
+                    qr_img_generated = generate_qr_code_image(
+                        data=qr_data,
+                        size=(qr_size, qr_size),
+                        background_color=solid_lightened_bg_rgb,  # Use card's background color, not stamp's
+                        request_id=request_id
+                    )
+
+                    # Center the QR code within the virtual stamp area
+                    qr_x = qr_area_x_start + (qr_area_width - qr_size) // 2
+                    qr_y = qr_area_y_start + (qr_area_height - qr_size) // 2
+                    
+                    canvas.paste(qr_img_generated, (qr_x, qr_y), qr_img_generated)
+                    log(f"Aligned card page QR code added. Data: {qr_data}", request_id=request_id)
+
+                except Exception as e:
+                    log(f"Error generating aligned card page QR code: {e}", level="ERROR", request_id=request_id)
 
     # Adjust Note Area based on the RECTANGULAR stamp (top-right)
     note_text_area_start_x = pad_x

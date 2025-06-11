@@ -7,7 +7,7 @@ import io
 from ..config import (
     SUPABASE_URL, SUPABASE_SERVICE_KEY, BLOB_READ_WRITE_TOKEN,
     DEFAULT_STATUS_PROCESSING, DEFAULT_STATUS_COMPLETED, DEFAULT_STATUS_FAILED,
-    ENABLE_AI_CARD_DETAILS
+    ENABLE_AI_CARD_DETAILS, QR_CODE_MODE
 )
 from ..models.card_generation_models import (
     CardGenerationCreateRequest, CardGenerationRecord, InitiateCardGenerationResponse,
@@ -368,6 +368,8 @@ async def add_note_to_card(
                 note_text=note_text,
                 hex_color_input=hex_color, 
                 orientation=orientation,
+                qr_code_mode=QR_CODE_MODE,
+                extended_id=extended_id,
                 created_at_iso_str=created_at_str, 
                 request_id=str(db_id),
                 output_format="PNG"
@@ -378,6 +380,8 @@ async def add_note_to_card(
                 note_text=note_text,
                 hex_color_input=hex_color, 
                 orientation=orientation,
+                qr_code_mode=QR_CODE_MODE,
+                extended_id=extended_id,
                 created_at_iso_str=created_at_str, 
                 request_id=str(db_id),
                 output_format="TIFF"

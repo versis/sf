@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+from api.core.enums import QrCodeMode
+
 # Load .env.local first, then .env
 # This allows .env.local to override .env for local development specifics
 load_dotenv(".env.local") 
@@ -18,6 +20,8 @@ DEFAULT_STATUS_PROCESSING = "processing_image"
 DEFAULT_STATUS_COMPLETED = "completed"
 DEFAULT_STATUS_FAILED = "failed"
 
+# QR Code configuration
+QR_CODE_MODE = QrCodeMode(os.environ.get("QR_CODE_MODE", QrCodeMode.MAIN_PAGE.value))
 
 # Supabase Configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
