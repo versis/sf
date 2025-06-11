@@ -433,12 +433,13 @@ class A4Layout:
         
         if output_format.upper() == "TIFF":
             # Save as TIFF with professional print settings, including sRGB color profile
+            srgb_profile = ImageCms.createProfile("sRGB")
             self.canvas.save(
                 img_byte_arr, 
                 format='TIFF',
                 compression='lzw',  # Lossless compression
                 dpi=(PRINT_DPI, PRINT_DPI),  # 300 DPI metadata
-                icc_profile=ImageCms.get_sRGB_profile_bytes() # Embed sRGB profile for color consistency
+                icc_profile=ImageCms.ImageCmsProfile(srgb_profile).tobytes() # Embed sRGB profile for color consistency
             )
             debug(f"Saved A4 layout as TIFF with LZW compression, sRGB profile, at {PRINT_DPI} DPI", request_id=self.request_id)
         else:
