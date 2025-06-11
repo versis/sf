@@ -3,7 +3,7 @@ import base64
 from typing import Tuple, Dict, Any, Optional
 
 from api.utils.logger import log, debug, error
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageCms
 from datetime import datetime
 import os
 import math
@@ -68,14 +68,15 @@ def save_card_image(canvas: Image.Image, output_format: str = "PNG", request_id:
             rgb_image.paste(canvas, mask=canvas.split()[-1])
             canvas = rgb_image
         
-        # Save as TIFF with professional print settings
+        # Save as TIFF with professional print settings, including sRGB color profile
         canvas.save(
             img_byte_arr, 
             format='TIFF',
             compression='lzw',  # Lossless compression ideal for print
-            dpi=(PRINT_DPI, PRINT_DPI)  # Embed 300 DPI metadata
+            dpi=(PRINT_DPI, PRINT_DPI),  # Embed 300 DPI metadata
+            icc_profile=ImageCms.get_sRGB_profile_bytes() # Embed sRGB profile for color consistency
         )
-        debug(f"Saved as TIFF with LZW compression at {PRINT_DPI} DPI", request_id=request_id)
+        debug(f"Saved as TIFF with LZW compression, sRGB profile, at {PRINT_DPI} DPI", request_id=request_id)
     else:
         # Default PNG (web quality): Preserve RGBA with transparency
         canvas.save(

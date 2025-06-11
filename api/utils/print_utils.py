@@ -3,7 +3,7 @@ Print utilities for professional postcard printing at 300 DPI.
 Handles A4 layout generation with exact positioning and cutting guides.
 """
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageCms
 from typing import List, Dict, Tuple, Optional, Any
 import io
 from .logger import log, debug
@@ -432,14 +432,15 @@ class A4Layout:
         img_byte_arr = io.BytesIO()
         
         if output_format.upper() == "TIFF":
-            # Save as TIFF with professional print settings
+            # Save as TIFF with professional print settings, including sRGB color profile
             self.canvas.save(
                 img_byte_arr, 
                 format='TIFF',
                 compression='lzw',  # Lossless compression
-                dpi=(PRINT_DPI, PRINT_DPI)  # 300 DPI metadata
+                dpi=(PRINT_DPI, PRINT_DPI),  # 300 DPI metadata
+                icc_profile=ImageCms.get_sRGB_profile_bytes() # Embed sRGB profile for color consistency
             )
-            debug(f"Saved A4 layout as TIFF with LZW compression at {PRINT_DPI} DPI", request_id=self.request_id)
+            debug(f"Saved A4 layout as TIFF with LZW compression, sRGB profile, at {PRINT_DPI} DPI", request_id=self.request_id)
         else:
             # Save as PNG for preview
             self.canvas.save(
