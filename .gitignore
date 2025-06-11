@@ -42,5 +42,6 @@ next-env.d.ts
 # PyCharm IDE
 .idea
 
-# Note: Hero card cache is now committed to git for static serving
-# Run 'npm run generate-hero-cache' locally to update cache files
+# generations
+*.zip
+*.tiff
