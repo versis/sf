@@ -4,5 +4,4 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
-    "qrcode[pil]>=7.4.2"
 ]
