@@ -3,34 +3,26 @@ description:
 globs: 
 alwaysApply: true
 ---
-When working on:
-- working on new feaature
-- improved implmenetation
-- changes to the implementation
-- bug fixing
-- and similar
+# Rules
+## When working on a new feature, an improved implementation, changes to existing code, bug fixes, or similar:
+1.	Don’t start coding immediately.
+2.	Restate the problem in your own words.
+3.	Step back and consider the bigger picture—what might you be overlooking?
+4.	Review the overall code structure and identify all files that could be affected.
+5.	Read those files to understand the context.
+6.	Take your time to think it through.
+7.	Brainstorm at least three very different, long-term solutions—no quick “band-aids” or technical debt.
+8.	Describe each solution in detail.
+9.	Identify which solution is most promising, or propose a new idea inspired by your options.
+10.	Outline a multi-step implementation plan.
+11.	Begin coding, following your plan step by step.
 
-1. Do not start immediately.
-2. State the problem (rephrase it).
-3. Take a step back, think at the bigger picture and what possibly you are missing.
-4. Check the full code structure and list possible files that might be involved in the changes.
-5. Read them to have context.
-6. Take your time to think about.
-7. Think about at least 3 possible solutions that are very different. They cannot be temporary solutions (band aids), we don't want to technical dept, we can spend some time on the refactor if needed.
-8. Describe all solutions.
-6. Is any one those solutions the most prominent? Or maybe you have new idea based on those solutions?
-9. Craft a multi step plan.
-10. Start the implementation, step by step.
+## When creating multi-step plans:
+1.	Add them to docs/plans/ as a Markdown file.
+2.	Prefix the filename with the date, e.g. 20230322-description.md.
+3.	Use checkboxes (- [ ]) to track task completion.
 
-
-When making multi-steps plans:
-1. Add them to `docs/plans` in markdown file.
-2. Use date as prefix, e.g. `20230322-<description>md`
-3. Use checkmarks to mark tasks as one.
-
-
-
-What to (not) run:
-1. Use linters to check the code.
-2. Do not run data migration scripts.
-3. If you run app to check if it works - remember to close it after you are done.
+## What to (and not to) run:
+1.	Use linters to validate your code.
+2.	Do not run data-migration scripts.
+3.	If you launch the app to test it, remember to close it when you’re done.
