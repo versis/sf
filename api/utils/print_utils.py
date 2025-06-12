@@ -230,6 +230,12 @@ class A4Layout:
         if not self.draw:
             raise RuntimeError("Canvas not created. Call create_canvas() first.")
         
+        # If this is the back side, we don't draw any cutting lines
+        # but we still maintain all margins and spacing for proper alignment
+        if self.duplex_back_side:
+            debug(f"Back side: Skipping cutting guides but preserving margins", request_id=self.request_id)
+            return
+            
         cutting_lines_added = []
         
         # For 1×3 grid: NO vertical cuts needed (single column)
