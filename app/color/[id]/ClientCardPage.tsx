@@ -212,7 +212,7 @@ export default function ClientCardPage({
               <h1 className="text-2xl md:text-3xl font-bold flex items-center">
                 <Link href="/" className="flex items-center cursor-pointer">
                   <span className="mr-1 ml-1">
-                    <img src="/sf-icon.png" alt="SF Icon" className="inline h-5 w-5 md:h-6 md:w-6 mr-1" />
+                    <img src="/sf-icon.png" alt="SF Icon" className="inline h-8 w-8 md:h-9 md:w-9 mr-1" />
                     shade
                   </span>
                   <span className="inline-block bg-card text-foreground border-2 border-blue-700 shadow-[5px_5px_0_0_theme(colors.blue.700)] px-2 py-0.5 mr-1">
