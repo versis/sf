@@ -4,6 +4,10 @@ globs:
 alwaysApply: true
 ---
 # Rules
+
+# Commands
+1. Use `uv`
+
 ## When working on a new feature, an improved implementation, changes to existing code, bug fixes, or similar:
 1.	Don’t start coding immediately.
 2.	Restate the problem in your own words.
