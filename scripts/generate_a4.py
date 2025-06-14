@@ -29,26 +29,14 @@ CARD_IDS = [
 ]  # Maximum 3 cards per A4 sheet
 
 # Layout Settings
-OUTPUT_DIR = "data/a4_generations/drukA2"
+OUTPUT_DIR = "data/a4_generations/"
 DUPLEX_MODE = True
 
-# print v01
-PASSEPARTOUT_MM = 8
-CONTENT_WIDTH_MM = 146
-ORIENTATION = "h"
-OUTPUT_PREFIX = "sfkuba_v01"
-
-# # print v02
-# PASSEPARTOUT_MM = 7
-# CONTENT_WIDTH_MM = 136
-# ORIENTATION = "h"
-# OUTPUT_PREFIX = "sfkuba_v02"
-#
-# # print v03
-# PASSEPARTOUT_MM = 10
-# CONTENT_WIDTH_MM = 146
-# ORIENTATION = "v"
-# OUTPUT_PREFIX = "sfkuba_v03"
+# print v04 (THE BEST)
+PASSEPARTOUT_MM = 5
+CONTENT_WIDTH_MM = 130
+ORIENTATION = "v"
+OUTPUT_PREFIX = "sfkuba_v04"
 
 
 # =============================================================================
