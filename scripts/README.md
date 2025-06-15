@@ -9,10 +9,14 @@ Downloads TIFF cards (front and back) for specific card IDs, organizing them int
 ### Quick Start
 
 ```bash
-# Make sure the API is running first
+# Make sure both servers are running first
+# Terminal 1: Start Next.js server
+pnpm dev
+
+# Terminal 2: Start Python API server  
 uvicorn api.index:app --reload
 
-# Download cards using command line
+# Then download cards using command line
 uv run python scripts/download_generation.py \
   --generation-name "my_generation" \
   --ids "000000001 FE F,000000002 FE F,000000003 FE F" \
@@ -79,14 +83,18 @@ uv run python scripts/download_generation.py --interactive
 
 ### Requirements
 
-- API server must be running: `uvicorn api.index:app --reload`
+- Both servers must be running:
+  1. Next.js server: `pnpm dev` (port 3000)
+  2. Python API server: `uvicorn api.index:app --reload` (port 8000)
 - Dependencies are managed via `uv` (automatically installed)
 
 ### Troubleshooting
 
-If you get "API not reachable" error:
-1. Make sure the API server is running: `uvicorn api.index:app --reload`
-2. Check that the API_BASE_URL in the script matches your server (default: `http://localhost:8000/api`)
+If you get "API not reachable" or "500 error":
+1. Make sure BOTH servers are running:
+   - Next.js server: `pnpm dev` (port 3000)
+   - Python API server: `uvicorn api.index:app --reload` (port 8000)
+2. Check that the API_BASE_URL in the script matches your Next.js server (default: `http://localhost:3000/api`)
 
 If cards are not found:
 1. Verify the card IDs exist in the database
