@@ -32,8 +32,8 @@ MM_TO_INCH = 1 / 25.4
 
 # Physical dimensions for print at 300 DPI
 CARD_CONTENT_WIDTH_MM = 130
-CARD_CONTENT_HEIGHT_MM = 260 # Maintain 1:2 aspect ratio
-PASSEPARTOUT_MM = 5
+CARD_CONTENT_HEIGHT_MM = CARD_CONTENT_WIDTH_MM * 2
+PASSEPARTOUT_MM = 7
 
 def get_card_dimensions(output_format: str = "PNG") -> tuple:
     """
