@@ -236,12 +236,12 @@ async def generate_card_image_bytes(
     current_y = pad_t
 
     # Fonts (Final fine-tuning of base sizes)
-    f_title = get_font(int(40 * base_font_scale), "Bold", request_id=request_id)
+    f_title = get_font(int(42 * base_font_scale), "Bold", request_id=request_id)
     f_phonetic = get_font(int(30 * base_font_scale), "Light", "Italic", request_id=request_id)
     f_article = get_font(int(30 * base_font_scale), "Light", request_id=request_id)
     f_desc = get_font(int(27 * base_font_scale), "Light", request_id=request_id)
     f_id = get_font(int(38 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
-    f_brand = get_font(int(40 * base_font_scale), "Semibold", request_id=request_id)  # User updated
+    f_brand = get_font(int(40 * base_font_scale), "Bold", request_id=request_id)  # User updated
     f_metrics_val = get_font(int(26 * base_font_scale), "Light", font_family="Mono", request_id=request_id)
 
     # Color Name (from AI or default)
