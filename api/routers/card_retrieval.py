@@ -129,10 +129,14 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             card_name=final_card_name,
                             front_horizontal_image_url=card_data.get("front_horizontal_image_url"),
                             front_vertical_image_url=card_data.get("front_vertical_image_url"),
+                            front_horizontal_tiff_url=card_data.get("front_horizontal_tiff_url"),
+                            front_vertical_tiff_url=card_data.get("front_vertical_tiff_url"),
                             note_text=card_data.get("note_text"),
                             has_note=card_data.get("has_note"),
                             back_horizontal_image_url=card_data.get("back_horizontal_image_url"),
                             back_vertical_image_url=card_data.get("back_vertical_image_url"),
+                            back_horizontal_tiff_url=card_data.get("back_horizontal_tiff_url"),
+                            back_vertical_tiff_url=card_data.get("back_vertical_tiff_url"),
                             ai_name=metadata.get("ai_info", {}).get("colorName"),
                             ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
                             ai_article=metadata.get("ai_info", {}).get("article"),
@@ -150,7 +154,7 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
             info(f"Using fallback extended_id query for {len(fallback_extended_ids)} cards")
             fallback_response = (
                 supabase_client.table("card_generations")
-                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
+                .select("id, extended_id, hex_color, status, metadata, front_horizontal_image_url, front_vertical_image_url, front_horizontal_tiff_url, front_vertical_tiff_url, note_text, has_note, back_horizontal_image_url, back_vertical_image_url, back_horizontal_tiff_url, back_vertical_tiff_url, photo_location_country, photo_location_coordinates, photo_date, created_at, updated_at")
                 .in_("extended_id", fallback_extended_ids)
                 .execute()
             )
@@ -172,10 +176,14 @@ async def batch_retrieve_cards(request: BatchRetrieveRequest):
                             card_name=final_card_name,
                             front_horizontal_image_url=card_data.get("front_horizontal_image_url"),
                             front_vertical_image_url=card_data.get("front_vertical_image_url"),
+                            front_horizontal_tiff_url=card_data.get("front_horizontal_tiff_url"),
+                            front_vertical_tiff_url=card_data.get("front_vertical_tiff_url"),
                             note_text=card_data.get("note_text"),
                             has_note=card_data.get("has_note"),
                             back_horizontal_image_url=card_data.get("back_horizontal_image_url"),
                             back_vertical_image_url=card_data.get("back_vertical_image_url"),
+                            back_horizontal_tiff_url=card_data.get("back_horizontal_tiff_url"),
+                            back_vertical_tiff_url=card_data.get("back_vertical_tiff_url"),
                             ai_name=metadata.get("ai_info", {}).get("colorName"),
                             ai_phonetic=metadata.get("ai_info", {}).get("phoneticName"),
                             ai_article=metadata.get("ai_info", {}).get("article"),

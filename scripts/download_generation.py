@@ -24,7 +24,7 @@ import re
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "test_generation"
+GENERATION_NAME = "sfkuba"
 CARD_IDS = [
     "000000666 FE F",
     "000000667 FE F", 
@@ -205,11 +205,11 @@ def download_generation(
         
         # Determine which TIFF URLs to use based on orientation
         if full_orientation == "vertical":
-            front_tiff_url = card_data.get("frontVerticalTiffUrl")
-            back_tiff_url = card_data.get("backVerticalTiffUrl")
+            front_tiff_url = card_data.get("vTiff")
+            back_tiff_url = card_data.get("bvTiff")
         else:  # horizontal
-            front_tiff_url = card_data.get("frontHorizontalTiffUrl")
-            back_tiff_url = card_data.get("backHorizontalTiffUrl")
+            front_tiff_url = card_data.get("hTiff")
+            back_tiff_url = card_data.get("bhTiff")
         
         # Download front card
         if front_tiff_url:

@@ -12,6 +12,10 @@ interface CardData {
   h: string | null;
   bv: string | null;
   bh: string | null;
+  vTiff: string | null;
+  hTiff: string | null;
+  bvTiff: string | null;
+  bhTiff: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -51,6 +55,10 @@ export async function POST(request: NextRequest) {
           h: card.front_horizontal_image_url || null,
           bv: card.back_vertical_image_url || null,
           bh: card.back_horizontal_image_url || null,
+          vTiff: card.front_vertical_tiff_url || null,
+          hTiff: card.front_horizontal_tiff_url || null,
+          bvTiff: card.back_vertical_tiff_url || null,
+          bhTiff: card.back_horizontal_tiff_url || null,
         };
       } else {
         transformedCards[extendedId] = null;
