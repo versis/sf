@@ -180,36 +180,17 @@ class A4Layout:
         else:
             rotated_card = card_image  # Already landscape or square
             debug(f"Using card as-is (already landscape): {card_image.size}", request_id=self.request_id)
-        
-        # STEP 2: Scale rotated card to EXACT target content size
-        # This ensures 2:1 ratio with no white space around content
-        scaled_card = rotated_card.resize((self.target_content_width_px, self.target_content_height_px), Image.Resampling.LANCZOS)
-        
-        scale_factor = self.target_content_width_px / rotated_card.size[0]  # Calculate for debug
-        debug(f"Scaled to EXACT content size: {rotated_card.size} → {scaled_card.size} (scale={scale_factor:.3f})", request_id=self.request_id)
-        
-        # STEP 3: Create final card with passepartout (if specified)
-        # Create canvas for final card size (content + passepartout)
-        final_card = Image.new('RGB', (self.card_width, self.card_height), 'white')
-        
-        if self.passepartout_mm > 0:
-            # Place content with exact passepartout borders
-            paste_x = self.passepartout_px
-            paste_y = self.passepartout_px
-            debug(f"Placing content with {self.passepartout_mm}mm ({self.passepartout_px}px) passepartout borders", request_id=self.request_id)
-        else:
-            # No passepartout - content fills entire final card (same size)
-            paste_x = 0
-            paste_y = 0
-            debug(f"No passepartout - content fills entire card", request_id=self.request_id)
+
+        # The incoming card image already includes the passepartout.
+        # We just need to resize it to the final target size for the layout.
+        final_card = rotated_card.resize((self.card_width, self.card_height), Image.Resampling.LANCZOS)
+        debug(f"Resized final card (with baked-in passepartout) from {rotated_card.size} to layout size {final_card.size}", request_id=self.request_id)
         
         # Convert RGBA to RGB if needed (for TIFF compatibility)
-        if scaled_card.mode == 'RGBA':
-            rgb_image = Image.new('RGB', scaled_card.size, 'white')
-            rgb_image.paste(scaled_card, mask=scaled_card.split()[-1])
-            scaled_card = rgb_image
-        
-        final_card.paste(scaled_card, (paste_x, paste_y))
+        if final_card.mode == 'RGBA':
+            rgb_image = Image.new('RGB', final_card.size, 'white')
+            rgb_image.paste(final_card, mask=final_card.split()[-1])
+            final_card = rgb_image
         
         # STEP 5: Place final card on A4 canvas
         x, y = self.get_card_position(grid_x, grid_y)
@@ -222,8 +203,6 @@ class A4Layout:
         content_height_cm = self.target_content_height_mm / 10
         
         debug(f"Placed card at [{grid_x},{grid_y}]: final size {final_width_cm:.1f}×{final_height_cm:.1f}cm, content {content_width_cm:.1f}×{content_height_cm:.1f}cm", request_id=self.request_id)
-    
-    # Passepartout logic moved to place_card() method for correct calculation approach
     
     def draw_cutting_guides(self) -> None:
         """Draw guillotine cutting guides for 1×3 landscape layout with kerf considerations"""

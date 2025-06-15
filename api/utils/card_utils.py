@@ -28,6 +28,12 @@ CARD_HEIGHT_TIFF = 1800  # Base height for vertical orientation (TIFF)
 
 # --- Print Quality Constants ---
 PRINT_DPI = 300  # High resolution for professional printing
+MM_TO_INCH = 1 / 25.4
+
+# Physical dimensions for print at 300 DPI
+CARD_CONTENT_WIDTH_MM = 130
+CARD_CONTENT_HEIGHT_MM = 260 # Maintain 1:2 aspect ratio
+PASSEPARTOUT_MM = 5
 
 def get_card_dimensions(output_format: str = "PNG") -> tuple:
     """
@@ -40,7 +46,10 @@ def get_card_dimensions(output_format: str = "PNG") -> tuple:
         Tuple of (width, height) for the specified format
     """
     if output_format.upper() == "TIFF":
-        return CARD_WIDTH_TIFF, CARD_HEIGHT_TIFF
+        # For TIFF, we calculate dimensions based on physical size and DPI for the content area
+        width_px = int(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)
+        height_px = int(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)
+        return width_px, height_px
     else:
         return CARD_WIDTH_PNG, CARD_HEIGHT_PNG
 
@@ -405,14 +414,38 @@ async def generate_card_image_bytes(
     
     debug("Text rendering complete", request_id=request_id)
 
-    # Rounded corners and save
+    # --- Rounded Corners & Passepartout ---
+
+    # 1. Apply rounded corners to the content canvas.
+    # This makes the content have rounded corners against the passepartout (for TIFFs)
+    # or a transparent background (for PNGs).
     radius = 40
+    scaled_radius = int(radius * (card_w / CARD_WIDTH_PNG))
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=scaled_radius*2, fill=255)
     mask = mask.resize((card_w, card_h), Image.Resampling.LANCZOS)
     canvas.putalpha(mask)
-    debug("Applied rounded corners", request_id=request_id)
+    debug("Applied rounded corners to content canvas", request_id=request_id)
 
+    # 2. If TIFF, create passepartout and paste the rounded content onto it.
+    if output_format.upper() == 'TIFF':
+        passepartout_px = int(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)
+        
+        content_canvas = canvas # This now has rounded corners
+        
+        # Create final canvas with a white, opaque background
+        final_width = content_canvas.width + (2 * passepartout_px)
+        final_height = content_canvas.height + (2 * passepartout_px)
+        final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
+        
+        # Paste the rounded content onto the passepartout.
+        # The alpha channel of content_canvas acts as a mask.
+        paste_pos = (passepartout_px, passepartout_px)
+        final_canvas.paste(content_canvas, paste_pos, content_canvas)
+        
+        canvas = final_canvas # The final image is now the content on the passepartout
+        debug(f"Added {PASSEPARTOUT_MM}mm passepartout for TIFF. Final canvas size: {canvas.size}", request_id=request_id)
+    
     # Save card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
     log(f"Card image generated ({orientation}, {output_format}). Size: {len(image_bytes)/1024:.2f}KB", request_id=request_id)
@@ -795,13 +828,28 @@ async def generate_back_card_image_bytes(
     log(f"Back card note processing complete. Request ID: {request_id if request_id else 'N/A'}", request_id=request_id)
     # --- End of Note and Rule Drawing Logic ---
 
-    # Rounded corners and save
+    # --- Rounded Corners & Passepartout for Back Card ---
+
+    # 1. Apply rounded corners to the content canvas.
     radius = 40
+    scaled_radius = int(radius * (card_w / CARD_WIDTH_PNG))
     mask = Image.new('L', (card_w * 2, card_h * 2), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=radius*2, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle([(0,0), (card_w*2-1, card_h*2-1)], radius=scaled_radius*2, fill=255)
     mask = mask.resize((card_w, card_h), Image.Resampling.LANCZOS)
     canvas.putalpha(mask)
-    debug("Applied rounded corners to back card", request_id=request_id)
+    debug("Applied rounded corners to back content canvas", request_id=request_id)
+
+    # 2. If TIFF, create passepartout and paste the rounded content onto it.
+    if output_format.upper() == 'TIFF':
+        passepartout_px = int(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)
+        content_canvas = canvas
+        final_width = content_canvas.width + (2 * passepartout_px)
+        final_height = content_canvas.height + (2 * passepartout_px)
+        final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
+        paste_pos = (passepartout_px, passepartout_px)
+        final_canvas.paste(content_canvas, paste_pos, content_canvas)
+        canvas = final_canvas
+        debug(f"Added {PASSEPARTOUT_MM}mm passepartout to back card for TIFF. New canvas size: {canvas.size}", request_id=request_id)
 
     # Save back card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
