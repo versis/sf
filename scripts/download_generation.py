@@ -24,16 +24,16 @@ import re
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba"
+GENERATION_NAME = "sfkuba2"
 CARD_IDS = [
-    "000000666 FE F",
-    "000000667 FE F", 
-    "000000668 FE F"
+    "000000682 FE F",
+    # "000000667 FE F",
+    # "000000668 FE F"
 ]
 
 # Download Settings
 ORIENTATION = "v"  # "v" for vertical, "h" for horizontal
-OUTPUT_BASE_DIR = "data/generations_single"
+OUTPUT_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "generations_single")
 
 # =============================================================================
 # CONFIGURATION EXAMPLES:
@@ -51,21 +51,17 @@ OUTPUT_BASE_DIR = "data/generations_single"
 
 def convert_extended_id_to_simple_id(extended_id: str) -> str:
     """
-    Convert extended ID format to simple ID format.
+    Convert extended ID format to simple ID format, preserving the suffix.
     
     Args:
         extended_id: Extended ID like "000000057 FE F"
         
     Returns:
-        Simple ID like "000000057" (no spaces or underscores)
+        Simple ID like "000000057FEF" (no spaces or underscores)
     """
-    # Remove spaces and underscores, take the first 9 digits
-    cleaned = re.sub(r'[^0-9]', '', extended_id)
-    if len(cleaned) >= 9:
-        return cleaned[:9]
-    else:
-        # If somehow we don't have enough digits, pad with zeros
-        return cleaned.zfill(9)
+    # Remove spaces and underscores but keep all characters
+    cleaned = re.sub(r'[^A-Za-z0-9]', '', extended_id)
+    return cleaned
 
 def check_api_status() -> bool:
     """Check if the API is running."""
