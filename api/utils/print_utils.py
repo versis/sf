@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageCms
 from typing import List, Dict, Tuple, Optional, Any
 import io
 from .logger import log, debug
-from .card_utils import CARD_WIDTH_PNG, CARD_HEIGHT_PNG, CARD_WIDTH_TIFF, CARD_HEIGHT_TIFF, PRINT_DPI
+from .card_utils import CARD_WIDTH_PNG, CARD_HEIGHT_PNG, CARD_CONTENT_WIDTH_PX, CARD_CONTENT_HEIGHT_PX, PRINT_DPI
 
 # --- A4 Print Layout Constants (300 DPI) ---
 A4_WIDTH_MM = 210

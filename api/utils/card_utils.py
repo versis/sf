@@ -22,18 +22,42 @@ LOGO_PATH = "public/sf-icon.png"
 CARD_WIDTH_PNG = 700   # Base width for vertical orientation (PNG)
 CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
 
-# TIFF dimensions (print quality) 
-CARD_WIDTH_TIFF = 900   # Base width for vertical orientation (TIFF)
-CARD_HEIGHT_TIFF = 1800  # Base height for vertical orientation (TIFF)
-
 # --- Print Quality Constants ---
 PRINT_DPI = 300  # High resolution for professional printing
-MM_TO_INCH = 1 / 25.4
+MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 
-# Physical dimensions for print at 300 DPI
-CARD_CONTENT_WIDTH_MM = 130
-CARD_CONTENT_HEIGHT_MM = CARD_CONTENT_WIDTH_MM * 2
-PASSEPARTOUT_MM = 7
+# Physical dimensions for print (in millimeters)
+CARD_CONTENT_WIDTH_MM = 130.0
+CARD_CONTENT_HEIGHT_MM = 260.0  # Exact 1:2 ratio
+PASSEPARTOUT_MM = 7.0
+
+# Pre-calculated TIFF dimensions (using proper rounding for exact 300 DPI)
+# Content area dimensions
+CARD_CONTENT_WIDTH_PX = round(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)  # 1535 px
+CARD_CONTENT_HEIGHT_PX = round(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)  # 3071 px
+
+# Passepartout dimensions
+PASSEPARTOUT_PX = round(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)  # 83 px
+
+# Final TIFF dimensions (content + passepartout)
+CARD_TIFF_WIDTH = CARD_CONTENT_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px
+CARD_TIFF_HEIGHT = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 3237 px
+
+# Verification of actual physical dimensions (for debugging)
+ACTUAL_CONTENT_WIDTH_MM = CARD_CONTENT_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~130mm
+ACTUAL_CONTENT_HEIGHT_MM = CARD_CONTENT_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~260mm
+ACTUAL_PASSEPARTOUT_MM = PASSEPARTOUT_PX / PRINT_DPI * 25.4  # Should be ~7mm
+
+def log_print_dimensions(request_id: Optional[str] = None):
+    """
+    Log the actual print dimensions for verification.
+    Useful for debugging print quality and ensuring exact measurements.
+    """
+    debug(f"Print Dimensions Verification:", request_id=request_id)
+    debug(f"  Content: {CARD_CONTENT_WIDTH_PX}x{CARD_CONTENT_HEIGHT_PX}px = {ACTUAL_CONTENT_WIDTH_MM:.2f}x{ACTUAL_CONTENT_HEIGHT_MM:.2f}mm", request_id=request_id)
+    debug(f"  Passepartout: {PASSEPARTOUT_PX}px = {ACTUAL_PASSEPARTOUT_MM:.2f}mm", request_id=request_id)
+    debug(f"  Final TIFF: {CARD_TIFF_WIDTH}x{CARD_TIFF_HEIGHT}px = {CARD_TIFF_WIDTH/PRINT_DPI*25.4:.2f}x{CARD_TIFF_HEIGHT/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
+    debug(f"  Resolution: {PRINT_DPI} DPI", request_id=request_id)
 
 def get_card_dimensions(output_format: str = "PNG") -> tuple:
     """
@@ -43,13 +67,10 @@ def get_card_dimensions(output_format: str = "PNG") -> tuple:
         output_format: "PNG" for web quality, "TIFF" for print quality
         
     Returns:
-        Tuple of (width, height) for the specified format
+        Tuple of (width, height) for the specified format (content area only, without passepartout)
     """
     if output_format.upper() == "TIFF":
-        # For TIFF, we calculate dimensions based on physical size and DPI for the content area
-        width_px = int(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)
-        height_px = int(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)
-        return width_px, height_px
+        return CARD_CONTENT_WIDTH_PX, CARD_CONTENT_HEIGHT_PX
     else:
         return CARD_WIDTH_PNG, CARD_HEIGHT_PNG
 
@@ -86,7 +107,10 @@ def save_card_image(canvas: Image.Image, output_format: str = "PNG", request_id:
             dpi=(PRINT_DPI, PRINT_DPI),  # Embed 300 DPI metadata
             icc_profile=ImageCms.ImageCmsProfile(srgb_profile).tobytes() # Embed sRGB profile for color consistency
         )
-        debug(f"Saved as TIFF with LZW compression, sRGB profile, at {PRINT_DPI} DPI", request_id=request_id)
+        # Log detailed TIFF information
+        width_mm = canvas.width / PRINT_DPI * 25.4
+        height_mm = canvas.height / PRINT_DPI * 25.4
+        debug(f"Saved as TIFF: {canvas.width}x{canvas.height}px ({width_mm:.2f}x{height_mm:.2f}mm) at {PRINT_DPI} DPI with LZW compression and sRGB profile", request_id=request_id)
     else:
         # Default PNG (web quality): Preserve RGBA with transparency
         canvas.save(
@@ -178,7 +202,11 @@ async def generate_card_image_bytes(
     photo_location: Optional[str] = None,
     output_format: str = "PNG"
 ) -> bytes:
-    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}", request_id=request_id)
+    log(f"Starting card image generation. Orientation: {orientation}, Color: {hex_color_input}, Photo Date: {photo_date}, Photo Location: {photo_location}, Format: {output_format}", request_id=request_id)
+    
+    # Log print dimensions for TIFF format
+    if output_format.upper() == "TIFF":
+        log_print_dimensions(request_id)
     
     rgb_color = hex_to_rgb(hex_color_input, request_id)
     if rgb_color is None:
@@ -429,22 +457,20 @@ async def generate_card_image_bytes(
 
     # 2. If TIFF, create passepartout and paste the rounded content onto it.
     if output_format.upper() == 'TIFF':
-        passepartout_px = int(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)
-        
         content_canvas = canvas # This now has rounded corners
         
-        # Create final canvas with a white, opaque background
-        final_width = content_canvas.width + (2 * passepartout_px)
-        final_height = content_canvas.height + (2 * passepartout_px)
+        # Create final canvas with exact passepartout dimensions (pre-calculated for precision)
+        final_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
+        final_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
         final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
         
         # Paste the rounded content onto the passepartout.
         # The alpha channel of content_canvas acts as a mask.
-        paste_pos = (passepartout_px, passepartout_px)
+        paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
         final_canvas.paste(content_canvas, paste_pos, content_canvas)
         
         canvas = final_canvas # The final image is now the content on the passepartout
-        debug(f"Added {PASSEPARTOUT_MM}mm passepartout for TIFF. Final canvas size: {canvas.size}", request_id=request_id)
+        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout for TIFF. Final canvas size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
     
     # Save card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
@@ -462,7 +488,11 @@ async def generate_back_card_image_bytes(
     request_id: Optional[str] = None,
     output_format: str = "PNG"
 ) -> bytes:
-    log(f"Starting back card image generation. Orientation: {orientation}", request_id=request_id)
+    log(f"Starting back card image generation. Orientation: {orientation}, Format: {output_format}", request_id=request_id)
+    
+    # Log print dimensions for TIFF format
+    if output_format.upper() == "TIFF":
+        log_print_dimensions(request_id)
 
     # Define the fixed background color for the card back
     FIXED_BACK_CARD_COLOR_HEX = "#e9e9eb"  # "#E9EFF1" # Blue-Grey Card 6
@@ -841,15 +871,15 @@ async def generate_back_card_image_bytes(
 
     # 2. If TIFF, create passepartout and paste the rounded content onto it.
     if output_format.upper() == 'TIFF':
-        passepartout_px = int(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)
         content_canvas = canvas
-        final_width = content_canvas.width + (2 * passepartout_px)
-        final_height = content_canvas.height + (2 * passepartout_px)
+        # Use pre-calculated passepartout dimensions for exact precision
+        final_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
+        final_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
         final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
-        paste_pos = (passepartout_px, passepartout_px)
+        paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
         final_canvas.paste(content_canvas, paste_pos, content_canvas)
         canvas = final_canvas
-        debug(f"Added {PASSEPARTOUT_MM}mm passepartout to back card for TIFF. New canvas size: {canvas.size}", request_id=request_id)
+        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout to back card for TIFF. Final size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
 
     # Save back card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
