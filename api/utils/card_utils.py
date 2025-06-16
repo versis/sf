@@ -29,24 +29,35 @@ MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 # Physical dimensions for print (in millimeters)
 CARD_CONTENT_WIDTH_MM = 130.0
 CARD_CONTENT_HEIGHT_MM = 260.0  # Exact 1:2 ratio
-PASSEPARTOUT_MM = 7.0
+PASSEPARTOUT_MM = 7.0           # White border (part of final card)
+BLEED_MM = 3.0                  # Extra margin for cutting safety (Polish: "spad")
 
 # Pre-calculated TIFF dimensions (using proper rounding for exact 300 DPI)
 # Content area dimensions
 CARD_CONTENT_WIDTH_PX = round(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)  # 1535 px
 CARD_CONTENT_HEIGHT_PX = round(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)  # 3071 px
 
-# Passepartout dimensions
-PASSEPARTOUT_PX = round(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)  # 83 px
+# Passepartout dimensions (white border only)
+PASSEPARTOUT_PX = round(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)  # 83 px (7mm)
 
-# Final TIFF dimensions (content + passepartout)
-CARD_TIFF_WIDTH = CARD_CONTENT_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px
-CARD_TIFF_HEIGHT = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 3237 px
+# Bleed dimensions (cutting safety margin)
+BLEED_PX = round(BLEED_MM * MM_TO_INCH * PRINT_DPI)  # 35 px (3mm)
+
+# Final card dimensions (content + passepartout - this is the target final card size)
+CARD_FINAL_WIDTH_PX = CARD_CONTENT_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px (144mm)
+CARD_FINAL_HEIGHT_PX = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 3237 px (274mm)
+
+# TIFF dimensions with bleed (for printing with cutting safety)
+CARD_TIFF_WIDTH = CARD_FINAL_WIDTH_PX + (2 * BLEED_PX)   # 1771 px (150mm)
+CARD_TIFF_HEIGHT = CARD_FINAL_HEIGHT_PX + (2 * BLEED_PX)  # 3307 px (280mm)
 
 # Verification of actual physical dimensions (for debugging)
 ACTUAL_CONTENT_WIDTH_MM = CARD_CONTENT_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~130mm
 ACTUAL_CONTENT_HEIGHT_MM = CARD_CONTENT_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~260mm
 ACTUAL_PASSEPARTOUT_MM = PASSEPARTOUT_PX / PRINT_DPI * 25.4  # Should be ~7mm
+ACTUAL_BLEED_MM = BLEED_PX / PRINT_DPI * 25.4  # Should be ~3mm
+ACTUAL_FINAL_CARD_WIDTH_MM = CARD_FINAL_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~144mm
+ACTUAL_FINAL_CARD_HEIGHT_MM = CARD_FINAL_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~274mm
 
 def log_print_dimensions(request_id: Optional[str] = None):
     """
@@ -56,7 +67,9 @@ def log_print_dimensions(request_id: Optional[str] = None):
     debug(f"Print Dimensions Verification:", request_id=request_id)
     debug(f"  Content: {CARD_CONTENT_WIDTH_PX}x{CARD_CONTENT_HEIGHT_PX}px = {ACTUAL_CONTENT_WIDTH_MM:.2f}x{ACTUAL_CONTENT_HEIGHT_MM:.2f}mm", request_id=request_id)
     debug(f"  Passepartout: {PASSEPARTOUT_PX}px = {ACTUAL_PASSEPARTOUT_MM:.2f}mm", request_id=request_id)
-    debug(f"  Final TIFF: {CARD_TIFF_WIDTH}x{CARD_TIFF_HEIGHT}px = {CARD_TIFF_WIDTH/PRINT_DPI*25.4:.2f}x{CARD_TIFF_HEIGHT/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
+    debug(f"  Bleed: {BLEED_PX}px = {ACTUAL_BLEED_MM:.2f}mm", request_id=request_id)
+    debug(f"  Final card: {CARD_FINAL_WIDTH_PX}x{CARD_FINAL_HEIGHT_PX}px = {ACTUAL_FINAL_CARD_WIDTH_MM:.2f}x{ACTUAL_FINAL_CARD_HEIGHT_MM:.2f}mm", request_id=request_id)
+    debug(f"  TIFF with bleed: {CARD_TIFF_WIDTH}x{CARD_TIFF_HEIGHT}px = {CARD_TIFF_WIDTH/PRINT_DPI*25.4:.2f}x{CARD_TIFF_HEIGHT/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
     debug(f"  Resolution: {PRINT_DPI} DPI", request_id=request_id)
 
 def get_card_dimensions(output_format: str = "PNG") -> tuple:
@@ -459,18 +472,26 @@ async def generate_card_image_bytes(
     if output_format.upper() == 'TIFF':
         content_canvas = canvas # This now has rounded corners
         
-        # Create final canvas with exact passepartout dimensions (pre-calculated for precision)
-        final_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
-        final_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
+        # Step 1: Create card with passepartout (final card size)
+        card_with_passepartout_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
+        card_with_passepartout_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
+        card_with_passepartout = Image.new('RGBA', (card_with_passepartout_width, card_with_passepartout_height), (255, 255, 255, 255))
+        
+        # Paste content onto passepartout
+        passepartout_paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
+        card_with_passepartout.paste(content_canvas, passepartout_paste_pos, content_canvas)
+        
+        # Step 2: Create final TIFF with bleed area
+        final_width = card_with_passepartout.width + (2 * BLEED_PX)
+        final_height = card_with_passepartout.height + (2 * BLEED_PX)
         final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
         
-        # Paste the rounded content onto the passepartout.
-        # The alpha channel of content_canvas acts as a mask.
-        paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
-        final_canvas.paste(content_canvas, paste_pos, content_canvas)
+        # Paste card with passepartout onto bleed area
+        bleed_paste_pos = (BLEED_PX, BLEED_PX)
+        final_canvas.paste(card_with_passepartout, bleed_paste_pos, card_with_passepartout)
         
-        canvas = final_canvas # The final image is now the content on the passepartout
-        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout for TIFF. Final canvas size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
+        canvas = final_canvas # The final image is now content + passepartout + bleed
+        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout + {ACTUAL_BLEED_MM:.2f}mm bleed for TIFF. Final canvas size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
     
     # Save card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
@@ -872,14 +893,27 @@ async def generate_back_card_image_bytes(
     # 2. If TIFF, create passepartout and paste the rounded content onto it.
     if output_format.upper() == 'TIFF':
         content_canvas = canvas
-        # Use pre-calculated passepartout dimensions for exact precision
-        final_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
-        final_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
+        
+        # Step 1: Create card with passepartout (final card size)
+        card_with_passepartout_width = content_canvas.width + (2 * PASSEPARTOUT_PX)
+        card_with_passepartout_height = content_canvas.height + (2 * PASSEPARTOUT_PX)
+        card_with_passepartout = Image.new('RGBA', (card_with_passepartout_width, card_with_passepartout_height), (255, 255, 255, 255))
+        
+        # Paste content onto passepartout
+        passepartout_paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
+        card_with_passepartout.paste(content_canvas, passepartout_paste_pos, content_canvas)
+        
+        # Step 2: Create final TIFF with bleed area
+        final_width = card_with_passepartout.width + (2 * BLEED_PX)
+        final_height = card_with_passepartout.height + (2 * BLEED_PX)
         final_canvas = Image.new('RGBA', (final_width, final_height), (255, 255, 255, 255))
-        paste_pos = (PASSEPARTOUT_PX, PASSEPARTOUT_PX)
-        final_canvas.paste(content_canvas, paste_pos, content_canvas)
+        
+        # Paste card with passepartout onto bleed area
+        bleed_paste_pos = (BLEED_PX, BLEED_PX)
+        final_canvas.paste(card_with_passepartout, bleed_paste_pos, card_with_passepartout)
+        
         canvas = final_canvas
-        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout to back card for TIFF. Final size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
+        debug(f"Added {ACTUAL_PASSEPARTOUT_MM:.2f}mm passepartout + {ACTUAL_BLEED_MM:.2f}mm bleed to back card for TIFF. Final size: {canvas.size} ({canvas.width/PRINT_DPI*25.4:.1f}x{canvas.height/PRINT_DPI*25.4:.1f}mm)", request_id=request_id)
 
     # Save back card image in requested format (PNG for web, TIFF for print)
     image_bytes = save_card_image(canvas, output_format, request_id)
