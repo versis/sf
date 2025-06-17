@@ -30,7 +30,7 @@ MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 # Base physical dimensions in millimeters
 CARD_LONG_SIDE_MM = 130.0   # The longer side of the card (130mm)
 CARD_SHORT_SIDE_MM = 65.0   # The shorter side of the card (65mm)
-PASSEPARTOUT_MM = 7.0       # White border (part of final card)
+PASSEPARTOUT_MM = 5.0       # White border (part of final card)
 BLEED_MM = 0.0              # Extra margin for cutting safety
 
 # Calculate pixel dimensions at 300 DPI
