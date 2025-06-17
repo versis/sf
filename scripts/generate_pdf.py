@@ -1,15 +1,16 @@
 """
 PDF Postcard Generator
 Generate professional PDF with front and back pages for cards in CMYK color space.
+Each PDF page is sized exactly to match the TIFF card dimensions (no A4 backgrounds).
 
 Instructions:
 1. Edit the configuration variables below
 2. Run: python generate_pdf.py
-3. Generated PDF will be saved with CMYK color space for professional printing
+3. Generated PDF will have pages sized exactly to card dimensions for professional printing
 
 Usage Options:
 1. Edit configuration variables below and run: python generate_pdf.py
-2. Use command line: python generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F" --orientation v
+2. Use command line: python generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F" --orientation h
 3. Interactive mode: python generate_pdf.py --interactive
 """
 
@@ -26,20 +27,11 @@ import io
 # PDF generation imports
 try:
     from reportlab.pdfgen import canvas as pdf_canvas
-    from reportlab.lib.pagesizes import A4, letter, legal
-    from reportlab.lib.units import mm, inch
-    from reportlab.lib.colors import Color
     from reportlab.lib.utils import ImageReader
     REPORTLAB_AVAILABLE = True
 except ImportError:
     print("⚠️  ReportLab not installed. Install with: pip install reportlab")
     REPORTLAB_AVAILABLE = False
-    # Define fallback values
-    A4 = (595.276, 841.890)  # A4 size in points
-    letter = (612, 792)      # US Letter size in points  
-    legal = (612, 1008)      # US Legal size in points
-    mm = 2.834645669          # Points per millimeter
-    inch = 72.0              # Points per inch
 
 # =============================================================================
 # CONFIGURATION - EDIT THESE VARIABLES (used when no CLI args provided)
@@ -49,7 +41,7 @@ except ImportError:
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba_pdf01"
+GENERATION_NAME = "sfkuba_pdf01h"
 CARD_IDS = [
     "000000704 FE F",
     "000000705 FE F",
@@ -57,8 +49,7 @@ CARD_IDS = [
 ]
 
 # PDF Settings
-ORIENTATION = "v"  # "v" for vertical, "h" for horizontal cards
-PAGE_SIZE = A4  # A4, letter, legal, or custom (width, height) in points
+ORIENTATION = "h"  # "v" for vertical, "h" for horizontal cards
 OUTPUT_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "pdf_generations")
 CMYK_CONVERSION = True  # Convert to CMYK color space for professional printing
 CARD_QUALITY = "TIFF"  # "TIFF" for print quality, "PNG" for web quality
@@ -68,10 +59,6 @@ CARD_QUALITY = "TIFF"  # "TIFF" for print quality, "PNG" for web quality
 #
 # Horizontal orientation:
 # ORIENTATION = "h"
-#
-# Different page size:
-# PAGE_SIZE = letter  # US Letter format
-# PAGE_SIZE = (200*mm, 300*mm)  # Custom size in millimeters
 #
 # Web quality (faster generation):
 # CARD_QUALITY = "PNG"
@@ -250,19 +237,18 @@ def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
         print(f"      ⚠️  CMYK conversion failed: {str(e)}, using original")
         return image_bytes
 
-def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size: tuple, 
+def create_pdf_with_cards(card_images: List[tuple], output_path: str, 
                          cmyk_conversion: bool = True) -> bool:
     """
     Create PDF with front and back pages for each card.
     
     IMPORTANT: TIFF files already include the 5mm passepartout and are the final complete cards.
     This function creates PDF pages that are exactly the same size as the TIFF files.
-    No A4 pages, no centering - just direct TIFF→PDF conversion at actual size.
+    No fixed page sizes - each PDF page matches its TIFF dimensions exactly.
     
     Args:
         card_images: List of (extended_id, front_bytes, back_bytes) tuples
         output_path: Path to save the PDF
-        page_size: PDF page size in points (IGNORED - calculated from TIFF size)
         cmyk_conversion: Whether to convert images to CMYK
         
     Returns:
@@ -351,18 +337,17 @@ def generate_pdf_from_cards(
     generation_name: str,
     card_ids: List[str], 
     orientation: str = "v",
-    page_size: tuple = A4,
     cmyk_conversion: bool = True,
     card_quality: str = "TIFF"
 ) -> bool:
     """
     Generate PDF with front and back pages for cards.
+    Each PDF page is sized exactly to match the TIFF card dimensions.
     
     Args:
         generation_name: Name for the PDF file
         card_ids: List of extended card IDs
         orientation: "v" for vertical, "h" for horizontal
-        page_size: PDF page size in points
         cmyk_conversion: Convert to CMYK color space
         card_quality: "TIFF" or "PNG"
         
@@ -377,7 +362,7 @@ def generate_pdf_from_cards(
     print(f"📄 Generating PDF: {generation_name}")
     print(f"   🆔 Cards: {len(card_ids)} cards")
     print(f"   📐 Orientation: {full_orientation}")
-    print(f"   📄 Page size: {page_size[0]:.0f}x{page_size[1]:.0f} points")
+    print(f"   📄 Page sizing: Each page sized to match TIFF dimensions")
     print(f"   🎨 CMYK conversion: {'ON' if cmyk_conversion else 'OFF'}")
     print(f"   🖼️  Quality: {card_quality}")
     print(f"   📚 Expected pages: {len(card_ids) * 2} (front + back for each card)")
@@ -431,7 +416,7 @@ def generate_pdf_from_cards(
     
     # Generate PDF
     print(f"📄 Creating PDF with {len(card_images)} cards...")
-    success = create_pdf_with_cards(card_images, pdf_path, page_size, cmyk_conversion)
+    success = create_pdf_with_cards(card_images, pdf_path, cmyk_conversion)
     
     if success:
         file_size_mb = os.path.getsize(pdf_path) / 1024 / 1024
@@ -451,7 +436,7 @@ def interactive_mode():
     generation_name = input("📦 Enter generation name: ").strip()
     if not generation_name:
         print("❌ Generation name cannot be empty")
-        return None, None, None, None, None, None
+        return None, None, None, None, None
     
     # Get card IDs
     print("🆔 Enter card IDs (one per line, empty line to finish):")
@@ -464,7 +449,7 @@ def interactive_mode():
     
     if not card_ids:
         print("❌ At least one card ID is required")
-        return None, None, None, None, None, None
+        return None, None, None, None, None
     
     # Get orientation
     orientation = input("📐 Enter orientation (v for vertical, h for horizontal) [v]: ").strip()
@@ -473,23 +458,7 @@ def interactive_mode():
     
     if orientation not in ["v", "h"]:
         print(f"❌ Invalid orientation '{orientation}'. Must be 'v' or 'h'")
-        return None, None, None, None, None, None
-    
-    # Get page size
-    print("📄 Page size options:")
-    print("   1. A4 (210x297mm)")
-    print("   2. US Letter (8.5x11in)")
-    print("   3. US Legal (8.5x14in)")
-    page_choice = input("   Enter choice [1]: ").strip()
-    if not page_choice:
-        page_choice = "1"
-    
-    page_size_map = {
-        "1": A4,
-        "2": letter,
-        "3": legal
-    }
-    page_size = page_size_map.get(page_choice, A4)
+        return None, None, None, None, None
     
     # Get CMYK conversion
     cmyk_choice = input("🎨 Convert to CMYK color space for professional printing? (y/n) [y]: ").strip().lower()
@@ -502,26 +471,18 @@ def interactive_mode():
     else:
         card_quality = "TIFF"
     
-    return generation_name, card_ids, orientation, page_size, cmyk_conversion, card_quality
+    return generation_name, card_ids, orientation, cmyk_conversion, card_quality
 
 def print_configuration(generation_name: str, card_ids: List[str], orientation: str, 
-                       page_size: tuple, cmyk_conversion: bool, card_quality: str):
+                       cmyk_conversion: bool, card_quality: str):
     """Print current configuration settings."""
     orientation_display = {"v": "vertical", "h": "horizontal"}.get(orientation, orientation)
-    
-    # Determine page size name
-    page_size_names = {
-        A4: "A4 (210x297mm)",
-        letter: "US Letter (8.5x11in)", 
-        legal: "US Legal (8.5x14in)"
-    }
-    page_size_name = page_size_names.get(page_size, f"Custom ({page_size[0]:.0f}x{page_size[1]:.0f} points)")
     
     print("🛠️  Current Configuration:")
     print(f"   📦 Generation name: {generation_name}")
     print(f"   🆔 Card IDs: {', '.join(card_ids)}")
     print(f"   📐 Orientation: {orientation_display} ({orientation})")
-    print(f"   📄 Page size: {page_size_name}")
+    print(f"   📄 Page sizing: Each page sized to match TIFF dimensions")
     print(f"   🎨 CMYK conversion: {'ON' if cmyk_conversion else 'OFF'}")
     print(f"   🖼️  Quality: {card_quality}")
     print(f"   💾 Output directory: {OUTPUT_BASE_DIR}")
@@ -585,7 +546,7 @@ def main():
     
     # Determine parameters source
     if args.interactive:
-        generation_name, card_ids, orientation, page_size, cmyk_conversion, card_quality = interactive_mode()
+        generation_name, card_ids, orientation, cmyk_conversion, card_quality = interactive_mode()
         if not generation_name:
             sys.exit(1)
     elif args.generation_name or args.ids or args.orientation:
@@ -593,7 +554,6 @@ def main():
         generation_name = args.generation_name or GENERATION_NAME
         card_ids = args.ids.split(",") if args.ids else CARD_IDS
         orientation = args.orientation or ORIENTATION
-        page_size = PAGE_SIZE
         cmyk_conversion = CMYK_CONVERSION
         card_quality = CARD_QUALITY
         
@@ -604,13 +564,12 @@ def main():
         generation_name = GENERATION_NAME
         card_ids = CARD_IDS
         orientation = ORIENTATION
-        page_size = PAGE_SIZE
         cmyk_conversion = CMYK_CONVERSION
         card_quality = CARD_QUALITY
         print("🔧 Using configuration from script")
     
     # Show current configuration
-    print_configuration(generation_name, card_ids, orientation, page_size, cmyk_conversion, card_quality)
+    print_configuration(generation_name, card_ids, orientation, cmyk_conversion, card_quality)
     
     # Validate inputs
     if not generation_name or not generation_name.strip():
@@ -643,7 +602,6 @@ def main():
         generation_name=generation_name,
         card_ids=card_ids,
         orientation=orientation,
-        page_size=page_size,
         cmyk_conversion=cmyk_conversion,
         card_quality=card_quality
     )
