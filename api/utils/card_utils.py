@@ -30,7 +30,7 @@ MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 CARD_CONTENT_WIDTH_MM = 130.0
 CARD_CONTENT_HEIGHT_MM = 260.0  # Exact 1:2 ratio
 PASSEPARTOUT_MM = 7.0           # White border (part of final card)
-BLEED_MM = 3.0                  # Extra margin for cutting safety (Polish: "spad")
+BLEED_MM = 0.0                  # Extra margin for cutting safety (Polish: "spad")
 
 # Pre-calculated TIFF dimensions (using proper rounding for exact 300 DPI)
 # Content area dimensions
