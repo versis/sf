@@ -26,38 +26,52 @@ CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
 PRINT_DPI = 300  # High resolution for professional printing
 MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 
-# Physical dimensions for print (in millimeters)
-CARD_CONTENT_WIDTH_MM = 130.0  # Width for 130mm × 65mm card
-CARD_CONTENT_HEIGHT_MM = 65.0   # Height for 130mm × 65mm card
-PASSEPARTOUT_MM = 7.0           # White border (part of final card)
-BLEED_MM = 0.0                  # Extra margin for cutting safety (Polish: "spad")
+# --- Card Physical Dimensions (130mm × 65mm card format) ---
+# Base physical dimensions in millimeters
+CARD_LONG_SIDE_MM = 130.0   # The longer side of the card (130mm)
+CARD_SHORT_SIDE_MM = 65.0   # The shorter side of the card (65mm)
+PASSEPARTOUT_MM = 7.0       # White border (part of final card)
+BLEED_MM = 0.0              # Extra margin for cutting safety
 
-# Pre-calculated TIFF dimensions (using proper rounding for exact 300 DPI)
-# Content area dimensions
-CARD_CONTENT_WIDTH_PX = round(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)  # 1535 px (130mm)
-CARD_CONTENT_HEIGHT_PX = round(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)  # 768 px (65mm)
+# Calculate pixel dimensions at 300 DPI
+CARD_LONG_SIDE_PX = round(CARD_LONG_SIDE_MM * MM_TO_INCH * PRINT_DPI)   # 1535 px (130mm)
+CARD_SHORT_SIDE_PX = round(CARD_SHORT_SIDE_MM * MM_TO_INCH * PRINT_DPI)  # 768 px (65mm)
 
-# Passepartout dimensions (white border only)
+# Clear orientation-specific dimensions (content area only, no passepartout)
+# Horizontal orientation: card is wider than tall (130mm × 65mm)
+CARD_HORIZONTAL_WIDTH_PX = CARD_LONG_SIDE_PX   # 1535 px (130mm wide)
+CARD_HORIZONTAL_HEIGHT_PX = CARD_SHORT_SIDE_PX  # 768 px (65mm tall)
+
+# Vertical orientation: card is taller than wide (65mm × 130mm)  
+CARD_VERTICAL_WIDTH_PX = CARD_SHORT_SIDE_PX   # 768 px (65mm wide)
+CARD_VERTICAL_HEIGHT_PX = CARD_LONG_SIDE_PX   # 1535 px (130mm tall)
+
+# Passepartout and bleed calculations
 PASSEPARTOUT_PX = round(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)  # 83 px (7mm)
+BLEED_PX = round(BLEED_MM * MM_TO_INCH * PRINT_DPI)                # 0 px (0mm)
 
-# Bleed dimensions (cutting safety margin)
-BLEED_PX = round(BLEED_MM * MM_TO_INCH * PRINT_DPI)  # 0 px (0mm)
+# Final card dimensions with passepartout
+CARD_HORIZONTAL_FINAL_WIDTH_PX = CARD_HORIZONTAL_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px (144mm)
+CARD_HORIZONTAL_FINAL_HEIGHT_PX = CARD_HORIZONTAL_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 934 px (79mm)
 
-# Final card dimensions (content + passepartout - this is the target final card size)
-CARD_FINAL_WIDTH_PX = CARD_CONTENT_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px (144mm)
-CARD_FINAL_HEIGHT_PX = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 933 px (79mm)
+CARD_VERTICAL_FINAL_WIDTH_PX = CARD_VERTICAL_WIDTH_PX + (2 * PASSEPARTOUT_PX)    # 934 px (79mm)  
+CARD_VERTICAL_FINAL_HEIGHT_PX = CARD_VERTICAL_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 1701 px (144mm)
 
-# TIFF dimensions with bleed (for printing with cutting safety)
-CARD_TIFF_WIDTH = CARD_FINAL_WIDTH_PX + (2 * BLEED_PX)   # 1701 px (144mm)
-CARD_TIFF_HEIGHT = CARD_FINAL_HEIGHT_PX + (2 * BLEED_PX)  # 933 px (79mm)
+# Legacy constants for compatibility (remove these eventually)
+CARD_CONTENT_WIDTH_MM = CARD_LONG_SIDE_MM   # 130.0mm - DEPRECATED
+CARD_CONTENT_HEIGHT_MM = CARD_SHORT_SIDE_MM  # 65.0mm - DEPRECATED  
+CARD_CONTENT_WIDTH_PX = CARD_LONG_SIDE_PX   # 1535 px - DEPRECATED
+CARD_CONTENT_HEIGHT_PX = CARD_SHORT_SIDE_PX  # 768 px - DEPRECATED
+CARD_FINAL_WIDTH_PX = CARD_HORIZONTAL_FINAL_WIDTH_PX   # DEPRECATED
+CARD_FINAL_HEIGHT_PX = CARD_HORIZONTAL_FINAL_HEIGHT_PX  # DEPRECATED
+CARD_TIFF_WIDTH = CARD_FINAL_WIDTH_PX   # DEPRECATED
+CARD_TIFF_HEIGHT = CARD_FINAL_HEIGHT_PX  # DEPRECATED
 
 # Verification of actual physical dimensions (for debugging)
-ACTUAL_CONTENT_WIDTH_MM = CARD_CONTENT_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~130mm
-ACTUAL_CONTENT_HEIGHT_MM = CARD_CONTENT_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~65mm
-ACTUAL_PASSEPARTOUT_MM = PASSEPARTOUT_PX / PRINT_DPI * 25.4  # Should be ~7mm
-ACTUAL_BLEED_MM = BLEED_PX / PRINT_DPI * 25.4  # Should be ~0mm
-ACTUAL_FINAL_CARD_WIDTH_MM = CARD_FINAL_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~144mm
-ACTUAL_FINAL_CARD_HEIGHT_MM = CARD_FINAL_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~79mm
+ACTUAL_LONG_SIDE_MM = CARD_LONG_SIDE_PX / PRINT_DPI * 25.4    # Should be ~130mm
+ACTUAL_SHORT_SIDE_MM = CARD_SHORT_SIDE_PX / PRINT_DPI * 25.4   # Should be ~65mm
+ACTUAL_PASSEPARTOUT_MM = PASSEPARTOUT_PX / PRINT_DPI * 25.4    # Should be ~7mm
+ACTUAL_BLEED_MM = BLEED_PX / PRINT_DPI * 25.4                 # Should be ~0mm
 
 def log_print_dimensions(request_id: Optional[str] = None):
     """
@@ -65,27 +79,34 @@ def log_print_dimensions(request_id: Optional[str] = None):
     Useful for debugging print quality and ensuring exact measurements.
     """
     debug(f"Print Dimensions Verification:", request_id=request_id)
-    debug(f"  Content: {CARD_CONTENT_WIDTH_PX}x{CARD_CONTENT_HEIGHT_PX}px = {ACTUAL_CONTENT_WIDTH_MM:.2f}x{ACTUAL_CONTENT_HEIGHT_MM:.2f}mm", request_id=request_id)
+    debug(f"  Content: {CARD_CONTENT_WIDTH_PX}x{CARD_CONTENT_HEIGHT_PX}px = {ACTUAL_LONG_SIDE_MM:.2f}x{ACTUAL_SHORT_SIDE_MM:.2f}mm", request_id=request_id)
     debug(f"  Passepartout: {PASSEPARTOUT_PX}px = {ACTUAL_PASSEPARTOUT_MM:.2f}mm", request_id=request_id)
     debug(f"  Bleed: {BLEED_PX}px = {ACTUAL_BLEED_MM:.2f}mm", request_id=request_id)
-    debug(f"  Final card: {CARD_FINAL_WIDTH_PX}x{CARD_FINAL_HEIGHT_PX}px = {ACTUAL_FINAL_CARD_WIDTH_MM:.2f}x{ACTUAL_FINAL_CARD_HEIGHT_MM:.2f}mm", request_id=request_id)
-    debug(f"  TIFF with bleed: {CARD_TIFF_WIDTH}x{CARD_TIFF_HEIGHT}px = {CARD_TIFF_WIDTH/PRINT_DPI*25.4:.2f}x{CARD_TIFF_HEIGHT/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
+    debug(f"  Final card: {CARD_HORIZONTAL_FINAL_WIDTH_PX}x{CARD_HORIZONTAL_FINAL_HEIGHT_PX}px = {CARD_HORIZONTAL_FINAL_WIDTH_PX/PRINT_DPI*25.4:.2f}x{CARD_HORIZONTAL_FINAL_HEIGHT_PX/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
+    debug(f"  TIFF with bleed: {CARD_HORIZONTAL_FINAL_WIDTH_PX}x{CARD_HORIZONTAL_FINAL_HEIGHT_PX}px = {CARD_HORIZONTAL_FINAL_WIDTH_PX/PRINT_DPI*25.4:.2f}x{CARD_HORIZONTAL_FINAL_HEIGHT_PX/PRINT_DPI*25.4:.2f}mm", request_id=request_id)
     debug(f"  Resolution: {PRINT_DPI} DPI", request_id=request_id)
 
-def get_card_dimensions(output_format: str = "PNG") -> tuple:
+def get_card_dimensions(output_format: str = "PNG", orientation: str = "vertical") -> tuple:
     """
-    Get card dimensions based on output format.
+    Get card dimensions based on output format and orientation.
     
     Args:
         output_format: "PNG" for web quality, "TIFF" for print quality
+        orientation: "horizontal" or "vertical"
         
     Returns:
-        Tuple of (width, height) for the specified format (content area only, without passepartout)
+        Tuple of (width, height) for the specified format and orientation (content area only, without passepartout)
     """
     if output_format.upper() == "TIFF":
-        return CARD_CONTENT_WIDTH_PX, CARD_CONTENT_HEIGHT_PX
-    else:
-        return CARD_WIDTH_PNG, CARD_HEIGHT_PNG
+        if orientation == "horizontal":
+            return CARD_HORIZONTAL_WIDTH_PX, CARD_HORIZONTAL_HEIGHT_PX  # 1535×768 (wide)
+        else:  # vertical
+            return CARD_VERTICAL_WIDTH_PX, CARD_VERTICAL_HEIGHT_PX      # 768×1535 (tall)
+    else:  # PNG
+        if orientation == "horizontal":
+            return CARD_HEIGHT_PNG, CARD_WIDTH_PNG  # Swap PNG dimensions for horizontal
+        else:  # vertical
+            return CARD_WIDTH_PNG, CARD_HEIGHT_PNG   # Use PNG dimensions as-is for vertical
 
 # --- Image Saving Helper Function ---
 def save_card_image(canvas: Image.Image, output_format: str = "PNG", request_id: Optional[str] = None) -> bytes:
@@ -246,22 +267,23 @@ async def generate_card_image_bytes(
         user_image_pil.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
         debug(f"Resized image to: {user_image_pil.size}", request_id=request_id)
 
-    # Get format-specific card dimensions
-    base_card_w, base_card_h = get_card_dimensions(output_format)
+    # Get orientation-specific card dimensions (already correctly oriented)
+    card_w, card_h = get_card_dimensions(output_format, orientation)
     bg_color_tuple = (0, 0, 0, 0) # Fully Transparent RGBA
 
+    # Calculate layout based on orientation
     if orientation == "horizontal":
-        card_w, card_h = base_card_h, base_card_w  # Swap for horizontal
+        # Horizontal: color swatch on left, image on right
         swatch_w, swatch_h = int(card_w * 0.5), card_h
         img_panel_w, img_panel_h = card_w - swatch_w, card_h
         img_paste_pos = (swatch_w, 0)
     else: # vertical
-        card_w, card_h = base_card_w, base_card_h
+        # Vertical: color swatch on top, image on bottom
         swatch_w, swatch_h = card_w, int(card_h * 0.5)
         img_panel_w, img_panel_h = card_w, card_h - swatch_h
         img_paste_pos = (0, swatch_h)
     
-    log(f"Card dims: {card_w}x{card_h}, Swatch: {swatch_w}x{swatch_h}, ImgPanel: {img_panel_w}x{img_panel_h}", request_id=request_id)
+    log(f"Card dims: {card_w}x{card_h} ({orientation}), Swatch: {swatch_w}x{swatch_h}, ImgPanel: {img_panel_w}x{img_panel_h}", request_id=request_id)
 
     canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
@@ -522,32 +544,25 @@ async def generate_back_card_image_bytes(
         log(f"Failed to convert FIXED_BACK_CARD_COLOR_HEX '{FIXED_BACK_CARD_COLOR_HEX}'. Using fallback.", level="ERROR", request_id=request_id)
         fixed_back_card_rgb = (233, 233, 235)  #(233, 237, 241)
 
-    # 1. Determine card dimensions and proportional font sizes (format-specific)
-    base_card_w, base_card_h = get_card_dimensions(output_format)
+    # Get orientation-specific card dimensions (already correctly oriented)
+    card_w, card_h = get_card_dimensions(output_format, orientation)
     
-    if orientation == "horizontal":
-        card_w, card_h = base_card_h, base_card_w  # Swap for horizontal
-        # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / CARD_WIDTH_PNG  # Use PNG baseline for consistent proportions
-        note_font_size_val = int(32 * base_scale)
-    else: # vertical
-        card_w, card_h = base_card_w, base_card_h
-        # Use smaller dimension for consistent scaling across orientations
-        base_scale = min(card_w, card_h) / CARD_WIDTH_PNG  # Use PNG baseline for consistent proportions
-        note_font_size_val = int(32 * base_scale)
+    # Use smaller dimension for consistent scaling across orientations
+    base_scale = min(card_w, card_h) / CARD_WIDTH_PNG  # Use PNG baseline for consistent proportions
+    note_font_size_val = int(32 * base_scale)
 
-    # 2. Calculate effective background color
+    # Calculate effective background color
     solid_lightened_bg_rgb = fixed_back_card_rgb # Use the fixed color directly
     bg_color_tuple = (*solid_lightened_bg_rgb, 255)
 
-    # 3. Initialize Canvas and Draw objects
+    # Initialize Canvas and Draw objects
     canvas = Image.new('RGBA', (card_w, card_h), bg_color_tuple)
     draw = ImageDraw.Draw(canvas)
 
-    # 4. Determine Text Color (based on the final solid background)
+    # Determine Text Color (based on the final solid background)
     text_color = (20, 20, 20) if sum(solid_lightened_bg_rgb) > 384 else (255, 255, 255)
 
-    # 5. Define Paddings and Font Objects
+    # Define Paddings and Font Objects
     pad_x = int(card_w * 0.05) 
     pad_y = int(card_h * 0.05)
     
