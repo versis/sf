@@ -51,9 +51,9 @@ API_BASE_URL = "http://localhost:3000/api"
 # Generation Configuration
 GENERATION_NAME = "sfkuba_pdf01"
 CARD_IDS = [
-    "000000693 FE F",
-    "000000694 FE F", 
-    "000000695 FE F"
+    "000000704 FE F",
+    "000000705 FE F",
+    "000000706 FE F"
 ]
 
 # PDF Settings
