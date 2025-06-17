@@ -202,7 +202,8 @@ def generate_card_images(card_data: Dict[str, Any], orientation: str, card_quali
 
 def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
     """
-    Convert image from RGB to CMYK color space.
+    Convert image from RGB to CMYK color space for professional printing.
+    Uses manual CMYK conversion if PIL CMYK support is not available.
     
     Args:
         image_bytes: Image data in bytes
@@ -213,28 +214,79 @@ def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
     try:
         # Load image
         img = Image.open(io.BytesIO(image_bytes))
+        print(f"         📊 Original image: {img.mode} mode, {img.size}px")
         
-        # Convert to RGB if not already
+        # Skip conversion if already CMYK
+        if img.mode == 'CMYK':
+            print(f"         ✅ Already CMYK, keeping original")
+            return image_bytes
+        
+        # Convert to RGB first if needed (handles RGBA, L, etc.)
         if img.mode != 'RGB':
-            img = img.convert('RGB')
+            print(f"         🔄 Converting {img.mode} → RGB")
+            if img.mode == 'RGBA':
+                # Create white background for RGBA images
+                rgb_img = Image.new('RGB', img.size, 'white')
+                rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = rgb_img
+            else:
+                img = img.convert('RGB')
         
-        # Create CMYK color profile
-        rgb_profile = ImageCms.createProfile('sRGB')
-        cmyk_profile = ImageCms.createProfile('CMYK')
+        print(f"         🎨 Converting RGB → CMYK using manual conversion")
         
-        # Convert RGB to CMYK
-        transform = ImageCms.buildTransformFromOpenProfiles(
-            rgb_profile, cmyk_profile, 'RGB', 'CMYK'
-        )
-        cmyk_img = ImageCms.applyTransform(img, transform)
+        # Manual RGB to CMYK conversion (universally supported)
+        import numpy as np
         
-        # Save as bytes
+        # Convert to numpy array for processing
+        rgb_array = np.array(img)
+        
+        # Normalize RGB values to 0-1 range
+        r = rgb_array[:, :, 0] / 255.0
+        g = rgb_array[:, :, 1] / 255.0
+        b = rgb_array[:, :, 2] / 255.0
+        
+        # Calculate CMYK values using standard conversion
+        k = 1 - np.maximum(r, np.maximum(g, b))
+        
+        # Avoid division by zero
+        k_inv = np.where(k == 1, 0, 1 - k)
+        
+        c = np.where(k == 1, 0, (1 - r - k) / k_inv)
+        m = np.where(k == 1, 0, (1 - g - k) / k_inv)
+        y = np.where(k == 1, 0, (1 - b - k) / k_inv)
+        
+        # Convert back to 0-255 range and create CMYK array
+        cmyk_array = np.stack([
+            (c * 255).astype(np.uint8),
+            (m * 255).astype(np.uint8), 
+            (y * 255).astype(np.uint8),
+            (k * 255).astype(np.uint8)
+        ], axis=2)
+        
+        # Create CMYK image
+        cmyk_img = Image.fromarray(cmyk_array, mode='CMYK')
+        
+        # Save as TIFF with proper settings
         output = io.BytesIO()
-        cmyk_img.save(output, format='TIFF', compression='lzw')
-        return output.getvalue()
+        cmyk_img.save(
+            output, 
+            format='TIFF', 
+            compression='lzw',
+            dpi=(300, 300)  # Ensure 300 DPI is preserved
+        )
+        
+        converted_bytes = output.getvalue()
+        print(f"         ✅ CMYK conversion successful: {len(converted_bytes)/1024:.1f}KB")
+        return converted_bytes
+        
+    except ImportError:
+        print(f"         ⚠️  NumPy not available for manual CMYK conversion")
+        print(f"         📋 Using original RGB (install numpy for CMYK: pip install numpy)")
+        return image_bytes
         
     except Exception as e:
-        print(f"      ⚠️  CMYK conversion failed: {str(e)}, using original")
+        print(f"      ❌ CMYK conversion failed: {str(e)}")
+        print(f"      📋 Using original RGB for compatibility")
         return image_bytes
 
 def create_pdf_with_cards(card_images: List[tuple], output_path: str, 
