@@ -2,6 +2,90 @@
 
 This directory contains utility scripts for working with card generations.
 
+## Available Scripts
+
+1. **`download_generation.py`** - Download individual TIFF cards (front and back)
+2. **`generate_a4.py`** - Generate A4 layouts for professional printing (3 cards per sheet)
+3. **`generate_pdf.py`** - Generate PDF with individual pages (front and back for each card) in CMYK color space
+4. **`generate-hero-cache.js`** - Generate hero image cache for the website
+
+---
+
+## generate_pdf.py
+
+**NEW!** Generates professional PDFs with front and back pages for cards in CMYK color space, perfect for professional printing services.
+
+### Quick Start
+
+```bash
+# Make sure both servers are running first
+# Terminal 1: Start Next.js server
+pnpm dev
+
+# Terminal 2: Start Python API server  
+uvicorn api.index:app --reload
+
+# Generate PDF using command line
+uv run python scripts/generate_pdf.py \
+  --generation-name "my_pdf" \
+  --ids "000000001 FE F,000000002 FE F" \
+  --orientation v
+
+# Or use interactive mode
+uv run python scripts/generate_pdf.py --interactive
+```
+
+### Key Features
+
+- **Professional PDF Output**: Individual pages for each card (front + back)
+- **CMYK Color Space**: Perfect for professional printing services
+- **Multiple Page Sizes**: A4, US Letter, US Legal, or custom sizes
+- **High Quality**: 300 DPI print resolution maintained
+- **Flexible Input**: Command line, interactive mode, or script configuration
+
+### Usage Options
+
+1. **Command Line Mode**:
+   ```bash
+   uv run python scripts/generate_pdf.py \
+     --generation-name "my_pdf" \
+     --ids "000000001 FE F,000000002 FE F" \
+     --orientation v
+   ```
+
+2. **Interactive Mode**:
+   ```bash
+   uv run python scripts/generate_pdf.py --interactive
+   ```
+
+3. **Configuration Mode**:
+   - Edit variables in the script
+   - Run: `uv run python scripts/generate_pdf.py`
+
+### Parameters
+
+- `--generation-name` / `-g`: Name for the PDF file
+- `--ids` / `-i`: Comma-separated list of card IDs
+- `--orientation` / `-o`: Card orientation (`v` for vertical, `h` for horizontal)
+- `--interactive`: Run in interactive mode
+
+### Output
+
+- **File Location**: `data/pdf_generations/<generation_name>.pdf`
+- **Page Structure**: For N cards → 2N pages (Card1-Front, Card1-Back, Card2-Front, Card2-Back, ...)
+- **Color Space**: CMYK (when enabled)
+- **Quality**: 300 DPI print resolution
+
+### Professional Printing
+
+The generated PDFs are optimized for professional printing:
+- CMYK color space for accurate color reproduction
+- Embedded ICC color profiles
+- High-resolution images (300 DPI)
+- Proper image scaling and centering
+
+---
+
 ## download_generation.py
 
 Downloads TIFF cards (front and back) for specific card IDs, organizing them into generation-specific directories.
