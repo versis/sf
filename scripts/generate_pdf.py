@@ -463,9 +463,7 @@ def create_pdf(card_images: List[tuple], output_path: str,
             with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
                 pdf.docinfo.Title = "shadefreude" 
                 pdf.docinfo.Subject = "CMYK Cards with PSO Uncoated v3 (FOGRA52) Color Profile"
-                pdf.docinfo.Keywords = "CMYK, FOGRA52, PSO Uncoated v3, Professional Printing"
                 pdf.docinfo.Creator = "tinker.institute"
-                pdf.docinfo.Producer = "Professional PDF Generator"
                 pdf.save()
             print(f"   📋 Added professional metadata to PDF")
         except Exception as meta_error:
