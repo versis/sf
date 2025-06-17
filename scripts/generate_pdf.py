@@ -200,13 +200,14 @@ def generate_card_images(card_data: Dict[str, Any], orientation: str, card_quali
         print(f"      ❌ Failed to generate card images: {str(e)}")
         return None, None
 
-def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
+def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> bytes:
     """
     Convert image from RGB to CMYK color space using PSO Uncoated v3 FOGRA52 profile.
     This provides professional-grade color conversion for commercial printing.
     
     Args:
         image_bytes: Image data in bytes
+        debug_save_path: Optional path to save the converted TIFF for inspection
         
     Returns:
         CMYK image data in bytes with embedded FOGRA52 profile
@@ -285,6 +286,22 @@ def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
         
         cmyk_img.save(output, **save_kwargs)
         
+        # DEBUG: Save interim TIFF file if path provided
+        if debug_save_path:
+            try:
+                os.makedirs(os.path.dirname(debug_save_path), exist_ok=True)
+                cmyk_img.save(debug_save_path, **save_kwargs)
+                print(f"         💾 Debug TIFF saved: {debug_save_path}")
+                
+                # Verify the saved file has ICC profile
+                test_img = Image.open(debug_save_path)
+                has_profile = 'icc_profile' in test_img.info
+                profile_size = len(test_img.info.get('icc_profile', b'')) if has_profile else 0
+                print(f"         🔍 Verification: ICC profile embedded = {has_profile}, size = {profile_size} bytes")
+                
+            except Exception as debug_error:
+                print(f"         ⚠️  Debug save failed: {debug_error}")
+        
         converted_bytes = output.getvalue()
         profile_info = "with FOGRA52 profile" if cmyk_profile else "without ICC profile"
         print(f"         ✅ CMYK conversion successful: {len(converted_bytes)/1024:.1f}KB {profile_info}")
@@ -323,7 +340,8 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str,
             # Process front image
             if front_bytes:
                 if cmyk_conversion:
-                    front_bytes = convert_image_to_cmyk(front_bytes)
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_FOGRA52.tiff")
+                    front_bytes = convert_image_to_cmyk(front_bytes, debug_path)
                 
                 # Load image and get dimensions
                 front_img = Image.open(io.BytesIO(front_bytes))
@@ -353,7 +371,8 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str,
             # Process back image
             if back_bytes:
                 if cmyk_conversion:
-                    back_bytes = convert_image_to_cmyk(back_bytes)
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_FOGRA52.tiff")
+                    back_bytes = convert_image_to_cmyk(back_bytes, debug_path)
                 
                 # Load image and get dimensions
                 back_img = Image.open(io.BytesIO(back_bytes))
