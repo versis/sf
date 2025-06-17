@@ -19,16 +19,16 @@ LOGO_PATH = "public/sf-icon.png"
 
 # --- Card Dimensions (Exact 1:2 ratio for print quality) ---
 # PNG dimensions (web quality)
-CARD_WIDTH_PNG = 700   # Base width for vertical orientation (PNG)
 CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
+CARD_WIDTH_PNG = 700   # Base width for vertical orientation (PNG)
 
 # --- Print Quality Constants ---
 PRINT_DPI = 300  # High resolution for professional printing
 MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 
 # Physical dimensions for print (in millimeters)
-CARD_CONTENT_WIDTH_MM = 130.0
-CARD_CONTENT_HEIGHT_MM = 260.0  # Exact 1:2 ratio
+CARD_CONTENT_HEIGHT_MM = 130.0  # Exact 1:2 ratio
+CARD_CONTENT_WIDTH_MM = CARD_HEIGHT_PNG / 2
 PASSEPARTOUT_MM = 7.0           # White border (part of final card)
 BLEED_MM = 0.0                  # Extra margin for cutting safety (Polish: "spad")
 
