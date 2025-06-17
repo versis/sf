@@ -255,26 +255,22 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size:
     """
     Create PDF with front and back pages for each card.
     
-    IMPORTANT: TIFF files already include the 7mm passepartout and are the final complete cards.
-    This function does direct TIFF→PDF conversion at actual size (300 DPI → 72 points/inch).
-    No additional scaling or margins are applied.
+    IMPORTANT: TIFF files already include the 5mm passepartout and are the final complete cards.
+    This function creates PDF pages that are exactly the same size as the TIFF files.
+    No A4 pages, no centering - just direct TIFF→PDF conversion at actual size.
     
     Args:
         card_images: List of (extended_id, front_bytes, back_bytes) tuples
         output_path: Path to save the PDF
-        page_size: PDF page size in points (width, height)
+        page_size: PDF page size in points (IGNORED - calculated from TIFF size)
         cmyk_conversion: Whether to convert images to CMYK
         
     Returns:
         True if successful, False otherwise
     """
     try:
-        # Create PDF canvas
-        pdf = pdf_canvas.Canvas(output_path, pagesize=page_size)
-        page_width, page_height = page_size
-        
-        print(f"   📄 Creating PDF: {page_width:.0f}x{page_height:.0f} points")
-        
+        # We'll create the PDF without a fixed page size - each page will be sized to match its TIFF
+        pdf = None
         total_pages = 0
         
         for extended_id, front_bytes, back_bytes in card_images:
@@ -296,44 +292,56 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size:
                 card_width_points = img_width * dpi_to_points
                 card_height_points = img_height * dpi_to_points
                 
-                # Center the card on the page (no scaling, just direct conversion)
-                x = (page_width - card_width_points) / 2
-                y = (page_height - card_height_points) / 2
+                # Create PDF canvas if this is the first page, or set page size for this page
+                if pdf is None:
+                    pdf = pdf_canvas.Canvas(output_path, pagesize=(card_width_points, card_height_points))
+                    print(f"   📄 Creating PDF with pages sized to match TIFFs")
+                else:
+                    pdf.setPageSize((card_width_points, card_height_points))
                 
-                # Add front page - direct size conversion from 300 DPI to points
+                # Place image at (0,0) - no centering, PDF page is exactly TIFF size
                 pdf.drawImage(ImageReader(io.BytesIO(front_bytes)), 
-                            x, y, width=card_width_points, height=card_height_points)
+                            0, 0, width=card_width_points, height=card_height_points)
                 pdf.showPage()
                 total_pages += 1
+                print(f"      ✅ Front page: {img_width}×{img_height}px → {card_width_points:.1f}×{card_height_points:.1f}pts")
                 
             # Process back image
             if back_bytes:
                 if cmyk_conversion:
                     back_bytes = convert_image_to_cmyk(back_bytes)
                 
-                # Load image and get dimensions (same logic as front)
+                # Load image and get dimensions
                 back_img = Image.open(io.BytesIO(back_bytes))
                 img_width, img_height = back_img.size
                 
-                # Convert pixels to points at 300 DPI (same as front)
+                # Convert pixels to points at 300 DPI
                 dpi_to_points = 72 / 300  # 0.24 points per pixel
                 card_width_points = img_width * dpi_to_points
                 card_height_points = img_height * dpi_to_points
                 
-                # Center the card on the page (no scaling, just direct conversion)
-                x = (page_width - card_width_points) / 2
-                y = (page_height - card_height_points) / 2
+                # Set page size for this page (back might be different orientation)
+                if pdf is None:
+                    pdf = pdf_canvas.Canvas(output_path, pagesize=(card_width_points, card_height_points))
+                    print(f"   📄 Creating PDF with pages sized to match TIFFs")
+                else:
+                    pdf.setPageSize((card_width_points, card_height_points))
                 
-                # Add back page - direct size conversion from 300 DPI to points
+                # Place image at (0,0) - no centering, PDF page is exactly TIFF size
                 pdf.drawImage(ImageReader(io.BytesIO(back_bytes)), 
-                            x, y, width=card_width_points, height=card_height_points)
+                            0, 0, width=card_width_points, height=card_height_points)
                 pdf.showPage()
                 total_pages += 1
+                print(f"      ✅ Back page: {img_width}×{img_height}px → {card_width_points:.1f}×{card_height_points:.1f}pts")
         
         # Save PDF
-        pdf.save()
-        print(f"   ✅ PDF created with {total_pages} pages")
-        return True
+        if pdf is not None:
+            pdf.save()
+            print(f"   ✅ PDF created with {total_pages} pages")
+            return True
+        else:
+            print(f"   ❌ No images to process - PDF not created")
+            return False
         
     except Exception as e:
         print(f"   ❌ Failed to create PDF: {str(e)}")
