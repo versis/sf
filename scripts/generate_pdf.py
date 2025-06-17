@@ -41,7 +41,7 @@ except ImportError:
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba_pdf01h"
+GENERATION_NAME = "sfkuba_pdf01h_FOGRA52"
 CARD_IDS = [
     "000000704 FE F",
     "000000705 FE F",
@@ -202,14 +202,14 @@ def generate_card_images(card_data: Dict[str, Any], orientation: str, card_quali
 
 def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
     """
-    Convert image from RGB to CMYK color space for professional printing.
-    Uses manual CMYK conversion if PIL CMYK support is not available.
+    Convert image from RGB to CMYK color space using PSO Uncoated v3 FOGRA52 profile.
+    This provides professional-grade color conversion for commercial printing.
     
     Args:
         image_bytes: Image data in bytes
         
     Returns:
-        CMYK image data in bytes
+        CMYK image data in bytes with embedded FOGRA52 profile
     """
     try:
         # Load image
@@ -232,57 +232,63 @@ def convert_image_to_cmyk(image_bytes: bytes) -> bytes:
             else:
                 img = img.convert('RGB')
         
-        print(f"         🎨 Converting RGB → CMYK using manual conversion")
+        # Path to FOGRA52 profile
+        fogra52_path = os.path.join(OUTPUT_BASE_DIR, "PSOuncoated_v3_FOGRA52.icc")
         
-        # Manual RGB to CMYK conversion (universally supported)
-        import numpy as np
+        # Check if FOGRA52 profile exists
+        if not os.path.exists(fogra52_path):
+            print(f"         ⚠️  FOGRA52 profile not found at: {fogra52_path}")
+            print(f"         🔄 Using basic PIL CMYK conversion")
+            cmyk_img = img.convert('CMYK')
+            cmyk_profile = None
+        else:
+            print(f"         🎨 Converting RGB → CMYK using FOGRA52 profile")
+            
+            try:
+                # Create sRGB input profile
+                src_profile = ImageCms.createProfile('sRGB')
+                
+                # Load FOGRA52 CMYK output profile
+                dst_profile = ImageCms.getOpenProfile(fogra52_path)
+                
+                # Create color transformation
+                transform = ImageCms.buildTransform(
+                    src_profile, dst_profile, 'RGB', 'CMYK'
+                )
+                
+                # Apply transformation
+                cmyk_img = ImageCms.applyTransform(img, transform)
+                
+                # Get FOGRA52 profile for embedding
+                with open(fogra52_path, 'rb') as f:
+                    cmyk_profile = f.read()
+                
+                print(f"         📋 Using ICC profile: PSO Uncoated v3 (FOGRA52)")
+                
+            except Exception as profile_error:
+                print(f"         ❌ FOGRA52 conversion failed: {profile_error}")
+                print(f"         🔄 Using basic PIL CMYK conversion")
+                cmyk_img = img.convert('CMYK')
+                cmyk_profile = None
         
-        # Convert to numpy array for processing
-        rgb_array = np.array(img)
-        
-        # Normalize RGB values to 0-1 range
-        r = rgb_array[:, :, 0] / 255.0
-        g = rgb_array[:, :, 1] / 255.0
-        b = rgb_array[:, :, 2] / 255.0
-        
-        # Calculate CMYK values using standard conversion
-        k = 1 - np.maximum(r, np.maximum(g, b))
-        
-        # Avoid division by zero
-        k_inv = np.where(k == 1, 0, 1 - k)
-        
-        c = np.where(k == 1, 0, (1 - r - k) / k_inv)
-        m = np.where(k == 1, 0, (1 - g - k) / k_inv)
-        y = np.where(k == 1, 0, (1 - b - k) / k_inv)
-        
-        # Convert back to 0-255 range and create CMYK array
-        cmyk_array = np.stack([
-            (c * 255).astype(np.uint8),
-            (m * 255).astype(np.uint8), 
-            (y * 255).astype(np.uint8),
-            (k * 255).astype(np.uint8)
-        ], axis=2)
-        
-        # Create CMYK image
-        cmyk_img = Image.fromarray(cmyk_array, mode='CMYK')
-        
-        # Save as TIFF with proper settings
+        # Save as TIFF with proper settings and ICC profile
         output = io.BytesIO()
-        cmyk_img.save(
-            output, 
-            format='TIFF', 
-            compression='lzw',
-            dpi=(300, 300)  # Ensure 300 DPI is preserved
-        )
+        save_kwargs = {
+            'format': 'TIFF',
+            'compression': 'lzw',
+            'dpi': (300, 300)  # Ensure 300 DPI is preserved
+        }
+        
+        # Embed FOGRA52 profile if available
+        if cmyk_profile:
+            save_kwargs['icc_profile'] = cmyk_profile
+        
+        cmyk_img.save(output, **save_kwargs)
         
         converted_bytes = output.getvalue()
-        print(f"         ✅ CMYK conversion successful: {len(converted_bytes)/1024:.1f}KB")
+        profile_info = "with FOGRA52 profile" if cmyk_profile else "without ICC profile"
+        print(f"         ✅ CMYK conversion successful: {len(converted_bytes)/1024:.1f}KB {profile_info}")
         return converted_bytes
-        
-    except ImportError:
-        print(f"         ⚠️  NumPy not available for manual CMYK conversion")
-        print(f"         📋 Using original RGB (install numpy for CMYK: pip install numpy)")
-        return image_bytes
         
     except Exception as e:
         print(f"      ❌ CMYK conversion failed: {str(e)}")
