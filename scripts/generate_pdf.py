@@ -1,17 +1,25 @@
 """
-PDF Postcard Generator
+PDF Postcard Generator with Professional ICC Profile Support
+
 Generate professional PDF with front and back pages for cards in CMYK color space.
+Uses img2pdf for proper ICC profile preservation and pikepdf for enhanced metadata.
 Each PDF page is sized exactly to match the TIFF card dimensions (no A4 backgrounds).
+
+Features:
+- Professional CMYK conversion using FOGRA52 color profile
+- Full ICC profile preservation in PDF 
+- Proper color management for commercial printing
+- Direct TIFF→PDF conversion without quality loss
 
 Instructions:
 1. Edit the configuration variables below
-2. Run: python generate_pdf.py
+2. Run: uv run python scripts/generate_pdf.py
 3. Generated PDF will have pages sized exactly to card dimensions for professional printing
 
 Usage Options:
-1. Edit configuration variables below and run: python generate_pdf.py
-2. Use command line: python generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F" --orientation h
-3. Interactive mode: python generate_pdf.py --interactive
+1. Edit configuration variables below and run: uv run python scripts/generate_pdf.py
+2. Use command line: uv run python scripts/generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F" --orientation h
+3. Interactive mode: uv run python scripts/generate_pdf.py --interactive
 """
 
 import requests
@@ -24,14 +32,14 @@ import re
 from PIL import Image, ImageCms
 import io
 
-# PDF generation imports
+# PDF generation with ICC profile support
 try:
-    from reportlab.pdfgen import canvas as pdf_canvas
-    from reportlab.lib.utils import ImageReader
-    REPORTLAB_AVAILABLE = True
+    import img2pdf
+    import pikepdf
+    IMG2PDF_AVAILABLE = True
 except ImportError:
-    print("⚠️  ReportLab not installed. Install with: pip install reportlab")
-    REPORTLAB_AVAILABLE = False
+    print("⚠️  img2pdf not installed. Install with: uv add img2pdf")
+    IMG2PDF_AVAILABLE = False
 
 # =============================================================================
 # CONFIGURATION - EDIT THESE VARIABLES (used when no CLI args provided)
@@ -89,9 +97,9 @@ def convert_extended_id_to_simple_id(extended_id: str) -> str:
 def check_dependencies() -> bool:
     """Check if all required dependencies are available."""
     
-    if not REPORTLAB_AVAILABLE:
-        print("❌ ReportLab is required for PDF generation")
-        print("   Install with: pip install reportlab")
+    if not IMG2PDF_AVAILABLE:
+        print("❌ img2pdf is required for PDF generation")
+        print("   Install with: uv add img2pdf")
         return False
     
     return True
@@ -233,8 +241,8 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
             else:
                 img = img.convert('RGB')
         
-        # Path to FOGRA52 profile
-        fogra52_path = os.path.join(OUTPUT_BASE_DIR, "PSOuncoated_v3_FOGRA52.icc")
+        # Path to FOGRA52 profile (in scripts directory)
+        fogra52_path = os.path.join(os.path.dirname(__file__), "PSOuncoated_v3_FOGRA52.icc")
         
         # Check if FOGRA52 profile exists
         if not os.path.exists(fogra52_path):
@@ -312,14 +320,12 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
         print(f"      📋 Using original RGB for compatibility")
         return image_bytes
 
-def create_pdf_with_cards(card_images: List[tuple], output_path: str, 
-                         cmyk_conversion: bool = True) -> bool:
+
+def create_pdf(card_images: List[tuple], output_path: str, 
+               cmyk_conversion: bool = True) -> bool:
     """
-    Create PDF with front and back pages for each card.
-    
-    IMPORTANT: TIFF files already include the 5mm passepartout and are the final complete cards.
-    This function creates PDF pages that are exactly the same size as the TIFF files.
-    No fixed page sizes - each PDF page matches its TIFF dimensions exactly.
+    Create PDF using img2pdf library which preserves ICC profiles properly.
+    Each TIFF image becomes a PDF page sized exactly to the image dimensions.
     
     Args:
         card_images: List of (extended_id, front_bytes, back_bytes) tuples
@@ -329,13 +335,19 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str,
     Returns:
         True if successful, False otherwise
     """
+    if not IMG2PDF_AVAILABLE:
+        print("   ❌ img2pdf not available")
+        return False
+    
     try:
-        # We'll create the PDF without a fixed page size - each page will be sized to match its TIFF
-        pdf = None
+        print(f"   📄 Creating PDF with ICC profile preservation")
+        
+        # Collect all image data for PDF creation
+        image_data_list = []
         total_pages = 0
         
         for extended_id, front_bytes, back_bytes in card_images:
-            print(f"   🎨 Adding card {extended_id} to PDF...")
+            print(f"   🎨 Processing card {extended_id}...")
             
             # Process front image
             if front_bytes:
@@ -343,30 +355,13 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str,
                     debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_FOGRA52.tiff")
                     front_bytes = convert_image_to_cmyk(front_bytes, debug_path)
                 
-                # Load image and get dimensions
-                front_img = Image.open(io.BytesIO(front_bytes))
-                img_width, img_height = front_img.size
-                
-                # Convert pixels to points at 300 DPI (TIFF files are at 300 DPI)
-                # 1 inch = 72 points, 1 inch = 300 pixels at 300 DPI
-                # So: points = pixels * 72 / 300
-                dpi_to_points = 72 / 300  # 0.24 points per pixel
-                card_width_points = img_width * dpi_to_points
-                card_height_points = img_height * dpi_to_points
-                
-                # Create PDF canvas if this is the first page, or set page size for this page
-                if pdf is None:
-                    pdf = pdf_canvas.Canvas(output_path, pagesize=(card_width_points, card_height_points))
-                    print(f"   📄 Creating PDF with pages sized to match TIFFs")
-                else:
-                    pdf.setPageSize((card_width_points, card_height_points))
-                
-                # Place image at (0,0) - no centering, PDF page is exactly TIFF size
-                pdf.drawImage(ImageReader(io.BytesIO(front_bytes)), 
-                            0, 0, width=card_width_points, height=card_height_points)
-                pdf.showPage()
+                # Add front image data to list
+                image_data_list.append(front_bytes)
                 total_pages += 1
-                print(f"      ✅ Front page: {img_width}×{img_height}px → {card_width_points:.1f}×{card_height_points:.1f}pts")
+                
+                # Get image info for logging
+                front_img = Image.open(io.BytesIO(front_bytes))
+                print(f"      ✅ Front: {front_img.size[0]}×{front_img.size[1]}px, ICC: {'Yes' if 'icc_profile' in front_img.info else 'No'}")
                 
             # Process back image
             if back_bytes:
@@ -374,40 +369,60 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str,
                     debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_FOGRA52.tiff")
                     back_bytes = convert_image_to_cmyk(back_bytes, debug_path)
                 
-                # Load image and get dimensions
-                back_img = Image.open(io.BytesIO(back_bytes))
-                img_width, img_height = back_img.size
-                
-                # Convert pixels to points at 300 DPI
-                dpi_to_points = 72 / 300  # 0.24 points per pixel
-                card_width_points = img_width * dpi_to_points
-                card_height_points = img_height * dpi_to_points
-                
-                # Set page size for this page (back might be different orientation)
-                if pdf is None:
-                    pdf = pdf_canvas.Canvas(output_path, pagesize=(card_width_points, card_height_points))
-                    print(f"   📄 Creating PDF with pages sized to match TIFFs")
-                else:
-                    pdf.setPageSize((card_width_points, card_height_points))
-                
-                # Place image at (0,0) - no centering, PDF page is exactly TIFF size
-                pdf.drawImage(ImageReader(io.BytesIO(back_bytes)), 
-                            0, 0, width=card_width_points, height=card_height_points)
-                pdf.showPage()
+                # Add back image data to list
+                image_data_list.append(back_bytes)
                 total_pages += 1
-                print(f"      ✅ Back page: {img_width}×{img_height}px → {card_width_points:.1f}×{card_height_points:.1f}pts")
+                
+                # Get image info for logging
+                back_img = Image.open(io.BytesIO(back_bytes))
+                print(f"      ✅ Back: {back_img.size[0]}×{back_img.size[1]}px, ICC: {'Yes' if 'icc_profile' in back_img.info else 'No'}")
         
-        # Save PDF
-        if pdf is not None:
-            pdf.save()
-            print(f"   ✅ PDF created with {total_pages} pages")
-            return True
-        else:
-            print(f"   ❌ No images to process - PDF not created")
+        if not image_data_list:
+            print(f"   ❌ No images to process")
             return False
         
+        # Create PDF with preserved ICC profiles
+        print(f"   📋 Converting {len(image_data_list)} images to PDF with ICC profile preservation...")
+        
+        # Configuration for maximum quality
+        layout_config = img2pdf.get_layout_fun(
+            pagesize=None,  # Use image dimensions as page size
+            imgsize=None,   # Use original image size
+            border=None,    # No borders
+            fit=None,       # No scaling
+            auto_orient=False  # Keep original orientation
+        )
+        
+        # Create PDF with preserved ICC profiles
+        pdf_bytes = img2pdf.convert(
+            image_data_list,
+            layout_fun=layout_config,
+            with_pdfrw=False  # Use internal PDF writer for better ICC support
+        )
+        
+        # Save PDF
+        with open(output_path, 'wb') as f:
+            f.write(pdf_bytes)
+        
+        print(f"   ✅ PDF created with {total_pages} pages and preserved ICC profiles")
+        
+        # Add metadata using pikepdf
+        try:
+            with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
+                pdf.docinfo.Title = "Professional CMYK Cards with FOGRA52 Profile"
+                pdf.docinfo.Subject = "CMYK Cards with PSO Uncoated v3 (FOGRA52) Color Profile" 
+                pdf.docinfo.Keywords = "CMYK, FOGRA52, PSO Uncoated v3, Professional Printing"
+                pdf.docinfo.Creator = "PDF Generator with FOGRA52 Support"
+                pdf.docinfo.Producer = "Professional PDF Generator"
+                pdf.save()
+            print(f"   📋 Added FOGRA52 metadata to PDF")
+        except Exception as meta_error:
+            print(f"   ⚠️  Could not add metadata: {meta_error}")
+        
+        return True
+        
     except Exception as e:
-        print(f"   ❌ Failed to create PDF: {str(e)}")
+        print(f"   ❌ img2pdf PDF generation failed: {str(e)}")
         return False
 
 def generate_pdf_from_cards(
@@ -493,7 +508,7 @@ def generate_pdf_from_cards(
     
     # Generate PDF
     print(f"📄 Creating PDF with {len(card_images)} cards...")
-    success = create_pdf_with_cards(card_images, pdf_path, cmyk_conversion)
+    success = create_pdf(card_images, pdf_path, cmyk_conversion)
     
     if success:
         file_size_mb = os.path.getsize(pdf_path) / 1024 / 1024
@@ -573,9 +588,9 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F"
-  python generate_pdf.py --interactive
-  python generate_pdf.py  # Uses configuration from script
+  uv run python scripts/generate_pdf.py --generation-name "my_pdf" --ids "000000001 FE F,000000002 FE F"
+  uv run python scripts/generate_pdf.py --interactive
+  uv run python scripts/generate_pdf.py  # Uses configuration from script
         """
     )
     
@@ -695,8 +710,8 @@ def main():
         print("   4. Specify CMYK printing when ordering")
         print()
         print("💡 Usage examples:")
-        print("   python generate_pdf.py --generation-name 'my_pdf' --ids '000000001 FE F,000000002 FE F'")
-        print("   python generate_pdf.py --interactive")
+        print("   uv run python scripts/generate_pdf.py --generation-name 'my_pdf' --ids '000000001 FE F,000000002 FE F'")
+        print("   uv run python scripts/generate_pdf.py --interactive")
     else:
         print("❌ PDF generation failed!")
         print("   Check the configuration and API status, then try again")
