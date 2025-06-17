@@ -255,6 +255,10 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size:
     """
     Create PDF with front and back pages for each card.
     
+    IMPORTANT: TIFF files already include the 7mm passepartout and are the final complete cards.
+    This function does direct TIFF→PDF conversion at actual size (300 DPI → 72 points/inch).
+    No additional scaling or margins are applied.
+    
     Args:
         card_images: List of (extended_id, front_bytes, back_bytes) tuples
         output_path: Path to save the PDF
@@ -281,25 +285,24 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size:
                 if cmyk_conversion:
                     front_bytes = convert_image_to_cmyk(front_bytes)
                 
-                # Load image and calculate dimensions
+                # Load image and get dimensions
                 front_img = Image.open(io.BytesIO(front_bytes))
                 img_width, img_height = front_img.size
                 
-                # Calculate scaling to fit page while maintaining aspect ratio
-                scale_x = (page_width - 20) / img_width  # 10 point margin on each side
-                scale_y = (page_height - 20) / img_height  # 10 point margin on each side
-                scale = min(scale_x, scale_y)
+                # Convert pixels to points at 300 DPI (TIFF files are at 300 DPI)
+                # 1 inch = 72 points, 1 inch = 300 pixels at 300 DPI
+                # So: points = pixels * 72 / 300
+                dpi_to_points = 72 / 300  # 0.24 points per pixel
+                card_width_points = img_width * dpi_to_points
+                card_height_points = img_height * dpi_to_points
                 
-                new_width = img_width * scale
-                new_height = img_height * scale
+                # Center the card on the page (no scaling, just direct conversion)
+                x = (page_width - card_width_points) / 2
+                y = (page_height - card_height_points) / 2
                 
-                # Center the image on the page
-                x = (page_width - new_width) / 2
-                y = (page_height - new_height) / 2
-                
-                # Add front page
+                # Add front page - direct size conversion from 300 DPI to points
                 pdf.drawImage(ImageReader(io.BytesIO(front_bytes)), 
-                            x, y, width=new_width, height=new_height)
+                            x, y, width=card_width_points, height=card_height_points)
                 pdf.showPage()
                 total_pages += 1
                 
@@ -308,23 +311,22 @@ def create_pdf_with_cards(card_images: List[tuple], output_path: str, page_size:
                 if cmyk_conversion:
                     back_bytes = convert_image_to_cmyk(back_bytes)
                 
-                # Load image and calculate dimensions (same logic as front)
+                # Load image and get dimensions (same logic as front)
                 back_img = Image.open(io.BytesIO(back_bytes))
                 img_width, img_height = back_img.size
                 
-                scale_x = (page_width - 20) / img_width
-                scale_y = (page_height - 20) / img_height
-                scale = min(scale_x, scale_y)
+                # Convert pixels to points at 300 DPI (same as front)
+                dpi_to_points = 72 / 300  # 0.24 points per pixel
+                card_width_points = img_width * dpi_to_points
+                card_height_points = img_height * dpi_to_points
                 
-                new_width = img_width * scale
-                new_height = img_height * scale
+                # Center the card on the page (no scaling, just direct conversion)
+                x = (page_width - card_width_points) / 2
+                y = (page_height - card_height_points) / 2
                 
-                x = (page_width - new_width) / 2
-                y = (page_height - new_height) / 2
-                
-                # Add back page
+                # Add back page - direct size conversion from 300 DPI to points
                 pdf.drawImage(ImageReader(io.BytesIO(back_bytes)), 
-                            x, y, width=new_width, height=new_height)
+                            x, y, width=card_width_points, height=card_height_points)
                 pdf.showPage()
                 total_pages += 1
         
