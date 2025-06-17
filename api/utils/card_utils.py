@@ -17,10 +17,10 @@ from api.core.enums import QrCodeMode
 ASSETS_BASE_PATH = "assets"
 LOGO_PATH = "public/sf-icon.png"
 
-# --- Card Dimensions (Exact 1:2 ratio for print quality) ---
-# PNG dimensions (web quality)
-CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
+# --- Card Dimensions (130mm × 65mm card format) ---
+# PNG dimensions (web quality) - original working values
 CARD_WIDTH_PNG = 700   # Base width for vertical orientation (PNG)
+CARD_HEIGHT_PNG = 1400  # Base height for vertical orientation (PNG)
 
 # --- Print Quality Constants ---
 PRINT_DPI = 300  # High resolution for professional printing
@@ -841,7 +841,7 @@ async def generate_back_card_image_bytes(
         # The available vertical space is from pad_y to (card_h - pad_y)
         available_vertical_space_for_note = card_h - (2 * pad_y)
         
-        # If the stamp is on the right, the note area might be constrained vertically if horizontal card.
+        # If the stamp is on the right, the note area might be constrained vertically if horizontal card.1,701 × 933 pixels at 300 DPI.
         # Here, we assume note area has full vertical space from top to bottom padding.
         # If text block is taller than available space, it will just start from pad_y.
         y_cursor_start_centered = pad_y + (available_vertical_space_for_note - total_ruled_block_height) / 2
