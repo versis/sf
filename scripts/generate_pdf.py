@@ -49,15 +49,15 @@ except ImportError:
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba_pdf01h_FOGRA52"
+GENERATION_NAME = "sfkuba_test100"
 CARD_IDS = [
     "000000704 FE F",
-    "000000705 FE F",
+    "000000705 FE F", 
     "000000706 FE F"
 ]
 
 # PDF Settings
-ORIENTATION = "h"  # "v" for vertical, "h" for horizontal cards
+ORIENTATION = "v"  # "v" for vertical, "h" for horizontal cards
 OUTPUT_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "pdf_generations")
 CMYK_CONVERSION = True  # Convert to CMYK color space for professional printing
 CARD_QUALITY = "TIFF"  # "TIFF" for print quality, "PNG" for web quality
@@ -260,9 +260,10 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
                 # Load FOGRA52 CMYK output profile
                 dst_profile = ImageCms.getOpenProfile(fogra52_path)
                 
-                # Create color transformation
+                # Create color transformation with perceptual rendering intent
                 transform = ImageCms.buildTransform(
-                    src_profile, dst_profile, 'RGB', 'CMYK'
+                    src_profile, dst_profile, 'RGB', 'CMYK',
+                    renderingIntent=0  # Perceptual rendering for better color accuracy
                 )
                 
                 # Apply transformation
@@ -319,6 +320,50 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
         print(f"      ❌ CMYK conversion failed: {str(e)}")
         print(f"      📋 Using original RGB for compatibility")
         return image_bytes
+
+def add_pdf_output_intent(pdf_path: str, icc_path: str) -> bool:
+    """
+    Add professional OutputIntent to PDF for proper color management.
+    Simplified Adobe Reader compatible implementation.
+    
+    Args:
+        pdf_path: Path to the PDF file
+        icc_path: Path to the ICC profile
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        with pikepdf.open(pdf_path, allow_overwriting_input=True) as pdf:
+            # Read ICC profile data
+            with open(icc_path, "rb") as icc_file:
+                icc_data = icc_file.read()
+            
+            # Create uncompressed ICC profile stream (more compatible)
+            icc_stream = pikepdf.Stream(pdf, icc_data)
+            icc_stream["/N"] = 4  # CMYK = 4 components
+            
+            # Simple OutputIntent dictionary - minimal but compatible
+            output_intent = pikepdf.Dictionary({
+                "/Type": pikepdf.Name("/OutputIntent"),
+                "/S": pikepdf.Name("/GTS_PDFX"), 
+                "/OutputConditionIdentifier": "FOGRA52",
+                "/Info": "PSO Uncoated v3 FOGRA52",
+                "/DestOutputProfile": icc_stream
+            })
+            
+            # Add OutputIntent to PDF root
+            pdf.Root["/OutputIntents"] = pikepdf.Array([output_intent])
+            
+            pdf.save()
+        
+        print(f"   📋 Added simplified OutputIntent (Adobe Reader compatible)")
+        return True
+        
+    except Exception as e:
+        print(f"   ⚠️  Could not add OutputIntent: {e}")
+        print(f"   📋 PDF still valid for printing without OutputIntent")
+        return False
 
 
 def create_pdf(card_images: List[tuple], output_path: str, 
@@ -406,16 +451,23 @@ def create_pdf(card_images: List[tuple], output_path: str,
         
         print(f"   ✅ PDF created with {total_pages} pages and preserved ICC profiles")
         
+        # OutputIntent disabled for Adobe Reader compatibility
+        # The CMYK images with embedded ICC profiles are sufficient for professional printing
+        # if cmyk_conversion:
+        #     fogra52_path = os.path.join(os.path.dirname(__file__), "PSOuncoated_v3_FOGRA52.icc")
+        #     if os.path.exists(fogra52_path):
+        #         add_pdf_output_intent(output_path, fogra52_path)
+        
         # Add metadata using pikepdf
         try:
             with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
-                pdf.docinfo.Title = "Professional CMYK Cards with FOGRA52 Profile"
-                pdf.docinfo.Subject = "CMYK Cards with PSO Uncoated v3 (FOGRA52) Color Profile" 
+                pdf.docinfo.Title = "shadefreude" 
+                pdf.docinfo.Subject = "CMYK Cards with PSO Uncoated v3 (FOGRA52) Color Profile"
                 pdf.docinfo.Keywords = "CMYK, FOGRA52, PSO Uncoated v3, Professional Printing"
-                pdf.docinfo.Creator = "PDF Generator with FOGRA52 Support"
+                pdf.docinfo.Creator = "tinker.institute"
                 pdf.docinfo.Producer = "Professional PDF Generator"
                 pdf.save()
-            print(f"   📋 Added FOGRA52 metadata to PDF")
+            print(f"   📋 Added professional metadata to PDF")
         except Exception as meta_error:
             print(f"   ⚠️  Could not add metadata: {meta_error}")
         
