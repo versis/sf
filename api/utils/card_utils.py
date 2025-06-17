@@ -27,37 +27,37 @@ PRINT_DPI = 300  # High resolution for professional printing
 MM_TO_INCH = 1 / 25.4  # Exact conversion factor
 
 # Physical dimensions for print (in millimeters)
-CARD_CONTENT_HEIGHT_MM = 130.0  # Exact 1:2 ratio
-CARD_CONTENT_WIDTH_MM = CARD_HEIGHT_PNG / 2
+CARD_CONTENT_WIDTH_MM = 130.0  # Width for 130mm × 65mm card
+CARD_CONTENT_HEIGHT_MM = 65.0   # Height for 130mm × 65mm card
 PASSEPARTOUT_MM = 7.0           # White border (part of final card)
 BLEED_MM = 0.0                  # Extra margin for cutting safety (Polish: "spad")
 
 # Pre-calculated TIFF dimensions (using proper rounding for exact 300 DPI)
 # Content area dimensions
-CARD_CONTENT_WIDTH_PX = round(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)  # 1535 px
-CARD_CONTENT_HEIGHT_PX = round(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)  # 3071 px
+CARD_CONTENT_WIDTH_PX = round(CARD_CONTENT_WIDTH_MM * MM_TO_INCH * PRINT_DPI)  # 1535 px (130mm)
+CARD_CONTENT_HEIGHT_PX = round(CARD_CONTENT_HEIGHT_MM * MM_TO_INCH * PRINT_DPI)  # 768 px (65mm)
 
 # Passepartout dimensions (white border only)
 PASSEPARTOUT_PX = round(PASSEPARTOUT_MM * MM_TO_INCH * PRINT_DPI)  # 83 px (7mm)
 
 # Bleed dimensions (cutting safety margin)
-BLEED_PX = round(BLEED_MM * MM_TO_INCH * PRINT_DPI)  # 35 px (3mm)
+BLEED_PX = round(BLEED_MM * MM_TO_INCH * PRINT_DPI)  # 0 px (0mm)
 
 # Final card dimensions (content + passepartout - this is the target final card size)
 CARD_FINAL_WIDTH_PX = CARD_CONTENT_WIDTH_PX + (2 * PASSEPARTOUT_PX)   # 1701 px (144mm)
-CARD_FINAL_HEIGHT_PX = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 3237 px (274mm)
+CARD_FINAL_HEIGHT_PX = CARD_CONTENT_HEIGHT_PX + (2 * PASSEPARTOUT_PX)  # 933 px (79mm)
 
 # TIFF dimensions with bleed (for printing with cutting safety)
-CARD_TIFF_WIDTH = CARD_FINAL_WIDTH_PX + (2 * BLEED_PX)   # 1771 px (150mm)
-CARD_TIFF_HEIGHT = CARD_FINAL_HEIGHT_PX + (2 * BLEED_PX)  # 3307 px (280mm)
+CARD_TIFF_WIDTH = CARD_FINAL_WIDTH_PX + (2 * BLEED_PX)   # 1701 px (144mm)
+CARD_TIFF_HEIGHT = CARD_FINAL_HEIGHT_PX + (2 * BLEED_PX)  # 933 px (79mm)
 
 # Verification of actual physical dimensions (for debugging)
 ACTUAL_CONTENT_WIDTH_MM = CARD_CONTENT_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~130mm
-ACTUAL_CONTENT_HEIGHT_MM = CARD_CONTENT_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~260mm
+ACTUAL_CONTENT_HEIGHT_MM = CARD_CONTENT_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~65mm
 ACTUAL_PASSEPARTOUT_MM = PASSEPARTOUT_PX / PRINT_DPI * 25.4  # Should be ~7mm
-ACTUAL_BLEED_MM = BLEED_PX / PRINT_DPI * 25.4  # Should be ~3mm
+ACTUAL_BLEED_MM = BLEED_PX / PRINT_DPI * 25.4  # Should be ~0mm
 ACTUAL_FINAL_CARD_WIDTH_MM = CARD_FINAL_WIDTH_PX / PRINT_DPI * 25.4  # Should be ~144mm
-ACTUAL_FINAL_CARD_HEIGHT_MM = CARD_FINAL_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~274mm
+ACTUAL_FINAL_CARD_HEIGHT_MM = CARD_FINAL_HEIGHT_PX / PRINT_DPI * 25.4  # Should be ~79mm
 
 def log_print_dimensions(request_id: Optional[str] = None):
     """
