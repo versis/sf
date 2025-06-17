@@ -49,7 +49,7 @@ except ImportError:
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba_test100"
+GENERATION_NAME = "sfkuba_test101"
 CARD_IDS = [
     "000000704 FE F",
     "000000705 FE F", 
@@ -61,6 +61,7 @@ ORIENTATION = "v"  # "v" for vertical, "h" for horizontal cards
 OUTPUT_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "pdf_generations")
 CMYK_CONVERSION = True  # Convert to CMYK color space for professional printing
 CARD_QUALITY = "TIFF"  # "TIFF" for print quality, "PNG" for web quality
+SAVE_DEBUG_TIFFS = True # Set to True to save CMYK TIFFs for debugging
 
 # =============================================================================
 # CONFIGURATION EXAMPLES:
@@ -397,7 +398,7 @@ def create_pdf(card_images: List[tuple], output_path: str,
             # Process front image
             if front_bytes:
                 if cmyk_conversion:
-                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_FOGRA52.tiff")
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_FOGRA52.tiff") if SAVE_DEBUG_TIFFS else None
                     front_bytes = convert_image_to_cmyk(front_bytes, debug_path)
                 
                 # Add front image data to list
@@ -411,7 +412,7 @@ def create_pdf(card_images: List[tuple], output_path: str,
             # Process back image
             if back_bytes:
                 if cmyk_conversion:
-                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_FOGRA52.tiff")
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_FOGRA52.tiff") if SAVE_DEBUG_TIFFS else None
                     back_bytes = convert_image_to_cmyk(back_bytes, debug_path)
                 
                 # Add back image data to list
@@ -627,6 +628,7 @@ def print_configuration(generation_name: str, card_ids: List[str], orientation: 
     print(f"   📄 Page sizing: Each page sized to match TIFF dimensions")
     print(f"   🎨 CMYK conversion: {'ON' if cmyk_conversion else 'OFF'}")
     print(f"   🖼️  Quality: {card_quality}")
+    print(f"   💾 Debug TIFFs: {'ON' if SAVE_DEBUG_TIFFS else 'OFF'}")
     print(f"   💾 Output directory: {OUTPUT_BASE_DIR}")
     print(f"   📚 Expected pages: {len(card_ids) * 2} (front + back for each card)")
     print()
