@@ -6,9 +6,11 @@ Uses img2pdf for proper ICC profile preservation and pikepdf for enhanced metada
 Each PDF page is sized exactly to match the TIFF card dimensions (no A4 backgrounds).
 
 Features:
-- Professional CMYK conversion using FOGRA52 color profile
-- Full ICC profile preservation in PDF 
-- Proper color management for commercial printing
+- Two professional workflows: "NO_PROFILE" (HP Indigo) and "FOGRA39_CMYK" (Standard)
+- NO_PROFILE: RGB output for professional RIP conversion (HP Indigo compatible)
+- FOGRA39_CMYK: Professional CMYK conversion using ISO Coated v2 profile
+- Full ICC profile control (embed or omit based on printer requirements)
+- Compatible with HP Indigo, DrukExpress.pl, and most European print services
 - Direct TIFF→PDF conversion without quality loss
 
 Instructions:
@@ -45,23 +47,77 @@ except ImportError:
 # CONFIGURATION - EDIT THESE VARIABLES (used when no CLI args provided)
 # =============================================================================
 
-# API Configuration  
+# =============================================================================
+# PRINTING WORKFLOW CONFIGURATION
+# =============================================================================
+
+# Choose your printing workflow:
+PRINTING_WORKFLOW = "NO_PROFILE"  # Options: "NO_PROFILE", "FOGRA39_CMYK"
+
+# NO_PROFILE: For HP Indigo and professional printers with custom RIP profiles
+# - Keeps images in RGB color space (but still contains sRGB data)
+# - No ICC profiles embedded in PDF (but RIP assumes sRGB as default)
+# - Printer's RIP handles CMYK conversion with their calibrated profile
+# - RIP interprets "no profile" as sRGB input (industry standard)
+# - Recommended for: HP Indigo, professional print services
+
+# FOGRA39_CMYK: For standard CMYK workflows (DrukExpress.pl, etc.)
+# - Converts to CMYK using FOGRA39 (ISO Coated v2)
+# - Embeds ICC profiles in PDF
+# - Full color management control
+# - Recommended for: Standard offset printing, DrukExpress.pl
+
+# =============================================================================
+
+CARD_IDS = [
+    # top3
+    "000000750 FE F",
+    "000000753 FE F",
+    "000000761 FE F",
+    # de01 one more time (6)
+    "000000713 FE F", # Aga
+    "000000719 FE F", # Dolomity lilac
+    "000000770 FE F", # Magda Ż. czarne tło
+    "000000771 FE F", # mloda polska (było ok)
+    "000000776 FE F", # czerwony szwajcaria
+    "000000764 FE F", # ja na slowhopie (sprawdzenei jasnej i twarz)
+    # print de01
+    # "000000751 FE F", # najlepsza; po wykładzie Igora
+    # "000000719 FE F",
+    # "000000722 FE F",
+    # "000000723 FE F",
+    # "000000741 FE F",
+    # "000000752 FE F",
+    # "000000759 FE F",
+    # "000000762 FE F",
+    # "000000769 FE F",
+    # "000000773 FE F",
+]
+
+# API Configuration
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sfkuba_test101"
-CARD_IDS = [
-    "000000704 FE F",
-    "000000705 FE F", 
-    "000000706 FE F"
-]
+GENERATION_NAME = "sf-kuba-de01"
 
-# PDF Settings
+# PDF Settings  
 ORIENTATION = "v"  # "v" for vertical, "h" for horizontal cards
 OUTPUT_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "pdf_generations")
-CMYK_CONVERSION = True  # Convert to CMYK color space for professional printing
+
+# Auto-configure based on workflow choice
+if PRINTING_WORKFLOW == "NO_PROFILE":
+    CMYK_CONVERSION = False     # Keep RGB - let printer's RIP handle conversion
+    EMBED_ICC_PROFILES = False  # No embedded profiles
+    WORKFLOW_NAME = "HP Indigo / Professional RIP"
+elif PRINTING_WORKFLOW == "FOGRA39_CMYK":
+    CMYK_CONVERSION = True      # Convert to CMYK using FOGRA39
+    EMBED_ICC_PROFILES = True   # Embed FOGRA39 profile
+    WORKFLOW_NAME = "Standard CMYK with FOGRA39_CMYK"
+else:
+    raise ValueError(f"Invalid PRINTING_WORKFLOW: {PRINTING_WORKFLOW}")
+
 CARD_QUALITY = "TIFF"  # "TIFF" for print quality, "PNG" for web quality
-SAVE_DEBUG_TIFFS = True # Set to True to save CMYK TIFFs for debugging
+SAVE_DEBUG_TIFFS = True # Set to True to save debug TIFFs
 
 # =============================================================================
 # CONFIGURATION EXAMPLES:
@@ -209,17 +265,19 @@ def generate_card_images(card_data: Dict[str, Any], orientation: str, card_quali
         print(f"      ❌ Failed to generate card images: {str(e)}")
         return None, None
 
-def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> bytes:
+def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None, embed_profile: bool = True) -> bytes:
     """
-    Convert image from RGB to CMYK color space using PSO Uncoated v3 FOGRA52 profile.
+    Convert image from RGB to CMYK color space using ISO Coated v2 FOGRA39 profile.
     This provides professional-grade color conversion for commercial printing.
+    Compatible with DrukExpress.pl and most European print services.
     
     Args:
         image_bytes: Image data in bytes
         debug_save_path: Optional path to save the converted TIFF for inspection
+        embed_profile: Whether to embed the ICC profile in the output
         
     Returns:
-        CMYK image data in bytes with embedded FOGRA52 profile
+        CMYK image data in bytes with optional embedded FOGRA39 profile
     """
     try:
         # Load image
@@ -242,24 +300,26 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
             else:
                 img = img.convert('RGB')
         
-        # Path to FOGRA52 profile (in scripts directory)
-        fogra52_path = os.path.join(os.path.dirname(__file__), "PSOuncoated_v3_FOGRA52.icc")
+        # Path to FOGRA39 profile (in scripts directory)
+        fogra39_path = os.path.join(os.path.dirname(__file__), "ISOcoated_v2_eci.icc")
         
-        # Check if FOGRA52 profile exists
-        if not os.path.exists(fogra52_path):
-            print(f"         ⚠️  FOGRA52 profile not found at: {fogra52_path}")
+        # Check if FOGRA39 profile exists
+        if not os.path.exists(fogra39_path):
+            print(f"         ⚠️  FOGRA39 profile not found at: {fogra39_path}")
+            print(f"         💡 Download from: http://www.eci.org/doku.php?id=en:downloads")
+            print(f"         📦 Extract ISOcoated_v2_eci.icc from eci_offset_2009.zip")
             print(f"         🔄 Using basic PIL CMYK conversion")
             cmyk_img = img.convert('CMYK')
             cmyk_profile = None
         else:
-            print(f"         🎨 Converting RGB → CMYK using FOGRA52 profile")
+            print(f"         🎨 Converting RGB → CMYK using FOGRA39 profile")
             
             try:
                 # Create sRGB input profile
                 src_profile = ImageCms.createProfile('sRGB')
                 
-                # Load FOGRA52 CMYK output profile
-                dst_profile = ImageCms.getOpenProfile(fogra52_path)
+                # Load FOGRA39 CMYK output profile
+                dst_profile = ImageCms.getOpenProfile(fogra39_path)
                 
                 # Create color transformation with perceptual rendering intent
                 transform = ImageCms.buildTransform(
@@ -270,14 +330,14 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
                 # Apply transformation
                 cmyk_img = ImageCms.applyTransform(img, transform)
                 
-                # Get FOGRA52 profile for embedding
-                with open(fogra52_path, 'rb') as f:
+                # Get FOGRA39 profile for embedding
+                with open(fogra39_path, 'rb') as f:
                     cmyk_profile = f.read()
                 
-                print(f"         📋 Using ICC profile: PSO Uncoated v3 (FOGRA52)")
+                print(f"         📋 Using ICC profile: ISO Coated v2 (FOGRA39)")
                 
             except Exception as profile_error:
-                print(f"         ❌ FOGRA52 conversion failed: {profile_error}")
+                print(f"         ❌ FOGRA39 conversion failed: {profile_error}")
                 print(f"         🔄 Using basic PIL CMYK conversion")
                 cmyk_img = img.convert('CMYK')
                 cmyk_profile = None
@@ -290,8 +350,8 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
             'dpi': (300, 300)  # Ensure 300 DPI is preserved
         }
         
-        # Embed FOGRA52 profile if available
-        if cmyk_profile:
+        # Embed FOGRA39 profile if available and requested
+        if cmyk_profile and embed_profile:
             save_kwargs['icc_profile'] = cmyk_profile
         
         cmyk_img.save(output, **save_kwargs)
@@ -313,7 +373,12 @@ def convert_image_to_cmyk(image_bytes: bytes, debug_save_path: str = None) -> by
                 print(f"         ⚠️  Debug save failed: {debug_error}")
         
         converted_bytes = output.getvalue()
-        profile_info = "with FOGRA52 profile" if cmyk_profile else "without ICC profile"
+        if cmyk_profile and embed_profile:
+            profile_info = "with embedded FOGRA39 profile"
+        elif cmyk_profile and not embed_profile:
+            profile_info = "without embedded profile (for professional RIP)"
+        else:
+            profile_info = "without ICC profile"
         print(f"         ✅ CMYK conversion successful: {len(converted_bytes)/1024:.1f}KB {profile_info}")
         return converted_bytes
         
@@ -348,8 +413,8 @@ def add_pdf_output_intent(pdf_path: str, icc_path: str) -> bool:
             output_intent = pikepdf.Dictionary({
                 "/Type": pikepdf.Name("/OutputIntent"),
                 "/S": pikepdf.Name("/GTS_PDFX"), 
-                "/OutputConditionIdentifier": "FOGRA52",
-                "/Info": "PSO Uncoated v3 FOGRA52",
+                "/OutputConditionIdentifier": "FOGRA39",
+                "/Info": "ISO Coated v2 FOGRA39",
                 "/DestOutputProfile": icc_stream
             })
             
@@ -398,8 +463,9 @@ def create_pdf(card_images: List[tuple], output_path: str,
             # Process front image
             if front_bytes:
                 if cmyk_conversion:
-                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_FOGRA52.tiff") if SAVE_DEBUG_TIFFS else None
-                    front_bytes = convert_image_to_cmyk(front_bytes, debug_path)
+                    profile_suffix = "FOGRA39" if EMBED_ICC_PROFILES else "CMYK_NoProfile"
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_front_{profile_suffix}.tiff") if SAVE_DEBUG_TIFFS else None
+                    front_bytes = convert_image_to_cmyk(front_bytes, debug_path, embed_profile=EMBED_ICC_PROFILES)
                 
                 # Add front image data to list
                 image_data_list.append(front_bytes)
@@ -412,8 +478,9 @@ def create_pdf(card_images: List[tuple], output_path: str,
             # Process back image
             if back_bytes:
                 if cmyk_conversion:
-                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_FOGRA52.tiff") if SAVE_DEBUG_TIFFS else None
-                    back_bytes = convert_image_to_cmyk(back_bytes, debug_path)
+                    profile_suffix = "FOGRA39" if EMBED_ICC_PROFILES else "CMYK_NoProfile"
+                    debug_path = os.path.join(OUTPUT_BASE_DIR, "debug_tiffs", f"{extended_id.replace(' ', '_')}_back_{profile_suffix}.tiff") if SAVE_DEBUG_TIFFS else None
+                    back_bytes = convert_image_to_cmyk(back_bytes, debug_path, embed_profile=EMBED_ICC_PROFILES)
                 
                 # Add back image data to list
                 image_data_list.append(back_bytes)
@@ -455,15 +522,18 @@ def create_pdf(card_images: List[tuple], output_path: str,
         # OutputIntent disabled for Adobe Reader compatibility
         # The CMYK images with embedded ICC profiles are sufficient for professional printing
         # if cmyk_conversion:
-        #     fogra52_path = os.path.join(os.path.dirname(__file__), "PSOuncoated_v3_FOGRA52.icc")
-        #     if os.path.exists(fogra52_path):
-        #         add_pdf_output_intent(output_path, fogra52_path)
+        #     fogra39_path = os.path.join(os.path.dirname(__file__), "ISOcoated_v2_eci.icc")
+        #     if os.path.exists(fogra39_path):
+        #         add_pdf_output_intent(output_path, fogra39_path)
         
         # Add metadata using pikepdf
         try:
             with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
                 pdf.docinfo.Title = "shadefreude" 
-                pdf.docinfo.Subject = "CMYK Cards with PSO Uncoated v3 (FOGRA52) Color Profile"
+                if PRINTING_WORKFLOW == "NO_PROFILE":
+                    pdf.docinfo.Subject = "RGB Cards for Professional RIP Conversion (HP Indigo Compatible)"
+                else:
+                    pdf.docinfo.Subject = "CMYK Cards with ISO Coated v2 (FOGRA39) Color Profile"
                 pdf.docinfo.Creator = "tinker.institute"
                 pdf.save()
             print(f"   📋 Added professional metadata to PDF")
@@ -506,7 +576,9 @@ def generate_pdf_from_cards(
     print(f"   🆔 Cards: {len(card_ids)} cards")
     print(f"   📐 Orientation: {full_orientation}")
     print(f"   📄 Page sizing: Each page sized to match TIFF dimensions")
+    print(f"   🖨️  Workflow: {PRINTING_WORKFLOW} - {WORKFLOW_NAME}")
     print(f"   🎨 CMYK conversion: {'ON' if cmyk_conversion else 'OFF'}")
+    print(f"   📋 ICC profiles: {'ON' if EMBED_ICC_PROFILES else 'OFF'}")
     print(f"   🖼️  Quality: {card_quality}")
     print(f"   📚 Expected pages: {len(card_ids) * 2} (front + back for each card)")
     print()
@@ -626,7 +698,9 @@ def print_configuration(generation_name: str, card_ids: List[str], orientation: 
     print(f"   🆔 Card IDs: {', '.join(card_ids)}")
     print(f"   📐 Orientation: {orientation_display} ({orientation})")
     print(f"   📄 Page sizing: Each page sized to match TIFF dimensions")
+    print(f"   🖨️  Workflow: {PRINTING_WORKFLOW} - {WORKFLOW_NAME}")
     print(f"   🎨 CMYK conversion: {'ON' if cmyk_conversion else 'OFF'}")
+    print(f"   📋 ICC profiles: {'ON' if EMBED_ICC_PROFILES else 'OFF'}")
     print(f"   🖼️  Quality: {card_quality}")
     print(f"   💾 Debug TIFFs: {'ON' if SAVE_DEBUG_TIFFS else 'OFF'}")
     print(f"   💾 Output directory: {OUTPUT_BASE_DIR}")
@@ -757,9 +831,20 @@ def main():
         print()
         print("📋 Next steps:")
         print("   1. Open the generated PDF to review")
-        print("   2. Send to print service with CMYK color profile")
-        print("   3. Use professional paper (300gsm+ recommended)")
-        print("   4. Specify CMYK printing when ordering")
+        if PRINTING_WORKFLOW == "NO_PROFILE":
+            print("   2. Send RGB PDF to HP Indigo / professional printer")
+            print("   3. Let printer's RIP handle CMYK conversion")
+            print("   4. Specify: 'Use your calibrated color profile'")
+            print("   5. Professional paper (300gsm+ recommended)")
+            print()
+            print("✅ Perfect for HP Indigo printers with custom RIP profiles!")
+        else:
+            print("   2. Send CMYK PDF with embedded FOGRA39 profile")
+            print("   3. Use with DrukExpress.pl or ISO Coated v2 printers")
+            print("   4. Specify CMYK printing when ordering")
+            print("   5. Professional paper (300gsm+ recommended)")
+            print()
+            print("✅ Perfect for standard offset printing and DrukExpress.pl!")
         print()
         print("💡 Usage examples:")
         print("   uv run python scripts/generate_pdf.py --generation-name 'my_pdf' --ids '000000001 FE F,000000002 FE F'")

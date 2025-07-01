@@ -84,6 +84,36 @@ The generated PDFs are optimized for professional printing:
 - High-resolution images (300 DPI)
 - Proper image scaling and centering
 
+### 🔍 **Technical Explanation: "No Profile" vs "sRGB Embedded"**
+
+This is a crucial distinction that affects color accuracy:
+
+#### **RGB File WITH sRGB Profile Embedded:**
+```
+File contains: RGB(30,30,130) + sRGB ICC profile embedded
+→ RIP reads: "These RGB values are specifically sRGB"
+→ Conversion: Precise sRGB→CMYK with printer's profile
+→ Result: Accurate color reproduction
+```
+
+#### **RGB File WITHOUT Profile (what HP Indigo wants):**
+```
+File contains: RGB(30,30,130) + NO ICC profile information
+→ RIP assumes: "These are probably sRGB values" (industry default)
+→ Conversion: Assumed sRGB→CMYK with printer's profile  
+→ Result: 99.9% accurate (same as embedded sRGB)
+```
+
+#### **Why HP Indigo prefers "no profile":**
+- **Simplified workflow** - no profile conflicts
+- **Their RIP is calibrated** for sRGB assumption  
+- **Less technical complexity** in file processing
+- **Printer controls everything** - their expertise, their responsibility
+
+#### **The key insight:**
+"No embedded profile" ≠ "no color space"
+"No embedded profile" = "use industry default assumption" (which is sRGB)
+
 ---
 
 ## download_generation.py
@@ -183,4 +213,68 @@ If you get "API not reachable" or "500 error":
 If cards are not found:
 1. Verify the card IDs exist in the database
 2. Check that the extended ID format is correct (e.g., "000000001 FE F")
-3. Ensure the cards have been fully generated (status = "completed") 
+3. Ensure the cards have been fully generated (status = "completed")
+
+## PDF Generation - Two Professional Workflows
+
+### 🎯 Workflow Selection
+
+Edit `PRINTING_WORKFLOW` in `generate_pdf.py`:
+
+```python
+PRINTING_WORKFLOW = "NO_PROFILE"     # For HP Indigo / Professional RIP
+# OR
+PRINTING_WORKFLOW = "FOGRA39_CMYK"   # For Standard Offset / DrukExpress.pl
+```
+
+### 🖨️ Workflow 1: NO_PROFILE (HP Indigo)
+
+**Perfect for your HP Indigo printer!**
+
+- ✅ **RGB output** - keeps images in sRGB color space
+- ✅ **No embedded ICC profiles** - exactly what your printer requested
+- ✅ **Professional RIP conversion** - let printer handle CMYK with their calibrated profile
+- ✅ **Best color accuracy** - printer knows their equipment best
+
+**⚠️ IMPORTANT: Still download FOGRA39 profile!**
+
+Even though NO_PROFILE doesn't embed the profile, you should still download it because:
+1. **Easy workflow switching** - can switch to FOGRA39_CMYK anytime
+2. **Color comparison** - compare RIP results vs manual conversion  
+3. **Backup option** - if NO_PROFILE doesn't work as expected
+4. **Professional standard** - FOGRA39 is industry reference
+
+### 🖨️ Workflow 2: FOGRA39_CMYK (Standard Printing)
+
+**For DrukExpress.pl and standard offset printing**
+
+Requires FOGRA39 ICC profile:
+
+1. **Download**: [ECI Downloads](http://www.eci.org/doku.php?id=en:downloads)
+2. **Find**: Download `eci_offset_2009.zip`
+3. **Extract**: Extract `ISOcoated_v2_eci.icc` 
+4. **Place**: Copy to `scripts/ISOcoated_v2_eci.icc`
+
+### File Structure
+```
+scripts/
+├── generate_pdf.py
+├── ISOcoated_v2_eci.icc     ← Only needed for FOGRA39_CMYK workflow
+└── README.md
+```
+
+### Usage
+```bash
+# Generate PDF with selected workflow
+uv run python scripts/generate_pdf.py
+```
+
+### Workflow Comparison
+
+| Feature | NO_PROFILE | FOGRA39_CMYK |
+|---------|------------|--------------|
+| **Color Space** | RGB (sRGB) | CMYK |
+| **ICC Profiles** | None embedded | FOGRA39 embedded |
+| **Best For** | HP Indigo, Professional RIP | DrukExpress.pl, Standard offset |
+| **Color Control** | Printer's calibrated profile | Manual FOGRA39 conversion |
+| **Drukarnia Preference** | ✅ "bez profili" | Standard workflow | 
