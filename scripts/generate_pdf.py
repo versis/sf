@@ -52,7 +52,7 @@ except ImportError:
 # =============================================================================
 
 # Choose your printing workflow:
-PRINTING_WORKFLOW = "NO_PROFILE"  # Options: "NO_PROFILE", "FOGRA39_CMYK"
+PRINTING_WORKFLOW = "NO_PROFILE"  # Options: "NO_PROFILE", "FOGRA39_CMYK", "CMYK_NO_PROFILE"
 
 # NO_PROFILE: For HP Indigo and professional printers with custom RIP profiles
 # - Keeps images in RGB color space (but still contains sRGB data)
@@ -67,6 +67,12 @@ PRINTING_WORKFLOW = "NO_PROFILE"  # Options: "NO_PROFILE", "FOGRA39_CMYK"
 # - Full color management control
 # - Recommended for: Standard offset printing, DrukExpress.pl
 
+# CMYK_NO_PROFILE: For printers requiring CMYK delivery without embedded profiles
+# - Converts to CMYK using FOGRA39 (ISO Coated v2)
+# - No ICC profiles embedded in PDF (printer applies their own profile)
+# - Pre-converts to CMYK but lets printer's RIP handle final interpretation
+# - Recommended for: HP Indigo with CMYK requirement, custom workflow printers
+
 # =============================================================================
 
 CARD_IDS = [
@@ -75,12 +81,12 @@ CARD_IDS = [
     "000000753 FE F",
     "000000761 FE F",
     # de01 one more time (6)
-    "000000713 FE F", # Aga
-    "000000719 FE F", # Dolomity lilac
-    "000000770 FE F", # Magda Ż. czarne tło
-    "000000771 FE F", # mloda polska (było ok)
-    "000000776 FE F", # czerwony szwajcaria
-    "000000764 FE F", # ja na slowhopie (sprawdzenei jasnej i twarz)
+    # "000000713 FE F", # Aga
+    # "000000719 FE F", # Dolomity lilac
+    # "000000770 FE F", # Magda Ż. czarne tło
+    # "000000771 FE F", # mloda polska (było ok)
+    # "000000776 FE F", # czerwony szwajcaria
+    # "000000764 FE F", # ja na slowhopie (sprawdzenei jasnej i twarz)
     # print de01
     # "000000751 FE F", # najlepsza; po wykładzie Igora
     # "000000719 FE F",
@@ -98,7 +104,7 @@ CARD_IDS = [
 API_BASE_URL = "http://localhost:3000/api"
 
 # Generation Configuration
-GENERATION_NAME = "sf-kuba-de01"
+GENERATION_NAME = "sf-kuba-de02"
 
 # PDF Settings  
 ORIENTATION = "v"  # "v" for vertical, "h" for horizontal cards
@@ -113,6 +119,10 @@ elif PRINTING_WORKFLOW == "FOGRA39_CMYK":
     CMYK_CONVERSION = True      # Convert to CMYK using FOGRA39
     EMBED_ICC_PROFILES = True   # Embed FOGRA39 profile
     WORKFLOW_NAME = "Standard CMYK with FOGRA39_CMYK"
+elif PRINTING_WORKFLOW == "CMYK_NO_PROFILE":
+    CMYK_CONVERSION = True      # Convert to CMYK using FOGRA39
+    EMBED_ICC_PROFILES = False  # No embedded profiles
+    WORKFLOW_NAME = "CMYK without ICC Profiles for Professional RIP"
 else:
     raise ValueError(f"Invalid PRINTING_WORKFLOW: {PRINTING_WORKFLOW}")
 
@@ -134,6 +144,11 @@ SAVE_DEBUG_TIFFS = True # Set to True to save debug TIFFs
 #
 # Custom generation name:
 # GENERATION_NAME = "my_custom_pdf"  # Generates: my_custom_pdf.pdf
+#
+# Different printing workflows:
+# PRINTING_WORKFLOW = "NO_PROFILE"        # RGB for HP Indigo
+# PRINTING_WORKFLOW = "CMYK_NO_PROFILE"   # CMYK without profiles for HP Indigo with CMYK requirement  
+# PRINTING_WORKFLOW = "FOGRA39_CMYK"      # CMYK with embedded profiles for DrukExpress.pl
 #
 # =============================================================================
 
@@ -532,6 +547,8 @@ def create_pdf(card_images: List[tuple], output_path: str,
                 pdf.docinfo.Title = "shadefreude" 
                 if PRINTING_WORKFLOW == "NO_PROFILE":
                     pdf.docinfo.Subject = "RGB Cards for Professional RIP Conversion (HP Indigo Compatible)"
+                elif PRINTING_WORKFLOW == "CMYK_NO_PROFILE":
+                    pdf.docinfo.Subject = "CMYK Cards without ICC Profiles for Professional RIP Processing"
                 else:
                     pdf.docinfo.Subject = "CMYK Cards with ISO Coated v2 (FOGRA39) Color Profile"
                 pdf.docinfo.Creator = "tinker.institute"
@@ -838,6 +855,13 @@ def main():
             print("   5. Professional paper (300gsm+ recommended)")
             print()
             print("✅ Perfect for HP Indigo printers with custom RIP profiles!")
+        elif PRINTING_WORKFLOW == "CMYK_NO_PROFILE":
+            print("   2. Send CMYK PDF without embedded profiles")
+            print("   3. Printer will apply their own profile (e.g., custom FOGRA39)")
+            print("   4. Pre-converted to CMYK for workflow compatibility")
+            print("   5. Professional paper (300gsm+ recommended)")
+            print()
+            print("✅ Perfect for HP Indigo with CMYK delivery requirement!")
         else:
             print("   2. Send CMYK PDF with embedded FOGRA39 profile")
             print("   3. Use with DrukExpress.pl or ISO Coated v2 printers")

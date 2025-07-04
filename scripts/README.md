@@ -213,7 +213,7 @@ If you get "API not reachable" or "500 error":
 If cards are not found:
 1. Verify the card IDs exist in the database
 2. Check that the extended ID format is correct (e.g., "000000001 FE F")
-3. Ensure the cards have been fully generated (status = "completed")
+3. Ensure the cards have been fully generated (status = "completed") 
 
 ## PDF Generation - Two Professional Workflows
 
